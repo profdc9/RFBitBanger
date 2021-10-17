@@ -24,7 +24,8 @@ freely, subject to the following restrictions:
 #ifndef __DSPINT_H
 #define __DSPINT_H
 
-#define DSPINT_MAX_SAMPLEBUFFER 80
+#define DSPINT_MAX_SAMPLEBUFFER 96
+#define DSPINT_MAX_MAGCOUNT 6
 
 typedef struct _dsp_state_fixed
 {
@@ -47,6 +48,9 @@ typedef struct _dsp_state
   uint8_t   count_20;
   uint8_t   count_24;
 
+  uint8_t   mag_count;
+  uint8_t   mag_new_sample;
+
   int16_t  state_i_8;
   int16_t  state_i_12;
   int16_t  state_i_16;
@@ -65,6 +69,11 @@ typedef struct _dsp_state
   uint32_t state_m_20;
   uint32_t state_m_24;
 
+  uint16_t  mag_values_8[DSPINT_MAX_MAGCOUNT];
+  uint16_t  mag_values_12[DSPINT_MAX_MAGCOUNT];
+  uint16_t  mag_values_16[DSPINT_MAX_MAGCOUNT];
+  uint16_t  mag_values_20[DSPINT_MAX_MAGCOUNT];
+  uint16_t  mag_values_24[DSPINT_MAX_MAGCOUNT];
   uint16_t  sample_buffer[DSPINT_MAX_SAMPLEBUFFER];
 } dsp_state;
 
