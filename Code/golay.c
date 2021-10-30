@@ -21,8 +21,6 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
  */
 
-#include "golay.h"
-
 #define GOLAY_DEBUG
 
 #ifdef GOLAY_DEBUG
@@ -30,6 +28,8 @@ freely, subject to the following restrictions:
 #include <stdlib.h>
 #include <stdint.h>
 #endif
+
+#include "golay.h"
 
 const uint16_t golay_matrix[12] =
 {
@@ -60,13 +60,20 @@ uint16_t golay_mult(uint16_t wd_enc)
    return enc;
 }
 
-uint8_t golay_hamming_weight(uint16_t n)
+uint8_t golay_hamming_weight_16(uint16_t n)
 {
-  uint8_t s = 0;
-  while (n != 0)
+  uint8_t s = 0, v;
+  v = (n >> 8) & 0xFF;
+  while (v)
   {
-     s += (n & 0x1);
-     n >>= 1;
+      v = v & (v - 1);
+      s++;
+  }
+  v = n & 0xFF;
+  while (v)
+  {
+      v = v & (v - 1);
+      s++;
   }
   return s;
 }
@@ -88,19 +95,19 @@ uint16_t golay_decode(uint32_t codeword)
      we hope that there are no errors in the data bits, otherwise
      the error is undetected */
   syndrome = golay_mult(enc) ^ parity;
-  if (golay_hamming_weight(syndrome) <= 3)
+  if (golay_hamming_weight_16(syndrome) <= 3)
    return enc;
 
   /* check to see if the parity bits have no errors */
   parity_syndrome = golay_mult(parity) ^ enc;
-  if (golay_hamming_weight(parity_syndrome) <= 3)
+  if (golay_hamming_weight_16(parity_syndrome) <= 3)
      return enc ^ parity_syndrome;
 
   /* we flip each bit of the data to see if we have two or fewer errors */
   for (i=12;i>0;)
   {
       i--;
-      if (golay_hamming_weight(syndrome ^ golay_matrix[i]) <= 2)
+      if (golay_hamming_weight_16(syndrome ^ golay_matrix[i]) <= 2)
         return enc ^ (((uint16_t)0x800) >> i);
   }
 
@@ -109,7 +116,7 @@ uint16_t golay_decode(uint32_t codeword)
   {
       i--;
       uint16_t par_bit_synd = parity_syndrome ^ golay_matrix[i];
-      if (golay_hamming_weight(par_bit_synd) <= 2)
+      if (golay_hamming_weight_16(par_bit_synd) <= 2)
         return enc ^ par_bit_synd;
   }
 

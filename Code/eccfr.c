@@ -175,6 +175,45 @@ uint8_t eccfr_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, uint16_t *c
 }
 
 #ifdef ECCFR_DEBUG
+uint8_t count_reversals(uint32_t n)
+{
+  uint8_t i,j,k,rev,mrev=0;
+  for (i=0;i<4;i++)
+  {
+    rev = 0;
+    for (j=i;j<29;j+=5)
+    {
+       if (((n >> j) & 0x01) != ((n >> (j+1)) & 0x01))
+            rev++;
+    }
+    if (rev>mrev) mrev=rev;
+  }
+  return mrev;
+}
+
+uint8_t autocorrelation(uint32_t n, uint8_t bits, int8_t autocor[])
+{
+  uint8_t i,j;
+  int8_t ct;
+  uint8_t maxcor = 0;
+
+  for (i=0;i<bits;i++)
+  {
+      ct = 0;
+      uint32_t cc = n ^ (n >> i);
+      for (j=0;j<(bits-i);j++)
+      {
+         ct += (cc & 0x01) ? -1 : 1;
+         cc >>= 1;
+      }
+      autocor[i] = ct;
+      ct = abs(ct);
+      if ((i>0) && (ct>maxcor))
+        maxcor = ct;
+  }
+  return maxcor;
+}
+
 void print_binary(uint32_t n, uint8_t d)
 {
   uint8_t i;
@@ -185,6 +224,37 @@ void print_binary(uint32_t n, uint8_t d)
   }
 }
 
+void test_sync_word(void)
+{
+    uint32_t i;
+    uint32_t syncword, j, bestsyncword;
+    uint32_t rev, maxcor;
+    int8_t autocor[32];
+    uint32_t minscore=1000000, score;
+    char s[100];
+
+    for(i=0;i<(1u<<29);i++)
+    {
+        syncword = i | (1u << 29);
+        rev = count_reversals(syncword);
+        maxcor = autocorrelation(syncword,30,autocor);
+        score = rev*maxcor;
+        if ((rev>0) && (score<=minscore))
+        {
+            minscore = score;
+            bestsyncword = syncword;
+            printf("syncword: ");
+            print_binary(syncword,30);
+            printf(" reversals: %d maxcor: %d score:%d\nautocor:",rev,maxcor,score);
+            for (j=0;j<30;j++)
+                printf(" %d",autocor[j]);
+            printf("\n\n");
+            fflush(stdout);
+        }
+    }
+    printf("\nend of search\n");
+    fflush(stdout);
+}
 
 void test_reversal_bits(void)
 {
@@ -201,7 +271,7 @@ void test_reversal_bits(void)
       print_binary(word1,24);
       printf("\nins: ");
       print_binary(ins,30);
-      printf("\nafter: ");
+      printf(" reversals: %d\nafter: ",count_reversals(ins));
       print_binary(after,24);
       printf("\n");
       if (after != word1)
@@ -245,7 +315,9 @@ void test_words_to_bytes(void)
 
 void main(void)
 {
-    test_words_to_bytes();
+    //test_words_to_bytes();
+    //test_reversal_bits();
+    test_sync_word();
 }
 
 #endif

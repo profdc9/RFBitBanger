@@ -25,5 +25,6 @@ freely, subject to the following restrictions:
 
 uint32_t golay_encode(uint16_t wd_enc);
 uint16_t golay_decode(uint32_t codeword);
+uint8_t golay_hamming_weight_16(uint16_t n);
 
 #endif /* __GOLAY_H */
