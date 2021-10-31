@@ -24,9 +24,12 @@ freely, subject to the following restrictions:
 #ifndef __ECCFR_H
 #define __ECCFR_H
 
-uint8_t eccfr_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, uint16_t *codewords, uint8_t max_words);
-uint8_t eccfr_raw_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, uint16_t *codewords, uint8_t max_words);
-uint8_t eccfr_code_words_to_bytes(uint16_t *codewords, uint8_t num_words, uint8_t *bytes, uint8_t max_bytes);
+typedef void (*eccfr_code_word_put)(uint16_t, void *);
+typedef uint16_t (*eccfr_code_word_get)(void *);
+
+void eccfr_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, eccfr_code_word_put ecwp, void *st);
+void eccfr_raw_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, eccfr_code_word_put ecwp, void *st);
+uint8_t eccfr_code_words_to_bytes(eccfr_code_word_get ecwg, void *st, uint8_t *bytes, uint8_t max_bytes);
 uint32_t eccfr_add_reversal_bits(uint32_t codeword);
 uint32_t eccfr_remove_reversal_bits(uint32_t outword);
 

@@ -50,6 +50,37 @@ const uint8_t ecc_6bit_codesymbols[60] = {'\0',   '\b',   '\r',    ' ',    '!', 
                                            /* Last 4 symbols can be interpreted as diacritical marks, 0x5C is diaeresis/umlaut */
                                            /* 0x27 can be interpreted as acute diacritical mark */
 
+
+/* in memory buffer encoder / decoder callbacks */
+typedef struct _eccfr_code_word_put_mem_buf_struct
+{
+  uint16_t *code_word_array;
+  uint16_t cur_word;
+  uint16_t max_words;
+} eccfr_code_word_put_mem_buf_struct;
+
+void eccfr_code_word_put_mem_buf(uint16_t code, void *st)
+{
+  eccfr_code_word_put_mem_buf_struct *s = (eccfr_code_word_put_mem_buf_struct *) st;
+  if (s->cur_word < s->max_words)
+     s->code_word_array[s->cur_word++] = code;
+}
+
+typedef struct _eccfr_code_word_get_mem_buf_struct
+{
+  uint16_t *code_word_array;
+  uint16_t cur_word;
+  uint16_t max_words;
+} eccfr_code_word_get_mem_buf_struct;
+
+uint16_t eccfr_code_word_get_mem_buf(void *st)
+{
+  eccfr_code_word_get_mem_buf_struct *s = (eccfr_code_word_get_mem_buf_struct *) st;
+  if (s->cur_word < s->max_words)
+     return s->code_word_array[s->cur_word++];
+  return 0xFFFF;
+}
+
 /*  The input word has 24 bits.  The output word has 30 bits, with bits
     1, 5, 9, 13, 17, 21 preceded by its complement bit inserted into
     the word */
@@ -92,13 +123,14 @@ uint32_t eccfr_remove_reversal_bits(uint32_t outword)
 }
 
 /* decode 12 bit code words to 8 bit bytes */
-uint8_t eccfr_code_words_to_bytes(uint16_t *codewords, uint8_t num_words, uint8_t *bytes, uint8_t max_bytes)
+uint8_t eccfr_code_words_to_bytes(eccfr_code_word_get ecwg, void *st, uint8_t *bytes, uint8_t max_bytes)
 {
-    uint8_t cur_word = 0;
     uint8_t cur_byte = 0;
-    while ((cur_word < num_words) && (cur_byte < max_bytes))
+    while (cur_byte < max_bytes)
     {
-        uint16_t code = codewords[cur_word++];
+        uint16_t code = ecwg(st);
+        if (code == 0xFFFF)
+            return cur_byte;
         if ((code & 0xF00) == 0xF00)
         {
             bytes[cur_byte++] = code & 0xFF;
@@ -111,20 +143,17 @@ uint8_t eccfr_code_words_to_bytes(uint16_t *codewords, uint8_t num_words, uint8_
         if ((code2 != 0) && (code1 < (sizeof(ecc_6bit_codesymbols)/sizeof(uint8_t))) && (cur_byte < max_bytes))
             bytes[cur_byte++] = ecc_6bit_codesymbols[code2];
     }
-    return cur_byte;
 }
 
 /* encode 8 bit bytes as 12 bit code words, always encoding as 8-bit raw */
-uint8_t eccfr_raw_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, uint16_t *codewords, uint8_t max_words)
+void eccfr_raw_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, eccfr_code_word_put ecwp, void *st)
 {
   uint8_t cur_byte = 0;
-  uint8_t cur_word = 0;
-  while ((cur_word < max_words) && (cur_byte < num_bytes))
+  while (cur_byte < num_bytes)
   {
      uint8_t b = bytes[cur_byte++];
-     codewords[cur_word++] = ((uint16_t)(0xF00)) | b;
+     ecwp( ((uint16_t)(0xF00)) | b, st );
   }
-  return cur_word;
 }
 
 /* convert character to 6-bit code if it exists */
@@ -145,33 +174,37 @@ uint8_t eccfr_find_code_in_table(uint8_t c)
    If a byte that can be encoded as a 6 bit symbol precedes one that can
    not be encoded as a 6 bit symbol, and there is an extra symbol slot
    in the current word, fill it with a zero. */
-uint8_t eccfr_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, uint16_t *codewords, uint8_t max_words)
+void eccfr_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, eccfr_code_word_put ecwp, void *st)
 {
   uint8_t cur_byte = 0;
-  uint8_t cur_word = 0;
-  while ((cur_word < max_words) && (cur_byte < num_bytes))
+  uint16_t last_code_word = 0;
+  uint16_t code_word;
+  while (cur_byte < num_bytes)
   {
      uint8_t b = bytes[cur_byte++];
      uint8_t code1 = eccfr_find_code_in_table(b);
      if (code1 == 0xFF)
      {
-         codewords[cur_word++] = ((uint16_t)(0xF00)) | b;
-         continue;
-     }
-     if (cur_byte < num_bytes)
+         code_word = ((uint16_t)(0xF00)) | b;
+     } else
      {
-         b = bytes[cur_byte];
-         uint8_t code2 = eccfr_find_code_in_table(b);
-         if (code2 != 0xFF)
+         code_word = (uint16_t)code1;
+         if (cur_byte < num_bytes)
          {
-             codewords[cur_word++] = (((uint16_t)code2) << 6) | code1;
-             cur_byte++;
-             continue;
+            b = bytes[cur_byte];
+            uint8_t code2 = eccfr_find_code_in_table(b);
+            if (code2 != 0xFF)
+            {
+               code_word |= (((uint16_t)code2) << 6);
+               cur_byte++;
+            }
          }
      }
-     codewords[cur_word++] = (uint16_t)code1;
+     if (code_word == last_code_word)
+         ecwp(0, st);
+     ecwp(code_word, st);
+     last_code_word = code_word;
   }
-  return cur_word;
 }
 
 #ifdef ECCFR_DEBUG
@@ -296,28 +329,42 @@ void test_words_to_bytes(void)
     uint16_t codes[255];
     uint8_t decode[255];
 
+    eccfr_code_word_put_mem_buf_struct ecwpmbs;
+    eccfr_code_word_get_mem_buf_struct ecwgmbs;
+
     uint8_t i;
     for (i=0;i<10;i++)
     {
-       uint8_t l, n, m;
+       uint8_t l;
+
        printf("enter string: ");
        gets(s);
        l = strlen(s);
        printf("entered string: %s, length: %d\n",s,l);
-       n = eccfr_bytes_to_code_words(s, l, codes, (sizeof(codes)/sizeof(uint16_t)));
+
+       ecwpmbs.code_word_array = codes;
+       ecwpmbs.cur_word = 0;
+       ecwpmbs.max_words = sizeof(codes)/sizeof(uint16_t);
+       eccfr_bytes_to_code_words(s, l, eccfr_code_word_put_mem_buf, &ecwpmbs);
+
        printf("codes: ");
-       print_hex_string(codes, n);
-       m = eccfr_code_words_to_bytes(codes, n, decode, sizeof(decode)-1);
-       decode[m] = '\000';
+       print_hex_string(ecwpmbs.code_word_array, ecwpmbs.cur_word);
+
+       ecwgmbs.code_word_array = codes;
+       ecwgmbs.cur_word = 0;
+       ecwgmbs.max_words = ecwpmbs.cur_word;
+
+       l = eccfr_code_words_to_bytes(eccfr_code_word_get_mem_buf, &ecwgmbs, decode, sizeof(decode)-1);
+       decode[l] = '\000';
        printf("\ndecoded string: %s\n",decode);
     }
 }
 
 void main(void)
 {
-    //test_words_to_bytes();
+    test_words_to_bytes();
     //test_reversal_bits();
-    test_sync_word();
+    //test_sync_word();
 }
 
 #endif

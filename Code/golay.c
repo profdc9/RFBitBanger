@@ -84,31 +84,43 @@ uint32_t golay_encode(uint16_t wd_enc)
   return (((uint32_t)enc) << 12) | wd_enc;
 }
 
-uint16_t golay_decode(uint32_t codeword)
+uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
 {
   uint16_t enc = codeword & 0xFFF;
   uint16_t parity = codeword >> 12;
-  uint8_t i;
+  uint8_t i, biterr;
   uint16_t syndrome, parity_syndrome;
 
   /* if there are three or fewer errors in the parity bits, then
      we hope that there are no errors in the data bits, otherwise
      the error is undetected */
   syndrome = golay_mult(enc) ^ parity;
-  if (golay_hamming_weight_16(syndrome) <= 3)
-   return enc;
+  biterr = golay_hamming_weight_16(syndrome);
+  if (biterr <= 3)
+  {
+     *biterrs = biterr;
+     return enc;
+  }
 
   /* check to see if the parity bits have no errors */
   parity_syndrome = golay_mult(parity) ^ enc;
-  if (golay_hamming_weight_16(parity_syndrome) <= 3)
+  biterr = golay_hamming_weight_16(parity_syndrome);
+  if (biterr <= 3)
+  {
+     *biterrs = biterr;
      return enc ^ parity_syndrome;
+  }
 
   /* we flip each bit of the data to see if we have two or fewer errors */
   for (i=12;i>0;)
   {
       i--;
-      if (golay_hamming_weight_16(syndrome ^ golay_matrix[i]) <= 2)
-        return enc ^ (((uint16_t)0x800) >> i);
+      biterr = golay_hamming_weight_16(syndrome ^ golay_matrix[i]);
+      if (biterr <= 2)
+      {
+          *biterrs = biterr+1;
+          return enc ^ (((uint16_t)0x800) >> i);
+      }
   }
 
   /* we flip each bit of the parity to see if we have two or fewer errors */
@@ -116,10 +128,13 @@ uint16_t golay_decode(uint32_t codeword)
   {
       i--;
       uint16_t par_bit_synd = parity_syndrome ^ golay_matrix[i];
-      if (golay_hamming_weight_16(par_bit_synd) <= 2)
-        return enc ^ par_bit_synd;
+      biterr = golay_hamming_weight_16(par_bit_synd);
+      if (biterr <= 2)
+      {
+          *biterrs = biterr+1;
+          return enc ^ par_bit_synd;
+      }
   }
-
   return 0xFFFF;   /* uncorrectable error */
 }
 
@@ -151,7 +166,7 @@ uint32_t generate_n_errors(uint8_t n)
 
 void test_decode(void)
 {
-    uint8_t i;
+    uint8_t i, biterrs;
     char s[100];
     for (i=0;i<100;i++)
     {
@@ -170,10 +185,10 @@ void test_decode(void)
     enc ^= errors;
     printf("\nencerr:  ");
     print_binary(enc,24);
-    uint16_t dec = golay_decode(enc);
+    uint16_t dec = golay_decode(enc,&biterrs);
     printf("\ndecode:  ");
     print_binary(dec,12);
-    printf("\n");
+    printf(" %d\n",biterrs);
     if (dec != input)
         printf("\n!!!!!!!!!!!!!!!!!\n");
     gets(s);
