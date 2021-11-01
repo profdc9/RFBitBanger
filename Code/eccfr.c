@@ -55,8 +55,8 @@ const uint8_t ecc_6bit_codesymbols[60] = {'\0',   '\b',   '\r',    ' ',    '!', 
 typedef struct _eccfr_code_word_put_mem_buf_struct
 {
   uint16_t *code_word_array;
-  uint16_t cur_word;
-  uint16_t max_words;
+  uint8_t cur_word;
+  uint8_t max_words;
 } eccfr_code_word_put_mem_buf_struct;
 
 void eccfr_code_word_put_mem_buf(uint16_t code, void *st)
@@ -69,8 +69,8 @@ void eccfr_code_word_put_mem_buf(uint16_t code, void *st)
 typedef struct _eccfr_code_word_get_mem_buf_struct
 {
   uint16_t *code_word_array;
-  uint16_t cur_word;
-  uint16_t max_words;
+  uint8_t cur_word;
+  uint8_t max_words;
 } eccfr_code_word_get_mem_buf_struct;
 
 uint16_t eccfr_code_word_get_mem_buf(void *st)
@@ -126,11 +126,13 @@ uint32_t eccfr_remove_reversal_bits(uint32_t outword)
 uint8_t eccfr_code_words_to_bytes(eccfr_code_word_get ecwg, void *st, uint8_t *bytes, uint8_t max_bytes)
 {
     uint8_t cur_byte = 0;
+    uint16_t last_code = 0xFFFF;
     while (cur_byte < max_bytes)
     {
         uint16_t code = ecwg(st);
-        if (code == 0xFFFF)
-            return cur_byte;
+        if (code == 0xFFFF) break;
+        if (code == last_code) continue;
+        last_code = code;
         if ((code & 0xF00) == 0xF00)
         {
             bytes[cur_byte++] = code & 0xFF;
@@ -140,9 +142,10 @@ uint8_t eccfr_code_words_to_bytes(eccfr_code_word_get ecwg, void *st, uint8_t *b
         uint16_t code2 = ((code >> 6) & 0x3F);
         if ((code1 != 0) && (code1 < (sizeof(ecc_6bit_codesymbols)/sizeof(uint8_t))))
             bytes[cur_byte++] = ecc_6bit_codesymbols[code1];
-        if ((code2 != 0) && (code1 < (sizeof(ecc_6bit_codesymbols)/sizeof(uint8_t))) && (cur_byte < max_bytes))
+        if ((code2 != 0) && (code2 < (sizeof(ecc_6bit_codesymbols)/sizeof(uint8_t))) && (cur_byte < max_bytes))
             bytes[cur_byte++] = ecc_6bit_codesymbols[code2];
     }
+    return cur_byte;
 }
 
 /* encode 8 bit bytes as 12 bit code words, always encoding as 8-bit raw */
@@ -163,6 +166,7 @@ uint8_t eccfr_find_code_in_table(uint8_t c)
     uint8_t i;
     if ((c >= 'a') && (c <= 'z')) c -= 32;
 	if (c =='\n') c = '\r';
+	if (c == 127) c = '\b';
     for (i=1;i<(sizeof(ecc_6bit_codesymbols)/sizeof(uint8_t));i++)
         if (ecc_6bit_codesymbols[i] == c) return i;
     return 0xFF;

@@ -24,8 +24,8 @@ freely, subject to the following restrictions:
 #ifndef __DSPINT_H
 #define __DSPINT_H
 
-#define DSPINT_MAX_SAMPLEBUFFER 96
-#define DSPINT_MAX_DEMODBUFFER 20
+#define DSPINT_MAX_SAMPLEBUFFER 64
+#define DSPINT_MAX_DEMODBUFFER 16
 #define DSPINT_PWR_THR_DEF 32
 
 #define DSPINT_AVG_CT_PWR2 8
@@ -40,7 +40,7 @@ freely, subject to the following restrictions:
 
 #define DSPINT_BLANK_CODEWORD 0xAAAAAAAA
 
-#define DSPINT_FRAME_FIFO_LENGTH 16
+#define DSPINT_FRAME_FIFO_LENGTH 8
 
 /* structure for FRAME FIFO */
 typedef struct _dspint_frame_fifo
@@ -74,6 +74,10 @@ typedef struct _dsp_state_fixed
    dsp_state_fixed state */
 typedef struct _dsp_state
 {
+  uint8_t   slow_samp;
+  uint8_t   slow_samp_num;
+  uint16_t  total_num;
+
   uint8_t   sample_no;
   uint8_t   mag_new_sample;
   uint8_t   demod_sample_no;
@@ -139,7 +143,7 @@ void dsp_initialize(uint8_t sample_buffer_size);
 void dsp_reset_state(void);
 
 void dsp_initialize_frame_fifo(volatile dspint_frame_fifo *dff);
-void dsp_insert_into_frame_fifo(volatile dspint_frame_fifo *dff, uint32_t frame);
+uint8_t dsp_insert_into_frame_fifo(volatile dspint_frame_fifo *dff, uint32_t frame);
 uint32_t dsp_remove_from_frame_fifo(volatile dspint_frame_fifo *dff);
 
 #endif  /* __DSPINT_H */

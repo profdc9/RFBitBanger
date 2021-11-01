@@ -93,7 +93,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
 
   /* if there are three or fewer errors in the parity bits, then
      we hope that there are no errors in the data bits, otherwise
-     the error is undetected */
+     the error is uncorrected */
   syndrome = golay_mult(enc) ^ parity;
   biterr = golay_hamming_weight_16(syndrome);
   if (biterr <= 3)
@@ -154,7 +154,7 @@ uint32_t generate_n_errors(uint8_t n)
   uint32_t d = 0;
   while (n>0)
   {
-    uint32_t bitmask = 1u << ((rand() % 24)+0);
+    uint32_t bitmask = 1u << (rand() % 24);
     if (!(d & bitmask))
     {
         d |= bitmask;

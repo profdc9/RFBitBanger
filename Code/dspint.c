@@ -47,12 +47,13 @@ void dsp_initialize_frame_fifo(volatile dspint_frame_fifo *dff)
 }
 
 /* insert a frame into the fifo.  this is intended to be interrupt safe */
-void dsp_insert_into_frame_fifo(volatile dspint_frame_fifo *dff, uint32_t frame)
+uint8_t dsp_insert_into_frame_fifo(volatile dspint_frame_fifo *dff, uint32_t frame)
 {
     uint8_t next = dff->head >= (DSPINT_FRAME_FIFO_LENGTH - 1) ? 0 : (dff->head+1);
-    if (next == dff->tail) return;
+    if (next == dff->tail) return 0;
     dff->frames[next] = frame;
     dff->head = next;
+    return 1;
 }
 
 /* remove a frame from the fifo.  this is intended to be interrupt safe */
@@ -139,7 +140,6 @@ void dsp_reset_state(void)
 
 /* initialize the buffer including the signs to be subtracted
    from the end of the buffer */
-
 void dsp_initialize(uint8_t mod_type)
 {
     uint8_t i;
@@ -166,7 +166,7 @@ void dsp_initialize(uint8_t mod_type)
     df.dly_24 = (df.buffer_size / 24) * 24;
     df.demod_samples_per_bit = df.buffer_size / 4;
     df.power_thr_min = ((uint16_t)df.buffer_size) * DSPINT_PWR_THR_DEF * (df.fsk ? 2 : 1);
-    df.demod_edge_window = 4;
+    df.demod_edge_window = (df.buffer_size + 6) / 12;
     dsp_reset_state();
 }
 
@@ -187,6 +187,21 @@ void dsp_new_sample(uint16_t sample)
 {
    uint8_t b, prep_sample;
    int16_t fir;
+
+   if (ds.slow_samp_num > 1)
+   {
+       ds.total_num += sample;
+       if ((++ds.slow_samp) >= ds.slow_samp_num)
+       {
+           sample = ds.total_num;
+           ds.slow_samp = 0;
+           ds.total_num = 0;
+       } else
+       {
+           ds.mag_new_sample = 0;
+           return;
+       }
+   }
 
    /* we do this so that the square roots are computed in the interrupt cycle
       before they are used to reduce the worst-case time for the interrupt
@@ -304,7 +319,9 @@ void dsp_interrupt_sample(uint16_t sample)
 
     switch (df.mod_type)
     {
-        case DSPINT_OOK:
+        case DSPINT_OOK:  demod_sample = ds.mag_value_8 - ds.power_thr;
+                          ds.ct_sum += ds.mag_value_8;
+                          break;
         case DSPINT_OOK2: demod_sample = ds.mag_value_16 - ds.power_thr;
                           ds.ct_sum += ds.mag_value_16;
                           break;
@@ -316,19 +333,15 @@ void dsp_interrupt_sample(uint16_t sample)
                           break;
     }
 
-    /* find the average of a certain number of samples (power of two for calculation
+    /* This is the automatic "gain" control (threshold level control).
+       find the average of a certain number of samples (power of two for calculation
        speed) so that we can determine what to set the thresholds at for the bit on/off
        threshold for ook and the edge threshold for ook/fsk */
     if ((++ds.ct_average) >= (1 << DSPINT_AVG_CT_PWR2))
     {
        uint16_t temp;
        ds.ct_average = 0;
-       if (df.fsk)
-            /* since fsk should have power on always, just divide total power by samples */
-            temp = ds.ct_sum >> DSPINT_AVG_CT_PWR2;
-       else
-            /* since ook should have power on half the time, multiply by 3/4 to try to estimate power threshold */
-            temp = (ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2 + 2);
+       temp = (ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2 + 2);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
        ds.edge_thr = ds.power_thr;
@@ -389,7 +402,7 @@ void dsp_interrupt_sample(uint16_t sample)
     ds.current_bit_no++;
     hamming_weight = dsp_hamming_weight_30(ds.current_word ^ DSPINT_SYNC_CODEWORD);
     printf("received: %08X %05d %02d %02d %02d\n", ds.current_word, ds.cur_bit, ds.current_bit_no, hamming_weight, ds.polarity);
-    if (hamming_weight < 3)  /* resync 30-bit word has occurred! */
+    if (hamming_weight < (ds.resync ? 3 : 5))  /* 30-bit resync word has occurred! */
     {
         printf("resync!\n");
         dsp_reset_codeword();
@@ -417,28 +430,61 @@ void dsp_interrupt_sample(uint16_t sample)
     /* if we have synced, and we have 30 bits, we have a frame */
     if ((ds.current_bit_no >= 30) && (ds.resync))  /* we have a complete frame */
     {
-       printf("inserted word into fifo: %08X\n", ds.current_word);
+       printf("inserted word into fifo: %08X -----------------------------\n", ds.current_word);
        dsp_insert_into_frame_fifo(&dsp_output_fifo, ds.current_word);
-       dsp_reset_codeword();
+       ds.current_bit_no = 0;
     }
 }
 
 #ifdef DSPINT_DEBUG
+
+#define MOD_TEST 3
+
+#if MOD_TEST==0
+#define MOD_TYPE DSPINT_OOK
+#define MOD_REP 32
+#define MOD_CHAN1 8.0
+#define MOD_CHAN2 99999999999.0
+#elif MOD_TEST==1
+#define MOD_TYPE DSPINT_OOK2
+#define MOD_REP 64
+#define MOD_CHAN1 16.0
+#define MOD_CHAN2 99999999999.0
+#elif MOD_TEST==2
+#define MOD_TYPE DSPINT_FSK
+#define MOD_REP 60
+#define MOD_CHAN1 12.0
+#define MOD_CHAN2 20.0
+#elif MOD_TEST==3
+#define MOD_TYPE DSPINT_FSK2
+#define MOD_REP 24
+#define MOD_CHAN1 8.0
+#define MOD_CHAN2 12.0
+#endif
+
 void test_dsp_sample(void)
 {
+    uint8_t cbit;
+    uint32_t c;
+    float freq, samp;
     srand(4001);
-    dsp_initialize(DSPINT_FSK);
-    uint16_t c, samp;
-    const uint8_t bits[122] = { 1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,1,1,  /* 30 bits */
+    dsp_initialize(MOD_TYPE);
+    const uint8_t bits[] = {    1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,1,1,  /* 30 bits */
                                 1,1, 1,1,1,0, 1,1,0,1, 0,0,0,1, 1,0,0,1, 1,1,0,1, 0,0,0,1, 1,1,1,0,  /* 30 bits */
-                                1,1, 1,1,0,1, 1,1,1,0, 1,1,1,1, 0,1,1,1, 1,0,1,1 ,1,1,0,1, 1,1,1,0,  /* 30 bits */
                                 1,0, 0,0,0,1, 1,0,0,0, 1,0,0,0, 1,0,0,1, 1,0,0,0 ,0,0,0,1, 0,0,1,0,  /* 30 bits */
-                                0,0 /*2 bits */ };
-    for (c=0;c<(122*60);c++)
+                                1,1, 1,1,0,1, 1,1,1,0, 1,1,1,1, 0,1,1,1, 1,0,1,1 ,1,1,0,1, 1,1,1,0,  /* 30 bits */
+                                0,0, 1,0,0,1, 0,0,0,0, 1,0,1,0, 0,1,1,0, 0,0,1,0, 0,1,0,1, 0,0,0,0,  /* 30 bits */
+//                                1,1, 1,1,0,1, 1,1,1,0, 1,1,1,1, 0,1,1,1, 1,0,1,1 ,1,1,0,1, 1,1,1,0,  /* 30 bits */
+                                0,1, 0,0,0,1, 1,0,0,0, 1,0,0,1, 0,0,0,1, 0,0,0,1 ,1,0,0,1, 0,0,1,1,  /* 30 bits */
+                                0,0, 1,0,0,1, 0,0,0,0, 1,0,1,0, 0,1,1,0, 0,0,1,0, 0,1,0,1, 0,0,0,0,  /* 30 bits */
+                                1,0, 0,0,0,1, 0,0,0,0, 1,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,1, 0,0,0,1,  /* 30 bits */
+                                1,1 };
+    for (c=0;c<(sizeof(bits)*MOD_REP);c++)
     {
-        uint8_t cbit = bits[c/60];
-        float freq = cbit ? 12.0 : 20.0;
-        float samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(128.0/16384.0);
+        cbit = bits[c/MOD_REP];
+        freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(64.0/16384.0);
+        //if ((c>4000) && (c<5000)) samp = (rand())*(128.0/16384.0)+512;
         dsp_interrupt_sample(samp);
 
         if (ds.mag_new_sample)
@@ -453,5 +499,6 @@ void test_dsp_sample(void)
 void main(void)
 {
   test_dsp_sample();
+  printf("size=%d\n",sizeof(ds)+sizeof(df)+sizeof(dsp_input_fifo)+sizeof(dsp_output_fifo));
 }
 #endif /* DSPINT_DEBUG */
