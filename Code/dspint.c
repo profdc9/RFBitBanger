@@ -124,6 +124,10 @@ void dsp_reset_codeword(void)
 {
    ds.current_bit_no = 0;
    ds.current_word = DSPINT_BLANK_CODEWORD;
+   ds.bitflips_in_phase = 0;
+   ds.bitflips_lag = 0;
+   ds.bitflips_lead = 0;
+   ds.bitflips_ctr = 0;
 }
 
 /* reset state of buffer in case we get some kind
@@ -302,7 +306,7 @@ void dsp_new_sample(uint16_t sample)
    frame in the frame FIFO */
 void dsp_interrupt_sample(uint16_t sample)
 {
-    int16_t demod_sample;
+    int16_t demod_sample, temp;
     uint8_t received_bit;
     uint8_t hamming_weight;
 
@@ -351,8 +355,8 @@ void dsp_interrupt_sample(uint16_t sample)
 
     /* calculate the difference between the modulated signal between now and one bit period ago to see
        if there is a bit edge */
-    ds.bit_edge_val = demod_sample > ds.demod_buffer[ds.demod_sample_no] ?
-       (demod_sample - ds.demod_buffer[ds.demod_sample_no]) : (ds.demod_buffer[ds.demod_sample_no] - demod_sample);
+    temp = ds.demod_buffer[ds.demod_sample_no];
+    ds.bit_edge_val = demod_sample > temp ? (demod_sample - temp) : (temp - demod_sample);
     /* store the demodulated sample into a circular buffer to calculate the edge */
     ds.demod_buffer[ds.demod_sample_no] = demod_sample;
     if ((++ds.demod_sample_no) >= df.demod_samples_per_bit)
@@ -389,7 +393,7 @@ void dsp_interrupt_sample(uint16_t sample)
                 {
                     ds.cur_bit = demod_sample;              /* save the bit */
                     ds.edge_ctr = df.demod_samples_per_bit;  /* reset and wait for the next bit edge to come along */
-                    received_bit = 1;                       /* an edge hasn't occurred but a bit interval happened */
+                    received_bit = 1;                       /* an edge hasn't been detected but a bit interval happened */
                 }
             }
         }
@@ -399,17 +403,30 @@ void dsp_interrupt_sample(uint16_t sample)
 
     /* add the bit to the current word */
     ds.current_word = (ds.current_word << 1) | (ds.polarity ^ (ds.cur_bit > 0));
-    ds.current_bit_no++;
+    ds.bitflips_ctr++;
+    /* this is done on the bit before it is needed to reduce worst case latency */
+    if (ds.bitflips_ctr == 4)
+    {
+        /* keep track of the number of complement bits in the word. should be 6 */
+        uint8_t maskbits, lowerbyte = ((uint8_t)ds.current_word);
+        maskbits = lowerbyte & 0x0C;
+        ds.bitflips_in_phase += (maskbits == 0x08) || (maskbits == 0x04);
+        maskbits = lowerbyte & 0x18;
+        ds.bitflips_lag += (maskbits == 0x10) || (maskbits == 0x08);
+        maskbits = lowerbyte & 0x06;
+        ds.bitflips_lead += (maskbits == 0x04) || (maskbits == 0x02);
+    } else if (ds.bitflips_ctr >= 5)
+        ds.bitflips_ctr = 0;
     hamming_weight = dsp_hamming_weight_30(ds.current_word ^ DSPINT_SYNC_CODEWORD);
     printf("received: %08X %05d %02d %02d %02d\n", ds.current_word, ds.cur_bit, ds.current_bit_no, hamming_weight, ds.polarity);
-    if (hamming_weight < (ds.resync ? 3 : 5))  /* 30-bit resync word has occurred! */
+    if (hamming_weight < (ds.resync ? 4 : 6))  /* 30-bit resync word has occurred! */
     {
         printf("resync!\n");
         dsp_reset_codeword();
         ds.resync = 1;
         return;
     }
-    /* if we 15 or 16 zeros in a row with fsk, that means we have a reversed polarity start */
+    /* if we 15 of the last 16 bits zeros with fsk, that means we have a reversed polarity start */
     hamming_weight = dsp_hamming_weight_16(ds.current_word);
     if ((hamming_weight < 2) && (df.fsk))
     {
@@ -419,7 +436,7 @@ void dsp_interrupt_sample(uint16_t sample)
         ds.resync = 0;
         return;
     }
-    /* if we have 15 or 16 ones in a row, that is a ook key down start, or a fsk start */
+    /* if we have 15 of the last 16 bits ones, that is a ook key down start, or a fsk start */
     if (hamming_weight >= 15)
     {
         ds.demod_edge_window = df.demod_samples_per_bit;
@@ -428,11 +445,42 @@ void dsp_interrupt_sample(uint16_t sample)
         return;
     }
     /* if we have synced, and we have 30 bits, we have a frame */
+    ds.current_bit_no++;
     if ((ds.current_bit_no >= 30) && (ds.resync))  /* we have a complete frame */
     {
-       printf("inserted word into fifo: %08X -----------------------------\n", ds.current_word);
-       dsp_insert_into_frame_fifo(&dsp_output_fifo, ds.current_word);
-       ds.current_bit_no = 0;
+       if ((ds.bitflips_lead > ds.bitflips_in_phase) && (ds.bitflips_lead >= 6))
+        /* we are at least one bit flip ahead, we probably registed a spurious bit flip */
+       {
+         /* back up and get one more bit.  clear bit_lead so we don't try a second time */
+         ds.current_bit_no--;
+         ds.bitflips_lead = 0;
+       } else
+       {
+          if ((ds.bitflips_lag > ds.bitflips_in_phase) && (ds.bitflips_lag >= 4))
+          /* we are at least one bit flip short, we probably fell a bit behind */
+          {
+            dsp_insert_into_frame_fifo(&dsp_output_fifo, ds.current_word >> 1);
+            printf("inserted- word into fifo: %08X %02d %02d %02d -----------------------------\n",
+                   ds.current_word >> 1, ds.bitflips_in_phase, ds.bitflips_lag, ds.bitflips_lead);
+            /* start with the next word with one flip */
+            ds.current_bit_no = 1;
+            ds.bitflips_ctr = 1;
+         } else
+         {
+             if (ds.bitflips_in_phase >= 4)
+             {
+               /* otherwise we just place in buffer and the code word is probably aligned */
+               dsp_insert_into_frame_fifo(&dsp_output_fifo, ds.current_word);
+               printf("inserted0 word into fifo: %08X %02d %02d %02d -----------------------------\n",
+                   ds.current_word, ds.bitflips_in_phase, ds.bitflips_lag, ds.bitflips_lead);
+             }
+             ds.current_bit_no = 0;
+             ds.bitflips_ctr = 0;
+          }
+          ds.bitflips_in_phase = 0;
+          ds.bitflips_lag = 0;
+          ds.bitflips_lead = 0;
+       }
     }
 }
 
@@ -469,25 +517,26 @@ void test_dsp_sample(void)
     float freq, samp;
     srand(4001);
     dsp_initialize(MOD_TYPE);
-    const uint8_t bits[] = {    1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,1,1,  /* 30 bits */
-                                1,1, 1,1,1,0, 1,1,0,1, 0,0,0,1, 1,0,0,1, 1,1,0,1, 0,0,0,1, 1,1,1,0,  /* 30 bits */
-                                1,0, 0,0,0,1, 1,0,0,0, 1,0,0,0, 1,0,0,1, 1,0,0,0 ,0,0,0,1, 0,0,1,0,  /* 30 bits */
-                                1,1, 1,1,0,1, 1,1,1,0, 1,1,1,1, 0,1,1,1, 1,0,1,1 ,1,1,0,1, 1,1,1,0,  /* 30 bits */
-                                0,0, 1,0,0,1, 0,0,0,0, 1,0,1,0, 0,1,1,0, 0,0,1,0, 0,1,0,1, 0,0,0,0,  /* 30 bits */
-//                                1,1, 1,1,0,1, 1,1,1,0, 1,1,1,1, 0,1,1,1, 1,0,1,1 ,1,1,0,1, 1,1,1,0,  /* 30 bits */
-                                0,1, 0,0,0,1, 1,0,0,0, 1,0,0,1, 0,0,0,1, 0,0,0,1 ,1,0,0,1, 0,0,1,1,  /* 30 bits */
-                                0,0, 1,0,0,1, 0,0,0,0, 1,0,1,0, 0,1,1,0, 0,0,1,0, 0,1,0,1, 0,0,0,0,  /* 30 bits */
-                                1,0, 0,0,0,1, 0,0,0,0, 1,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,1, 0,0,0,1,  /* 30 bits */
+    const uint8_t bits[] = {    1,1,1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1,  /* 30 bits */
+                                1,1,1,1,1, 0,1,1,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,0,0,0, 1,1,1,1,0,  /* 30 bits */
+                                1,0,0,0,0, 0,1,0,0,0, 0,1,0,0,1, 1,0,1,1,0, 1,0,0,0,0, 0,1,0,1,0,  /* 30 bits */
+                                1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
+                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 0,1,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
+//                              1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0,  /* 30 bits */
+                                0,1,0,0,0, 0,1,0,0,0, 1,0,0,1,0, 0,1,1,0,0, 0,1,1,0,0, 1,0,0,1,1,  /* 30 bits */
+                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
+                                1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
+                                1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
                                 1,1 };
     for (c=0;c<(sizeof(bits)*MOD_REP);c++)
     {
         cbit = bits[c/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(64.0/16384.0);
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(192.0/16384.0);
         //if ((c>4000) && (c<5000)) samp = (rand())*(128.0/16384.0)+512;
         dsp_interrupt_sample(samp);
 
-        if (ds.mag_new_sample)
+        if (ds.mag_new_sample && 0)
         {
             printf("%d %05d %05d %05d %05d %05d %05d %05d %05d %02d %02d xx\n",cbit,c,(int)samp,
                 ds.mag_value_8,ds.mag_value_12,ds.mag_value_16,ds.mag_value_20,ds.mag_value_24,

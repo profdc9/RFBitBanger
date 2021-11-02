@@ -87,13 +87,18 @@ typedef struct _dsp_state
   uint8_t   resync;
   uint8_t   demod_edge_window;
 
+  uint8_t   bitflips_in_phase;
+  uint8_t   bitflips_lag;
+  uint8_t   bitflips_lead;
+  uint8_t   bitflips_ctr;
+
   uint16_t  edge_thr;
   uint16_t  power_thr;
 
   uint16_t  ct_average;
   uint32_t  ct_sum;
 
-  uint8_t   current_bit_no;
+  int8_t    current_bit_no;
   uint32_t  current_word;
 
   uint8_t   count_8;

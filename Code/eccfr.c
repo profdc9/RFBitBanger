@@ -131,13 +131,13 @@ uint8_t eccfr_code_words_to_bytes(eccfr_code_word_get ecwg, void *st, uint8_t *b
     {
         uint16_t code = ecwg(st);
         if (code == 0xFFFF) break;
-        if (code == last_code) continue;
         last_code = code;
         if ((code & 0xF00) == 0xF00)
         {
             bytes[cur_byte++] = code & 0xFF;
             continue;
         }
+        if (code == last_code) continue;
         uint16_t code1 = (code & 0x3F);
         uint16_t code2 = ((code >> 6) & 0x3F);
         if ((code1 != 0) && (code1 < (sizeof(ecc_6bit_codesymbols)/sizeof(uint8_t))))
@@ -203,9 +203,9 @@ void eccfr_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, eccfr_code_wor
                cur_byte++;
             }
          }
+         if (code_word == last_code_word)
+             ecwp(0, st);
      }
-     if (code_word == last_code_word)
-         ecwp(0, st);
      ecwp(code_word, st);
      last_code_word = code_word;
   }
