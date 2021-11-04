@@ -1,4 +1,4 @@
-update=10/22/2021 8:28:36 PM
+update=11/4/2021 11:02:51 AM
 version=1
 last_client=kicad
 [pcbnew]
@@ -62,6 +62,8 @@ LibName30=atmel
 LibName31=contrib
 LibName32=valves
 LibName33=si5351a
+LibName34=triplewindingtransformer
+LibName35=relay
 [schematic_editor]
 version=1
 PageLayoutDescrFile=

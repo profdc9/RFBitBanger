@@ -28,7 +28,7 @@ freely, subject to the following restrictions:
 #define DSPINT_MAX_DEMODBUFFER 16
 #define DSPINT_PWR_THR_DEF 32
 
-#define DSPINT_AVG_CT_PWR2 8
+#define DSPINT_AVG_CT_PWR2 9
 
 #define DSPINT_OOK 0
 #define DSPINT_OOK2 1

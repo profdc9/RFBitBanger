@@ -345,7 +345,7 @@ void dsp_interrupt_sample(uint16_t sample)
     {
        uint16_t temp;
        ds.ct_average = 0;
-       temp = (ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2 + 2);
+       temp = (ds.ct_sum >> DSPINT_AVG_CT_PWR2);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
        ds.edge_thr = ds.power_thr;
@@ -449,7 +449,7 @@ void dsp_interrupt_sample(uint16_t sample)
     if ((ds.current_bit_no >= 30) && (ds.resync))  /* we have a complete frame */
     {
        if ((ds.bitflips_lead > ds.bitflips_in_phase) && (ds.bitflips_lead >= 6))
-        /* we are at least one bit flip ahead, we probably registed a spurious bit flip */
+        /* we are at least one bit flip ahead, we probably registered a spurious bit flip */
        {
          /* back up and get one more bit.  clear bit_lead so we don't try a second time */
          ds.current_bit_no--;
@@ -486,6 +486,53 @@ void dsp_interrupt_sample(uint16_t sample)
 
 #ifdef DSPINT_DEBUG
 
+typedef struct _wavefile_header
+{
+    unsigned char header[4];
+    uint32_t file_size;
+    unsigned char ftype[4];
+    unsigned char fmt[4];
+    uint32_t length;
+    uint16_t type;
+    uint16_t channels;
+    uint32_t samplerate;
+    uint32_t ratetotal;
+    uint16_t bitspersamplechannels8;
+    uint16_t bitspersample;
+    unsigned char dataheader[4];
+    uint32_t datasize;
+} wavefile_header;
+
+FILE *write_wav_file(const char *filename, uint32_t samples, uint32_t repeats)
+{
+    wavefile_header w;
+    w.header[0]='R';w.header[1]='I';w.header[2]='F';w.header[3]='F';
+    w.ftype[0]='W';w.ftype[1]='A';w.ftype[2]='V';w.ftype[3]='E';
+    w.fmt[0]='f';w.fmt[1]='m';w.fmt[2]='t';w.fmt[3]=' ';
+    w.length = 16;
+    w.type = 1;
+    w.channels = 1;
+    w.samplerate = 8000;
+    w.bitspersample = 16;
+    w.bitspersamplechannels8 = w.bitspersample * w.channels / 8;
+    w.ratetotal = w.samplerate * w.channels * w.bitspersample / 8;
+    w.dataheader[0]='d';w.dataheader[1]='a';w.dataheader[2]='t';w.dataheader[3]='a';
+    w.datasize = samples * repeats * w.bitspersamplechannels8;
+    w.file_size = w.datasize + sizeof(wavefile_header);
+    printf("headersize=%d file_size=%d datasize=%d\n",sizeof(wavefile_header),w.file_size,w.datasize);
+    FILE *fp = fopen(filename,"wb");
+    if (fp != NULL)
+        fwrite(&w,sizeof(w),1,fp);
+    return fp;
+}
+
+void write_sample(FILE *fp, uint16_t sample, uint16_t repeats)
+{
+  int i;
+  for (i=0;i<repeats;i++)
+    fwrite(&sample,sizeof(sample),1,fp);
+}
+
 #define MOD_TEST 3
 
 #if MOD_TEST==0
@@ -515,34 +562,42 @@ void test_dsp_sample(void)
     uint8_t cbit;
     uint32_t c;
     float freq, samp;
-    srand(4001);
+    srand(2001);
     dsp_initialize(MOD_TYPE);
-    const uint8_t bits[] = {    1,1,1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1,  /* 30 bits */
+    uint32_t samples;
+    uint32_t repeats = 8;
+    const uint8_t bits[] = {    1,1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1,  /* 30 bits */
                                 1,1,1,1,1, 0,1,1,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,0,0,0, 1,1,1,1,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 0,1,0,0,1, 1,0,1,1,0, 1,0,0,0,0, 0,1,0,1,0,  /* 30 bits */
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
                                 0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 0,1,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
 //                              1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0,  /* 30 bits */
                                 0,1,0,0,0, 0,1,0,0,0, 1,0,0,1,0, 0,1,1,0,0, 0,1,1,0,0, 1,0,0,1,1,  /* 30 bits */
+                                1,1,1,1,1, 0,1,1,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,0,0,0, 1,1,1,1,0,  /* 30 bits */
+                                1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0,  /* 30 bits */
                                 0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
                                 1,1 };
-    for (c=0;c<(sizeof(bits)*MOD_REP);c++)
+    samples = sizeof(bits)*MOD_REP;
+    FILE *fp = write_wav_file("synth.wav",samples,repeats);
+    for (c=0;c<samples;c++)
     {
-        cbit = bits[c/MOD_REP];
+        cbit = bits[(c+11)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(192.0/16384.0);
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(64.0/16384.0);
         //if ((c>4000) && (c<5000)) samp = (rand())*(128.0/16384.0)+512;
         dsp_interrupt_sample(samp);
+        write_sample(fp,samp*32,repeats);
 
-        if (ds.mag_new_sample && 0)
+        if (ds.mag_new_sample && 1)
         {
             printf("%d %05d %05d %05d %05d %05d %05d %05d %05d %02d %02d xx\n",cbit,c,(int)samp,
                 ds.mag_value_8,ds.mag_value_12,ds.mag_value_16,ds.mag_value_20,ds.mag_value_24,
                 ds.bit_edge_val,ds.edge_ctr,ds.demod_edge_window);
         }
     }
+    if (fp != NULL) fclose(fp);
 }
 
 void main(void)
