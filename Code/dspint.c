@@ -150,18 +150,32 @@ void dsp_initialize(uint8_t mod_type)
     df.mod_type = mod_type;
     switch (df.mod_type)
     {
-        case DSPINT_OOK:  df.buffer_size = 32;
-                          df.fsk = 0;
-                          break;
-        case DSPINT_OOK2: df.buffer_size = 64;
-                          df.fsk = 0;
-                          break;
-        case DSPINT_FSK:  df.buffer_size = 60;
-                          df.fsk = 1;
-                          break;
-        case DSPINT_FSK2: df.buffer_size = 24;
-                          df.fsk = 1;
-                          break;
+        case DSPINT_OOK_FAST:  df.buffer_size = 32;
+                               df.demod_edge_window = 3;
+                               df.fsk = 0;
+                               break;
+        case DSPINT_OOK:       df.buffer_size = 64;
+                               df.fsk = 0;
+                               df.demod_edge_window = 5;
+                               break;
+        case DSPINT_FSK:       df.buffer_size = 60;
+                               df.fsk = 1;
+                               df.demod_edge_window = 5;
+                               break;
+        case DSPINT_FSK_FAST:  df.buffer_size = 24;
+                               df.fsk = 1;
+                               df.demod_edge_window = 2;
+                               break;
+#ifdef DSPINT_VERY_SLOW_MODES
+        case DSPINT_OOK_SLOW:  df.buffer_size = 128;
+                               df.demod_edge_window = 5;
+                               df.fsk = 0;
+                               break;
+        case DSPINT_FSK_SLOW:  df.buffer_size = 120;
+                               df.fsk = 1;
+                               df.demod_edge_window = 5;
+                               break;
+#endif // DSPINT_VERY_SLOW_MODES
     }
     df.dly_8 = (df.buffer_size / 8) * 8;
     df.dly_12 = (df.buffer_size / 12) * 12;
@@ -170,7 +184,6 @@ void dsp_initialize(uint8_t mod_type)
     df.dly_24 = (df.buffer_size / 24) * 24;
     df.demod_samples_per_bit = df.buffer_size / 4;
     df.power_thr_min = ((uint16_t)df.buffer_size) * DSPINT_PWR_THR_DEF * (df.fsk ? 2 : 1);
-    df.demod_edge_window = (df.buffer_size + 6) / 12;
     dsp_reset_state();
 }
 
@@ -185,13 +198,14 @@ void dsp_initialize(uint8_t mod_type)
 /* called by the interrupt routine to update the spectral channels */
 /* this is used to update the I & Q of each spectral channel and update
    the magnitude of the signal on each channel.  more channels are used (5)
-   than needed (1 or 2) because this will help the operator align the signal into
-   the correct channels */
+   than needed (1 or 2) because this will help the receiver to track the
+   frequency of the channels */
 void dsp_new_sample(uint16_t sample)
 {
    uint8_t b, prep_sample;
    int16_t fir;
 
+   /* super slow mode.  used for experimentation with very low baud rates */
    if (ds.slow_samp_num > 1)
    {
        ds.total_num += sample;
@@ -310,7 +324,7 @@ void dsp_interrupt_sample(uint16_t sample)
     uint8_t received_bit;
     uint8_t hamming_weight;
 
-    /* update the filter channel I & Q */
+    /* update the filter channels I & Q */
     dsp_new_sample(sample);
 
     /* only proceed if we have new magnitude samples */
@@ -323,18 +337,20 @@ void dsp_interrupt_sample(uint16_t sample)
 
     switch (df.mod_type)
     {
-        case DSPINT_OOK:  demod_sample = ds.mag_value_8 - ds.power_thr;
-                          ds.ct_sum += ds.mag_value_8;
-                          break;
-        case DSPINT_OOK2: demod_sample = ds.mag_value_16 - ds.power_thr;
-                          ds.ct_sum += ds.mag_value_16;
-                          break;
-        case DSPINT_FSK:  demod_sample = ds.mag_value_20 - ds.mag_value_12;
-                          ds.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
-                          break;
-        case DSPINT_FSK2: demod_sample = ds.mag_value_12 - ds.mag_value_8;
-                          ds.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
-                          break;
+        case DSPINT_OOK_FAST:  demod_sample = ds.mag_value_8 - ds.power_thr;
+                               ds.ct_sum += ds.mag_value_8;
+                               break;
+        case DSPINT_OOK_SLOW:
+        case DSPINT_OOK:       demod_sample = ds.mag_value_16 - ds.power_thr;
+                               ds.ct_sum += ds.mag_value_16;
+                               break;
+        case DSPINT_FSK_SLOW:
+        case DSPINT_FSK:       demod_sample = ds.mag_value_20 - ds.mag_value_12;
+                               ds.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
+                               break;
+        case DSPINT_FSK_FAST:  demod_sample = ds.mag_value_12 - ds.mag_value_8;
+                               ds.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
+                               break;
     }
 
     /* This is the automatic "gain" control (threshold level control).
@@ -345,7 +361,8 @@ void dsp_interrupt_sample(uint16_t sample)
     {
        uint16_t temp;
        ds.ct_average = 0;
-       temp = (ds.ct_sum >> DSPINT_AVG_CT_PWR2);
+       //temp = (ds.ct_sum >> (DSPINT_AVG_CT_PWR2));
+       temp = ((ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+2));
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
        ds.edge_thr = ds.power_thr;
@@ -418,8 +435,8 @@ void dsp_interrupt_sample(uint16_t sample)
     } else if (ds.bitflips_ctr >= 5)
         ds.bitflips_ctr = 0;
     hamming_weight = dsp_hamming_weight_30(ds.current_word ^ DSPINT_SYNC_CODEWORD);
-    printf("received: %08X %05d %02d %02d %02d\n", ds.current_word, ds.cur_bit, ds.current_bit_no, hamming_weight, ds.polarity);
-    if (hamming_weight < (ds.resync ? 4 : 6))  /* 30-bit resync word has occurred! */
+    printf("received: %08X %05d %02d %02d %02d %02d %02d %02d\n", ds.current_word, ds.cur_bit, ds.current_bit_no, hamming_weight, ds.polarity, ds.bitflips_in_phase, ds.bitflips_lag, ds.bitflips_lead);
+    if (hamming_weight < (ds.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
     {
         printf("resync!\n");
         dsp_reset_codeword();
@@ -451,12 +468,14 @@ void dsp_interrupt_sample(uint16_t sample)
        if ((ds.bitflips_lead > ds.bitflips_in_phase) && (ds.bitflips_lead >= 6))
         /* we are at least one bit flip ahead, we probably registered a spurious bit flip */
        {
-         /* back up and get one more bit.  clear bit_lead so we don't try a second time */
+         /* back up and get one more bit.*/
          ds.current_bit_no--;
-         ds.bitflips_lead = 0;
+         ds.bitflips_in_phase = ds.bitflips_lead;  /*lead now becomes in phase */
+         ds.bitflips_lag = 0;  /* lag is now two behind, so we can't use it */
+         ds.bitflips_lead = 0; /* clear bit_lead so we don't try a second time */
        } else
        {
-          if ((ds.bitflips_lag > ds.bitflips_in_phase) && (ds.bitflips_lag >= 4))
+          if ((ds.bitflips_lag > ds.bitflips_in_phase) && (ds.bitflips_lag >= 5))
           /* we are at least one bit flip short, we probably fell a bit behind */
           {
             dsp_insert_into_frame_fifo(&dsp_output_fifo, ds.current_word >> 1);
@@ -536,12 +555,12 @@ void write_sample(FILE *fp, uint16_t sample, uint16_t repeats)
 #define MOD_TEST 2
 
 #if MOD_TEST==0
-#define MOD_TYPE DSPINT_OOK
+#define MOD_TYPE DSPINT_OOK_FAST
 #define MOD_REP 32
 #define MOD_CHAN1 8.0
 #define MOD_CHAN2 99999999999.0
 #elif MOD_TEST==1
-#define MOD_TYPE DSPINT_OOK2
+#define MOD_TYPE DSPINT_OOK
 #define MOD_REP 64
 #define MOD_CHAN1 16.0
 #define MOD_CHAN2 99999999999.0
@@ -551,10 +570,20 @@ void write_sample(FILE *fp, uint16_t sample, uint16_t repeats)
 #define MOD_CHAN1 12.0
 #define MOD_CHAN2 20.0
 #elif MOD_TEST==3
-#define MOD_TYPE DSPINT_FSK2
+#define MOD_TYPE DSPINT_FSK_FAST
 #define MOD_REP 24
 #define MOD_CHAN1 8.0
 #define MOD_CHAN2 12.0
+#elif MOD_TEST==4
+#define MOD_TYPE DSPINT_OOK_SLOW
+#define MOD_REP 128
+#define MOD_CHAN1 16.0
+#define MOD_CHAN2 9999999999.0
+#elif MOD_TEST==5
+#define MOD_TYPE DSPINT_FSK_SLOW
+#define MOD_REP 120
+#define MOD_CHAN1 12.0
+#define MOD_CHAN2 20.0
 #endif
 
 void test_dsp_sample(void)
@@ -565,8 +594,8 @@ void test_dsp_sample(void)
     srand(2001);
     dsp_initialize(MOD_TYPE);
     uint32_t samples;
-    uint32_t repeats = 8;
-    const uint8_t bits[] = {    1,1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1,  /* 30 bits */
+    uint32_t repeats = 4;
+    const uint8_t bits[] = {    1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1,  /* 30 bits */
                                 1,1,1,1,1, 0,1,1,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,0,0,0, 1,1,1,1,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 0,1,0,0,1, 1,0,1,1,0, 1,0,0,0,0, 0,1,0,1,0,  /* 30 bits */
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
@@ -583,14 +612,14 @@ void test_dsp_sample(void)
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
     for (c=0;c<samples;c++)
     {
-        cbit = bits[(c+11)/MOD_REP];
+        cbit = bits[(c+7)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
         samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(128.0/16384.0);
         //if ((c>8000) && (c<10000)) samp = (rand())*(128.0/16384.0)+512;
         dsp_interrupt_sample(samp);
-        write_sample(fp,samp*32,repeats);
+        write_sample(fp,samp*16,repeats);
 
-        if (ds.mag_new_sample && 1)
+        if (ds.mag_new_sample && 0)
         {
             printf("%d %05d %05d %05d %05d %05d %05d %05d %05d %02d %02d xx\n",cbit,c,(int)samp,
                 ds.mag_value_8,ds.mag_value_12,ds.mag_value_16,ds.mag_value_20,ds.mag_value_24,
@@ -603,6 +632,6 @@ void test_dsp_sample(void)
 void main(void)
 {
   test_dsp_sample();
-  printf("size=%d\n",sizeof(ds)+sizeof(df)+sizeof(dsp_input_fifo)+sizeof(dsp_output_fifo));
+  printf("size=%d %d %d\n",sizeof(ds)+sizeof(df)+sizeof(dsp_input_fifo)+sizeof(dsp_output_fifo),df.fsk,df.buffer_size);
 }
 #endif /* DSPINT_DEBUG */

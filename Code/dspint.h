@@ -24,16 +24,28 @@ freely, subject to the following restrictions:
 #ifndef __DSPINT_H
 #define __DSPINT_H
 
+#define DSPINT_VERY_SLOW_MODES
+
+#ifdef DSPINT_VERY_SLOW_MODES
+#define DSPINT_MAX_SAMPLEBUFFER 128
+#define DSPINT_MAX_DEMODBUFFER 32
+#else
 #define DSPINT_MAX_SAMPLEBUFFER 64
 #define DSPINT_MAX_DEMODBUFFER 16
-#define DSPINT_PWR_THR_DEF 32
+#endif
 
+#define DSPINT_PWR_THR_DEF 32
 #define DSPINT_AVG_CT_PWR2 9
 
-#define DSPINT_OOK 0
-#define DSPINT_OOK2 1
+#define DSPINT_OOK_FAST 0
+#define DSPINT_OOK 1
 #define DSPINT_FSK 2
-#define DSPINT_FSK2 3
+#define DSPINT_FSK_FAST 3
+
+#ifdef DSPINT_VERY_SLOW_MODES
+#define DSPINT_OOK_SLOW 4
+#define DSPINT_FSK_SLOW 5
+#endif
 
 #define DSPINT_SYNC_CODEWORD 0b111110110100011001110100011110ul
                               /* 0x3ED19D1E */
