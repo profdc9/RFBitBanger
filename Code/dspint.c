@@ -337,10 +337,8 @@ void dsp_interrupt_sample(uint16_t sample)
 
     switch (df.mod_type)
     {
-        case DSPINT_OOK_FAST:  demod_sample = ds.mag_value_8 - ds.power_thr;
-                               ds.ct_sum += ds.mag_value_8;
-                               break;
         case DSPINT_OOK_SLOW:
+        case DSPINT_OOK_FAST:
         case DSPINT_OOK:       demod_sample = ds.mag_value_16 - ds.power_thr;
                                ds.ct_sum += ds.mag_value_16;
                                break;
@@ -360,13 +358,15 @@ void dsp_interrupt_sample(uint16_t sample)
     if ((++ds.ct_average) >= (1 << DSPINT_AVG_CT_PWR2))
     {
        uint16_t temp;
-       ds.ct_average = 0;
-       //temp = (ds.ct_sum >> (DSPINT_AVG_CT_PWR2));
-       temp = ((ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+2));
+       if (df.fsk)
+            temp = ((ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+1));
+       else
+            temp = (ds.ct_sum) >> (DSPINT_AVG_CT_PWR2);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
        ds.edge_thr = ds.power_thr;
        printf("power %d edge %d min %d ---------------------------------\n",ds.power_thr,ds.edge_thr,df.power_thr_min);
+       ds.ct_average = 0;
        ds.ct_sum = 0;
     }
 
@@ -557,7 +557,7 @@ void write_sample(FILE *fp, uint16_t sample, uint16_t repeats)
 #if MOD_TEST==0
 #define MOD_TYPE DSPINT_OOK_FAST
 #define MOD_REP 32
-#define MOD_CHAN1 8.0
+#define MOD_CHAN1 16.0
 #define MOD_CHAN2 99999999999.0
 #elif MOD_TEST==1
 #define MOD_TYPE DSPINT_OOK
@@ -591,7 +591,7 @@ void test_dsp_sample(void)
     uint8_t cbit;
     uint32_t c;
     float freq, samp;
-    srand(2001);
+    srand(4001);
     dsp_initialize(MOD_TYPE);
     uint32_t samples;
     uint32_t repeats = 4;
@@ -612,9 +612,9 @@ void test_dsp_sample(void)
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
     for (c=0;c<samples;c++)
     {
-        cbit = bits[(c+7)/MOD_REP];
+        cbit = bits[(c+5)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + (rand())*(128.0/16384.0);
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*64.0)+512.0) + (rand())*(128.0/16384.0);
         //if ((c>8000) && (c<10000)) samp = (rand())*(128.0/16384.0)+512;
         dsp_interrupt_sample(samp);
         write_sample(fp,samp*16,repeats);

@@ -139,6 +139,112 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
 }
 
 #ifdef GOLAY_DEBUG
+
+uint8_t golay_hamming_weight_24(uint32_t n)
+{
+  uint8_t s = 0, v;
+  v = (n >> 16) & 0xFF;
+  while (v)
+  {
+      v = v & (v - 1);
+      s++;
+  }
+  v = (n >> 8) & 0xFF;
+  while (v)
+  {
+      v = v & (v - 1);
+      s++;
+  }
+  v = n & 0xFF;
+  while (v)
+  {
+      v = v & (v - 1);
+      s++;
+  }
+  return s;
+}
+
+uint8_t count_reversals(uint32_t n)
+{
+  uint8_t i,j,k,rev,mrev=0;
+  for (i=0;i<3;i++)
+  {
+    rev = 0;
+    for (j=i;j<23;j+=4)
+    {
+       if (((n >> j) & 0x01) != ((n >> (j+1)) & 0x01))
+            rev++;
+    }
+    if (rev>mrev) mrev=rev;
+  }
+  return mrev;
+}
+
+void generate_random_permutation(uint8_t num_bits, uint8_t bitlist[])
+{
+    uint8_t i=0,j;
+    while (i<num_bits)
+    {
+        uint8_t p = rand() % num_bits;
+        for (j=0;j<i;j++)
+            if (bitlist[j] == p) continue;
+        bitlist[i++] = p;
+    }
+}
+
+uint32_t golay_unpermute_bits(uint32_t bits, uint8_t num_bits, uint8_t bitlist[])
+{
+   uint8_t i;
+   uint32_t pb = 0;
+   for (i=0;i<num_bits++;i++)
+        if (bits & (1 << bitlist[i]))
+            pb |= (1 << i);
+   return pb;
+}
+
+uint32_t golay_permute_bits(uint32_t bits, uint8_t num_bits, uint8_t bitlist[])
+{
+   uint8_t i;
+   uint32_t pb = 0;
+   for (i=0;i<num_bits++;i++)
+        if (bits & (1 << i))
+            pb |= (1 << bitlist[i]);
+   return pb;
+}
+
+void test_all_codes(void)
+{
+    uint32_t xorval;
+    uint16_t c = 0;
+    uint32_t tmaxminrev = 0, minwt24 = 3000;
+    uint8_t permutation[32],i;
+
+    for (xorval=0x1000000;xorval>0;)
+    {
+        --xorval;
+        uint8_t wt24 = golay_hamming_weight_24(xorval);
+        //generate_random_permutation(24,permutation);
+        uint16_t min_rev = 100, max_rev = 0;
+        for (c=0;c<0x1000;c++)
+        {
+            uint32_t m = golay_encode(c) ^ xorval;
+            //m = golay_permute_bits(m,24,permutation);
+            uint8_t revs = count_reversals(m);
+            if (min_rev>revs) min_rev = revs;
+            if (max_rev<revs) max_rev = revs;
+        }
+        if ((tmaxminrev <= min_rev) && (wt24 <= minwt24))
+        {
+            tmaxminrev = min_rev;
+            minwt24 = wt24;
+            printf("xorval=%06X wt=%02d min_rev=%d max_rev=%d\n",xorval,wt24,min_rev,max_rev);
+            //printf("permutation: ");
+            //for (i=0;i<24;i++)
+            //    printf("%d%c",permutation[i], i == 23 ? '\n' : ',');
+        }
+    }
+}
+
 void print_binary(uint32_t n, uint8_t d)
 {
   uint8_t i;
@@ -197,8 +303,9 @@ void test_decode(void)
 
 void main(void)
 {
-    srand(111);
-    test_decode();
+    //srand(111);
+    //test_decode();
+    test_all_codes();
 }
 #endif
 
