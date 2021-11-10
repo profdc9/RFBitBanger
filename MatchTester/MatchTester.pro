@@ -1,4 +1,4 @@
-update=11/10/2021 7:42:12 AM
+update=11/9/2021 7:36:39 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -23,8 +23,6 @@ ModuleOutlineThickness=0.150000000000
 [cvpcb]
 version=1
 NetIExt=net
-[general]
-version=1
 [eeschema]
 version=1
 LibDir=
@@ -61,10 +59,8 @@ LibName29=opto
 LibName30=atmel
 LibName31=contrib
 LibName32=valves
-LibName33=si5351a
-LibName34=triplewindingtransformer
-LibName35=relay
-LibName36=SamplingTransformer
+[general]
+version=1
 [schematic_editor]
 version=1
 PageLayoutDescrFile=

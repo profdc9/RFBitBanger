@@ -1,6 +1,8 @@
 *.o
 *.a
 *.zip
+*.exe
+*.wav
 Ignore/
 
 # Temporary files

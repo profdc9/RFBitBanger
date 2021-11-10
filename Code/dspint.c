@@ -393,6 +393,7 @@ void dsp_interrupt_sample(uint16_t sample)
                 ds.max_bit_edge_val = ds.bit_edge_val;  /* if so, reset the edge center counter */
                 ds.next_edge_ctr = 1;
                 ds.cur_bit = demod_sample;              /* save the bit occurring at the edge */
+                /* printf("threshold trip\n"); */
             } else
                 ds.next_edge_ctr++;                     /* otherwise count that we have passed the edge peak */
         } else
@@ -612,7 +613,7 @@ void test_dsp_sample(void)
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
     for (c=0;c<samples;c++)
     {
-        cbit = bits[(c+5)/MOD_REP];
+        cbit = bits[(c+11)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
         samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*64.0)+512.0) + (rand())*(128.0/16384.0);
         //if ((c>8000) && (c<10000)) samp = (rand())*(128.0/16384.0)+512;

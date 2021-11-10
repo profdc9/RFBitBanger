@@ -303,9 +303,9 @@ void test_decode(void)
 
 void main(void)
 {
-    //srand(111);
-    //test_decode();
-    test_all_codes();
+    srand(111);
+    test_decode();
+    //test_all_codes();
 }
 #endif
 
