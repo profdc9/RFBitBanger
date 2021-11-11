@@ -358,10 +358,10 @@ void dsp_interrupt_sample(uint16_t sample)
     if ((++ds.ct_average) >= (1 << DSPINT_AVG_CT_PWR2))
     {
        uint16_t temp;
-       if (df.fsk)
+       /* if (df.fsk)
             temp = ((ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+1));
-       else
-            temp = (ds.ct_sum) >> (DSPINT_AVG_CT_PWR2);
+       else */
+            temp = (ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+1);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
        ds.edge_thr = ds.power_thr;
@@ -393,7 +393,6 @@ void dsp_interrupt_sample(uint16_t sample)
                 ds.max_bit_edge_val = ds.bit_edge_val;  /* if so, reset the edge center counter */
                 ds.next_edge_ctr = 1;
                 ds.cur_bit = demod_sample;              /* save the bit occurring at the edge */
-                /* printf("threshold trip\n"); */
             } else
                 ds.next_edge_ctr++;                     /* otherwise count that we have passed the edge peak */
         } else
@@ -553,6 +552,13 @@ void write_sample(FILE *fp, uint16_t sample, uint16_t repeats)
     fwrite(&sample,sizeof(sample),1,fp);
 }
 
+float gaussian_deviate(float stddev)
+{
+    float x = (rand()+1) / 32768.0f;
+    float y = (rand()+1) / 32768.0f;
+    return stddev*sqrt(-2*log(x))*cos(2.0*M_PI*y);
+}
+
 #define MOD_TEST 2
 
 #if MOD_TEST==0
@@ -592,7 +598,7 @@ void test_dsp_sample(void)
     uint8_t cbit;
     uint32_t c;
     float freq, samp;
-    srand(4001);
+    srand(2001);
     dsp_initialize(MOD_TYPE);
     uint32_t samples;
     uint32_t repeats = 4;
@@ -608,15 +614,15 @@ void test_dsp_sample(void)
                                 0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
-                                1,1 };
+                                1,0,1,1,1, 1,0,1,1,1 };
     samples = sizeof(bits)*MOD_REP;
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
     for (c=0;c<samples;c++)
     {
-        cbit = bits[(c+11)/MOD_REP];
+        cbit = bits[(c+7)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*64.0)+512.0) + (rand())*(128.0/16384.0);
-        //if ((c>8000) && (c<10000)) samp = (rand())*(128.0/16384.0)+512;
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + gaussian_deviate(96.0);
+ //       if ((c>8000) && (c<14000)) samp = gaussian_deviate(48.0)+512;
         dsp_interrupt_sample(samp);
         write_sample(fp,samp*16,repeats);
 
