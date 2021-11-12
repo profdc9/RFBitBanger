@@ -1,0 +1,19 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#
+# RCAJack
+#
+DEF RCAJack J 0 40 Y Y 1 F N
+F0 "J" 250 50 60 H V C CNN
+F1 "RCAJack" 0 50 60 H V C CNN
+F2 "" 0 0 60 H I C CNN
+F3 "" 0 0 60 H I C CNN
+DRAW
+C 50 -200 71 0 1 0 N
+C 50 -200 180 0 1 0 N
+X SHIELD 1 300 -350 200 L 50 50 1 1 I
+X PIN 2 300 -200 200 L 50 50 1 1 I
+ENDDRAW
+ENDDEF
+#
+#End Library

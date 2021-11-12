@@ -138,8 +138,11 @@ void dsp_reset_state(void)
    memset(&ds,'\000',sizeof(dsp_state));
    dsp_reset_codeword();
    ds.demod_edge_window =  df.demod_edge_window;
-   ds.power_thr = df.power_thr_min * 2;
-   ds.edge_thr = ds.power_thr;
+   ds.power_thr = df.power_thr_min << 1;
+   if (df.fsk)
+       ds.edge_thr = ds.power_thr;
+   else
+       ds.edge_thr = ds.power_thr << 1;
 }
 
 /* initialize the buffer including the signs to be subtracted
@@ -358,13 +361,14 @@ void dsp_interrupt_sample(uint16_t sample)
     if ((++ds.ct_average) >= (1 << DSPINT_AVG_CT_PWR2))
     {
        uint16_t temp;
-       /* if (df.fsk)
-            temp = ((ds.ct_sum + ds.ct_sum + ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+1));
-       else */
-            temp = (ds.ct_sum) >> (DSPINT_AVG_CT_PWR2+1);
+       temp = (ds.ct_sum) >> (DSPINT_AVG_CT_PWR2);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
-       ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
-       ds.edge_thr = ds.power_thr;
+       ds.power_thr = temp;
+      // ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
+       if (df.fsk)
+            ds.edge_thr = temp;
+       else
+            ds.edge_thr = temp << 1;
        printf("power %d edge %d min %d ---------------------------------\n",ds.power_thr,ds.edge_thr,df.power_thr_min);
        ds.ct_average = 0;
        ds.ct_sum = 0;
@@ -465,7 +469,7 @@ void dsp_interrupt_sample(uint16_t sample)
     ds.current_bit_no++;
     if ((ds.current_bit_no >= 30) && (ds.resync))  /* we have a complete frame */
     {
-       if ((ds.bitflips_lead > ds.bitflips_in_phase) && (ds.bitflips_lead >= 6))
+       if ((ds.bitflips_lead > ds.bitflips_in_phase) && (ds.bitflips_lead >= 5))
         /* we are at least one bit flip ahead, we probably registered a spurious bit flip */
        {
          /* back up and get one more bit.*/
@@ -614,6 +618,7 @@ void test_dsp_sample(void)
                                 0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
+                                1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,1,1,1, 1,0,1,1,1 };
     samples = sizeof(bits)*MOD_REP;
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
@@ -621,7 +626,7 @@ void test_dsp_sample(void)
     {
         cbit = bits[(c+7)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + gaussian_deviate(96.0);
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + gaussian_deviate(128.0);
  //       if ((c>8000) && (c<14000)) samp = gaussian_deviate(48.0)+512;
         dsp_interrupt_sample(samp);
         write_sample(fp,samp*16,repeats);
