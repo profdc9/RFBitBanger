@@ -149,7 +149,6 @@ void dsp_reset_state(void)
    from the end of the buffer */
 void dsp_initialize(uint8_t mod_type)
 {
-    uint8_t i;
     df.mod_type = mod_type;
     switch (df.mod_type)
     {
@@ -187,6 +186,19 @@ void dsp_initialize(uint8_t mod_type)
     df.dly_24 = (df.buffer_size / 24) * 24;
     df.demod_samples_per_bit = df.buffer_size / 4;
     df.power_thr_min = ((uint16_t)df.buffer_size) * DSPINT_PWR_THR_DEF * (df.fsk ? 2 : 1);
+    dsp_reset_state();
+}
+
+/* initialize DSP for CW mode */
+void dsp_initialize_cw(void)
+{
+    df.mod_type = DSPINT_CW;
+    df.buffer_size = 24;
+    df.dly_8 = 16;
+    df.dly_12 = 24;
+    df.dly_16 = 16;
+    df.dly_20 = 20;
+    df.dly_24 = 24;
     dsp_reset_state();
 }
 
@@ -363,12 +375,11 @@ void dsp_interrupt_sample(uint16_t sample)
        uint16_t temp;
        temp = (ds.ct_sum) >> (DSPINT_AVG_CT_PWR2);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
-       ds.power_thr = temp;
-      // ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
+       ds.power_thr = temp > df.power_thr_min ? temp : df.power_thr_min;
        if (df.fsk)
-            ds.edge_thr = temp;
+            ds.edge_thr = ds.power_thr;
        else
-            ds.edge_thr = temp << 1;
+            ds.edge_thr = ds.power_thr << 1;
        printf("power %d edge %d min %d ---------------------------------\n",ds.power_thr,ds.edge_thr,df.power_thr_min);
        ds.ct_average = 0;
        ds.ct_sum = 0;
@@ -507,6 +518,8 @@ void dsp_interrupt_sample(uint16_t sample)
     }
 }
 
+#include "cwmod.c"
+
 #ifdef DSPINT_DEBUG
 
 typedef struct _wavefile_header
@@ -563,7 +576,7 @@ float gaussian_deviate(float stddev)
     return stddev*sqrt(-2*log(x))*cos(2.0*M_PI*y);
 }
 
-#define MOD_TEST 2
+#define MOD_TEST 3
 
 #if MOD_TEST==0
 #define MOD_TYPE DSPINT_OOK_FAST
@@ -618,7 +631,8 @@ void test_dsp_sample(void)
                                 0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
-                                1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0,  /* 30 bits */
+                                1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
+                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,1,1,1, 1,0,1,1,1 };
     samples = sizeof(bits)*MOD_REP;
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
@@ -626,8 +640,8 @@ void test_dsp_sample(void)
     {
         cbit = bits[(c+7)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + gaussian_deviate(128.0);
- //       if ((c>8000) && (c<14000)) samp = gaussian_deviate(48.0)+512;
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*64.0)+512.0) + gaussian_deviate(48.0);
+      //  if ((c>4000) && (c<6000)) samp = gaussian_deviate(48.0)+512;
         dsp_interrupt_sample(samp);
         write_sample(fp,samp*16,repeats);
 
@@ -643,7 +657,8 @@ void test_dsp_sample(void)
 
 void main(void)
 {
-  test_dsp_sample();
-  printf("size=%d %d %d\n",sizeof(ds)+sizeof(df)+sizeof(dsp_input_fifo)+sizeof(dsp_output_fifo),df.fsk,df.buffer_size);
+  //test_dsp_sample();
+  test_cwmod_decode();
+  //printf("size=%d %d %d\n",sizeof(ds)+sizeof(df)+sizeof(dsp_input_fifo)+sizeof(dsp_output_fifo),df.fsk,df.buffer_size);
 }
 #endif /* DSPINT_DEBUG */

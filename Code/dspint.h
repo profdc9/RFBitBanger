@@ -41,10 +41,11 @@ freely, subject to the following restrictions:
 #define DSPINT_OOK 1
 #define DSPINT_FSK 2
 #define DSPINT_FSK_FAST 3
+#define DSPINT_CW 4
 
 #ifdef DSPINT_VERY_SLOW_MODES
-#define DSPINT_OOK_SLOW 4
-#define DSPINT_FSK_SLOW 5
+#define DSPINT_OOK_SLOW 5
+#define DSPINT_FSK_SLOW 6
 #endif
 
 #define DSPINT_SYNC_CODEWORD 0b111110110100011001110100011110ul
@@ -156,7 +157,8 @@ extern volatile dspint_frame_fifo dsp_input_fifo;
 extern volatile dspint_frame_fifo dsp_output_fifo;
 
 void dsp_new_sample(uint16_t sample);
-void dsp_initialize(uint8_t sample_buffer_size);
+void dsp_initialize(uint8_t mod_type);
+void dsp_initialize_cw(void);
 void dsp_reset_state(void);
 
 void dsp_initialize_frame_fifo(volatile dspint_frame_fifo *dff);
