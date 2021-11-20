@@ -26,11 +26,13 @@ freely, subject to the following restrictions:
 
 #define CWMOD_AVG_CT_PWR2 10
 #define CWMOD_THRESHOLD_MIN 1000
-#define CWMOD_STICKY_INTERVAL 3
 #define CWMOD_TIMING_LENGTHS 32
 #define CWMOD_TIMING_BINS 16
-#define CWMOD_PROCESS_DELAY 20000
+#define CWMOD_PROCESS_DELAY 2000
 #define CWMOD_FIFO_DECODE_THRESHOLD 4
+
+#define CWMOD_SMOOTH_SHIFT_LENGTH 4
+#define CWMOD_SMOOTH_MAX_LENGTH (1 << CWMOD_SMOOTH_SHIFT_LENGTH)
 
 typedef struct _cwmod_symbol
 {
@@ -39,13 +41,20 @@ typedef struct _cwmod_symbol
     uint8_t   symbol;     /* ASCII symbol */
 } cwmod_symbol;
 
-typedef struct _cwmod_state_fixed
-{
-  uint8_t   temp;
-} cwmod_state_fixed;
-
 typedef struct _cwmod_state
 {
+  uint8_t   protocol;
+
+  uint8_t   last_sample_ct;
+  uint8_t   sticky_interval_length;
+
+  uint8_t   ct_smooth;
+  uint8_t   ct_smooth_ind;
+  uint8_t   ct_smooth_ind_max;
+  uint32_t  ct_smooth_sum;
+  uint16_t  ct_smooth_mag[CWMOD_SMOOTH_MAX_LENGTH];
+
+  uint8_t   spaces_from_mark_timing;
   uint8_t   key_state;
   uint16_t  state_ctr;
   uint8_t   sticky_interval;
@@ -74,6 +83,5 @@ typedef struct _cwmod_state
 } cwmod_state;
 
 extern cwmod_state       cs;
-extern cwmod_state_fixed cf;
 
 #endif  /* __CWMOD_H */

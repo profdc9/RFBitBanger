@@ -33,10 +33,6 @@ freely, subject to the following restrictions:
 #endif
 
 #include "dspint.h"
-#include "cwmod.h"
-
-cwmod_state       cs;
-cwmod_state_fixed cf;
 
 const uint8_t cwmod_bit_mask[8] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
 
@@ -49,14 +45,14 @@ const uint16_t cwmod_timing_histogram_bins[CWMOD_TIMING_BINS] =
 /* zero dit, 1 dah */
 const cwmod_symbol morse_pattern[] =
 {
-//    { 0b010101,   6, '.' },
-//    { 0b110011,   6, ',' },
-//    { 0b111000,   6, ':' },
-//    { 0b001100,   6, '?' },
-//    { 0b011110,   6, '\'' },
-//    { 0b100001,   6, '-' },
-//    { 0b101101,   6, ']' },
-//    { 0b010010,   6, '\"' },
+    { 0b010101,   6, '.' },
+    { 0b110011,   6, ',' },
+    { 0b111000,   6, ':' },
+    { 0b001100,   6, '?' },
+    { 0b011110,   6, '\'' },
+    { 0b100001,   6, '-' },
+    { 0b101101,   6, ']' },
+    { 0b010010,   6, '\"' },
     { 0b01111,    5, '1' },
     { 0b00111,    5, '2' },
     { 0b00011,    5, '3' },
@@ -67,11 +63,11 @@ const cwmod_symbol morse_pattern[] =
     { 0b11100,    5, '8' },
     { 0b11110,    5, '9' },
     { 0b11111,    5, '0' },
-//    { 0b10010,    5, '/' },
-//    { 0b10110,    5, '[' },
-//    { 0b10001,    5, '=' },
-//    { 0b00010,    5, '!' },
-//    { 0b01010,    5, '+' },
+    { 0b10010,    5, '/' },
+    { 0b10110,    5, '[' },
+    { 0b10001,    5, '=' },
+    { 0b00010,    5, '!' },
+    { 0b01010,    5, '+' },
     { 0b1000,     4, 'B' },
     { 0b1010,     4, 'C' },
     { 0b0010,     4, 'F' },
@@ -103,17 +99,17 @@ const cwmod_symbol morse_pattern[] =
 /* insert a timing the fifo.  this is intended to be interrupt safe */
 uint8_t cw_insert_into_timing_fifo(uint16_t tim)
 {
-    uint8_t next = cs.timing_head >= (CWMOD_TIMING_LENGTHS - 1) ? 0 : (cs.timing_head+1);
-    if (next == cs.timing_tail) return 0;
-    cs.timing_lengths[next] = tim;
-    cs.timing_head = next;
+    uint8_t next = ps.cs.timing_head >= (CWMOD_TIMING_LENGTHS - 1) ? 0 : (ps.cs.timing_head+1);
+    if (next == ps.cs.timing_tail) return 0;
+    ps.cs.timing_lengths[next] = tim;
+    ps.cs.timing_head = next;
     return 1;
 }
 
 uint8_t cw_fifo_available(void)
 {
-    uint8_t head = cs.timing_head;
-    return cs.timing_tail > head ? cs.timing_tail - head : cs.timing_tail - head + CWMOD_TIMING_LENGTHS;
+    uint8_t head = ps.cs.timing_head;
+    return ps.cs.timing_tail > head ? ps.cs.timing_tail - head : ps.cs.timing_tail - head + CWMOD_TIMING_LENGTHS;
 }
 
 /* remove a timing from the fifo.  this is intended to be interrupt safe */
@@ -121,10 +117,10 @@ uint16_t cw_remove_from_timing_fifo(void)
 {
     uint16_t tim;
     uint8_t next;
-    if (cs.timing_tail == cs.timing_head) return 0;
-    next = cs.timing_tail >= (CWMOD_TIMING_LENGTHS - 1) ? 0 : (cs.timing_tail+1);
-    tim = cs.timing_lengths[next];
-    cs.timing_tail = next;
+    if (ps.cs.timing_tail == ps.cs.timing_head) return 0;
+    next = ps.cs.timing_tail >= (CWMOD_TIMING_LENGTHS - 1) ? 0 : (ps.cs.timing_tail+1);
+    tim = ps.cs.timing_lengths[next];
+    ps.cs.timing_tail = next;
     return tim;
 }
 
@@ -133,86 +129,104 @@ uint16_t cw_peek_from_timing_fifo(void)
 {
     uint16_t tim;
     uint8_t next;
-    if (cs.timing_peek_tail == cs.timing_head) return 0;
-    next = cs.timing_peek_tail >= (CWMOD_TIMING_LENGTHS - 1) ? 0 : (cs.timing_peek_tail+1);
-    tim = cs.timing_lengths[next];
-    cs.timing_peek_tail = next;
+    if (ps.cs.timing_peek_tail == ps.cs.timing_head) return 0;
+    next = ps.cs.timing_peek_tail >= (CWMOD_TIMING_LENGTHS - 1) ? 0 : (ps.cs.timing_peek_tail+1);
+    tim = ps.cs.timing_lengths[next];
+    ps.cs.timing_peek_tail = next;
     return tim;
 }
 
-void cw_initialize(void)
+void cw_initialize(uint8_t wide, uint8_t spaces_from_mark_timing,
+                   uint8_t smooth, uint8_t sticky_interval_length)
 {
-   dsp_initialize_cw();
-   ds.slow_samp_num = 4;
-   memset(&cs,'\000',sizeof(cs));
-   memset(&cf,'\000',sizeof(cf));
+   dsp_initialize_cw(wide);
+   memset(&ps.cs,'\000',sizeof(cs));
 
-   cs.keydown_threshold = CWMOD_THRESHOLD_MIN;
-   cs.keyup_threshold = CWMOD_THRESHOLD_MIN >> 1;
+   ps.cs.protocol = PROTOCOL_CW;
+   ps.cs.keydown_threshold = CWMOD_THRESHOLD_MIN;
+   ps.cs.keyup_threshold = CWMOD_THRESHOLD_MIN >> 1;
+   ps.cs.spaces_from_mark_timing = spaces_from_mark_timing;
+   smooth = smooth > CWMOD_SMOOTH_SHIFT_LENGTH ? CWMOD_SMOOTH_SHIFT_LENGTH : smooth;
+   ps.cs.ct_smooth = smooth;
+   ps.cs.ct_smooth_ind_max = 1 << smooth;
+   ps.cs.sticky_interval_length = sticky_interval_length;
 }
 
 void cw_reset_timing(uint16_t tim)
 {
    tim = (tim < CWMOD_THRESHOLD_MIN) ? CWMOD_THRESHOLD_MIN : tim;
-   cs.keydown_threshold = tim;
-   cs.keyup_threshold = tim >> 1;
-   cs.ct_average = 0;
-   cs.ct_sum = 0;
+   ps.cs.keydown_threshold = tim;
+   ps.cs.keyup_threshold = tim >> 1;
+   ps.cs.ct_average = 0;
+   ps.cs.ct_sum = 0;
 }
 
-void cw_interrupt_sample(uint16_t sample)
+void cw_new_sample(void)
 {
     uint16_t mag_sample, c1, ctr;
     int16_t edge_val;
-    /* update the filter channels I & Q */
-    dsp_new_sample(sample);
 
     /* only proceed if we have new magnitude samples */
-    if (!ds.mag_new_sample)
+    ctr = ds.sample_ct;
+    if (ctr == ps.cs.last_sample_ct)
         return;
+    ps.cs.last_sample_ct = ctr;
 
-    cs.total_ticks++;  /* increment the total ticks counter */
+    ps.cs.total_ticks++;  /* increment the total ticks counter */
 
     mag_sample = ds.mag_value_12;
-
-    cs.ct_sum += mag_sample;
-    if (cs.keydown_threshold <= CWMOD_THRESHOLD_MIN)
+    ps.cs.ct_sum += mag_sample;
+    if (ps.cs.ct_smooth)
     {
-       if ((++cs.ct_average) >= (1 << (CWMOD_AVG_CT_PWR2-2)))
-          cw_reset_timing( (cs.ct_sum) >> (CWMOD_AVG_CT_PWR2-1) );
-    } else
-    {
-       if ((++cs.ct_average) >= (1 << (CWMOD_AVG_CT_PWR2)))
-          cw_reset_timing( (cs.ct_sum) >> (CWMOD_AVG_CT_PWR2+1) );
+      ps.cs.ct_smooth_sum += mag_sample - ps.cs.ct_smooth_mag[ps.cs.ct_smooth_ind];
+      ps.cs.ct_smooth_mag[ps.cs.ct_smooth_ind] = mag_sample;
+      if ((++ps.cs.ct_smooth_ind) >= ps.cs.ct_smooth_ind_max)
+        ps.cs.ct_smooth_ind = 0;
+      switch (ps.cs.ct_smooth)
+      {
+          case 1: mag_sample = ps.cs.ct_smooth_sum >> 1; break;
+          case 2: mag_sample = ps.cs.ct_smooth_sum >> 2; break;
+          case 3: mag_sample = ps.cs.ct_smooth_sum >> 3; break;
+          case 4: mag_sample = ps.cs.ct_smooth_sum >> 4; break;
+      }
     }
-    cs.state_ctr++;
-    if (cs.key_state)
+    if (ps.cs.keydown_threshold <= CWMOD_THRESHOLD_MIN)
     {
-       if (mag_sample < cs.keyup_threshold)
-       {
-          if ((++cs.sticky_interval) >= CWMOD_STICKY_INTERVAL)
-          {
-            cs.key_state = 0;
-            //printf("key up %d %d\n",cs.state_ctr, mag_sample);
-            cw_insert_into_timing_fifo(cs.state_ctr);
-            cs.state_ctr = 0;
-            cs.sticky_interval = 0;
-          }
-       } else cs.sticky_interval = 0;
+       if ((++ps.cs.ct_average) >= (1 << (CWMOD_AVG_CT_PWR2-2)))
+          cw_reset_timing( (ps.cs.ct_sum) >> (CWMOD_AVG_CT_PWR2-1) );
     } else
     {
-       if (mag_sample > cs.keydown_threshold)
+       if ((++ps.cs.ct_average) >= (1 << (CWMOD_AVG_CT_PWR2)))
+          cw_reset_timing( (ps.cs.ct_sum) >> (CWMOD_AVG_CT_PWR2+1) );
+    }
+    ps.cs.state_ctr++;
+    if (ps.cs.key_state)
+    {
+       if (mag_sample < ps.cs.keyup_threshold)
        {
-          if ((++cs.sticky_interval) >= CWMOD_STICKY_INTERVAL)
+          if ((++ps.cs.sticky_interval) >= ps.cs.sticky_interval_length)
           {
-            cs.key_state = 1;
-            //printf("key down %d %d\n",cs.state_ctr, mag_sample);
-            cw_insert_into_timing_fifo(((uint16_t)cs.state_ctr) | 0x8000);
-            cs.state_ctr = 0;
-            cs.sticky_interval = 0;
-            cs.keyup_threshold = mag_sample >> 1;
+            ps.cs.key_state = 0;
+            //printf("key up %d %d\n",ps.cs.state_ctr, mag_sample);
+            cw_insert_into_timing_fifo(ps.cs.state_ctr);
+            ps.cs.state_ctr = 0;
+            ps.cs.sticky_interval = 0;
           }
-       } else cs.sticky_interval = 0;
+       } else ps.cs.sticky_interval = 0;
+    } else
+    {
+       if (mag_sample > ps.cs.keydown_threshold)
+       {
+          if ((++ps.cs.sticky_interval) >= ps.cs.sticky_interval_length)
+          {
+            ps.cs.key_state = 1;
+            //printf("key down %d %d\n",ps.cs.state_ctr, mag_sample);
+            cw_insert_into_timing_fifo(((uint16_t)ps.cs.state_ctr) | 0x8000);
+            ps.cs.state_ctr = 0;
+            ps.cs.sticky_interval = 0;
+            ps.cs.keyup_threshold = mag_sample >> 1;
+          }
+       } else ps.cs.sticky_interval = 0;
     }
 }
 
@@ -251,16 +265,16 @@ void cw_find_two_greatest(uint8_t array[], uint8_t length, uint8_t sep,
 
 void cw_decode_process(void)
 {
-    uint8_t is_mark, bin, large_bin, decode_now;
+    uint8_t is_mark, bin, decode_now;
     uint16_t dly, tim = cw_peek_from_timing_fifo();
     is_mark = (tim & 0x8000) == 0;
     tim = tim & 0x7FFF;
 
-    dly = cs.total_ticks - cs.last_tick;
+    dly = ps.cs.total_ticks - ps.cs.last_tick;
     /* assume a really short timing is a glitch */
     decode_now = (dly >= CWMOD_PROCESS_DELAY) || (cw_fifo_available() < CWMOD_FIFO_DECODE_THRESHOLD);
     if ((!decode_now) && (tim < 10)) return;
-    cs.last_tick = cs.total_ticks;
+    ps.cs.last_tick = ps.cs.total_ticks;
 
     if (tim > 0)
     {
@@ -268,46 +282,47 @@ void cw_decode_process(void)
             if (tim < cwmod_timing_histogram_bins[bin]) break;
         if (bin < CWMOD_TIMING_BINS)
         {
-            if (is_mark) cs.histogram_marks[bin]++;
-                else cs.histogram_spaces[bin]++;
+            if (is_mark) ps.cs.histogram_marks[bin]++;
+                else ps.cs.histogram_spaces[bin]++;
         }
     }
 
     if (!decode_now) return;
 
 #if 0
-    printf("mark bin:  ");
+    printf("\nmark bin:  ");
     for (bin=0; bin<(CWMOD_TIMING_BINS); bin++)
-        printf("%02d,",cs.histogram_marks[bin]);
-    printf("\n");
-
-
-    printf("space bin: ");
+        printf("%02d,",ps.cs.histogram_marks[bin]);
+    printf("\nspace bin: ");
     for (bin=0; bin<(CWMOD_TIMING_BINS); bin++)
-        printf("%02d,",cs.histogram_spaces[bin]);
+        printf("%02d,",ps.cs.histogram_spaces[bin]);
     printf("\n");
 #endif
 
 
     uint8_t g1, g2;
 
-    cw_find_two_greatest(cs.histogram_marks, sizeof(cs.histogram_marks)/sizeof(cs.histogram_marks[0]),
+    cw_find_two_greatest(ps.cs.histogram_marks, sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]),
                         2, &g1, &g2);
 
-    // printf(" lm: %d/%d %d/%d ",g1,cs.histogram_marks[g1],g2,cs.histogram_marks[g2]);
+    //printf(" lm: %d/%d ",g1,g2);
 
-    cs.dit_dah_threshold = cwmod_timing_histogram_bins[(g1+g2)/2];
+    ps.cs.dit_dah_threshold = cwmod_timing_histogram_bins[(g1+g2)/2];
 
-    cw_find_two_greatest(cs.histogram_spaces, sizeof(cs.histogram_spaces)/sizeof(cs.histogram_spaces[0]),
+    if (!ps.cs.spaces_from_mark_timing)
+    {
+        cw_find_two_greatest(ps.cs.histogram_spaces, sizeof(ps.cs.histogram_spaces)/sizeof(ps.cs.histogram_spaces[0]),
                          2, &g1, &g2);
+    }
+    //printf(" %d/%d\n",g1,g2);
 
-    cs.intrainterspace_threshold = cwmod_timing_histogram_bins[(g1+g2)/2];
-    cs.interspaceword_threshold = 3*cs.intrainterspace_threshold;
+    ps.cs.intrainterspace_threshold = cwmod_timing_histogram_bins[(g1+g2)/2];
+    ps.cs.interspaceword_threshold = 3*ps.cs.intrainterspace_threshold;
 
 
-    // printf("ls: %d/%d %d/%d\n",g1,cs.histogram_spaces[g1],g2,cs.histogram_spaces[g2]);
+    // printf("ls: %d/%d %d/%d\n",g1,ps.cs.histogram_spaces[g1],g2,ps.cs.histogram_spaces[g2]);
 
-    //  printf("x: %d %d %d\n",cs.dit_dah_threshold,cs.intrainterspace_threshold,cs.interspaceword_threshold);
+    //  printf("x: %d %d %d\n",ps.cs.dit_dah_threshold,ps.cs.intrainterspace_threshold,ps.cs.interspaceword_threshold);
 
     for (;;)
     {
@@ -317,22 +332,22 @@ void cw_decode_process(void)
         tim = tim & 0x7FFF;
         if (is_mark)
         {
-            cs.num_ditdahs++;
-            cs.cur_ditdahs <<= 1;
-            if (tim > cs.dit_dah_threshold)
-                cs.cur_ditdahs |= 1;
-      //      printf("%c",tim > cs.dit_dah_threshold ? '-' : '.');
+            ps.cs.num_ditdahs++;
+            ps.cs.cur_ditdahs <<= 1;
+            if (tim > ps.cs.dit_dah_threshold)
+                ps.cs.cur_ditdahs |= 1;
+      //      printf("%c",tim > ps.cs.dit_dah_threshold ? '-' : '.');
         } else
         {
-            if (tim > cs.intrainterspace_threshold)
+            if (tim > ps.cs.intrainterspace_threshold)
             {
                const cwmod_symbol *cws = &morse_pattern[0];
                while (cws < (&morse_pattern[(sizeof(morse_pattern)/sizeof(cwmod_symbol))]))
                {
-                   int8_t diff = cs.num_ditdahs - cws->num;
+                   int8_t diff = ps.cs.num_ditdahs - cws->num;
                    if (diff >= 0)
                    {
-                       uint8_t test = cs.cur_ditdahs >> diff;
+                       uint8_t test = ps.cs.cur_ditdahs >> diff;
                        if (cws->cwbits == test)
                        {
                             printf("%c",cws->symbol);
@@ -341,35 +356,41 @@ void cw_decode_process(void)
                    }
                    cws++;
                }
-               cs.num_ditdahs = 0;
-               cs.cur_ditdahs = 0;
-               if (tim > cs.interspaceword_threshold)
+               ps.cs.num_ditdahs = 0;
+               ps.cs.cur_ditdahs = 0;
+               if (tim > ps.cs.interspaceword_threshold)
                    printf(" ");
             }
         }
     }
     // printf("!!!\n");
-    for (g1=0;g1<(sizeof(cs.histogram_marks)/sizeof(cs.histogram_marks[0]));g1++)
-        cs.histogram_marks[g1] >>= 1;
-    for (g1=0;g1<(sizeof(cs.histogram_spaces)/sizeof(cs.histogram_spaces[0]));g1++)
-        cs.histogram_spaces[g1] >>= 1;
+
+
+    for (g1=0;g1<(sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]));g1++)
+        ps.cs.histogram_marks[g1] >>= 1;
+    for (g1=0;g1<(sizeof(ps.cs.histogram_spaces)/sizeof(ps.cs.histogram_spaces[0]));g1++)
+        ps.cs.histogram_spaces[g1] >>= 1;
+
 }
 
 #ifdef CWMOD_DEBUG
 
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\kw4ti-msg.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wnu-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\n1ea-processed.wav";
+const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\n1ea-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\vix-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\px-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\kfs-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\cootie-processed.wav";
-const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wxdewcc-processed.wav";
+//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wxdewcc-processed.wav";
+//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\ejm8-processed.wav";
+//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\px-1-processed.wav";
 
 void test_cwmod_decode()
 {
    FILE *fp = fopen(filename,"rb");
-   cw_initialize();
+   cw_initialize(0, 1, 2, 6);
+   ds.slow_samp_num = 4;
    int samplecount = 0;
 
    if (fp == NULL)
@@ -383,18 +404,20 @@ void test_cwmod_decode()
    {
        int16_t sample;
        fread((void *)&sample,1,sizeof(int16_t),fp);
-       sample = sample / 64 + 512;
+       sample = sample / 32 + 512;
 //       if ((sample<200) || (sample > 800)) printf("sample=%d\n",sample);
        /* if ((samplecount/1024) & 0x1) sample = 512;
         else
        sample = 512 - 64 * cos(2*M_PI*samplecount/64.0); */
-       cw_interrupt_sample(sample);
+       dsp_interrupt_sample(sample);
+       cw_new_sample();
        cw_decode_process();
        samplecount++;
    }
    for (samplecount=0;samplecount<360000;samplecount++)
    {
-       cw_interrupt_sample(512);
+       dsp_interrupt_sample(512);
+       cw_new_sample();
        cw_decode_process();
    }
 }
