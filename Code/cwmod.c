@@ -30,9 +30,11 @@ freely, subject to the following restrictions:
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 #endif
 
 #include "dspint.h"
+#include "cwmod.h"
 
 const uint8_t cwmod_bit_mask[8] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
 
@@ -150,15 +152,20 @@ void cw_initialize(uint8_t wide, uint8_t spaces_from_mark_timing,
    ps.cs.ct_smooth = smooth;
    ps.cs.ct_smooth_ind_max = 1 << smooth;
    ps.cs.sticky_interval_length = sticky_interval_length;
+   ps.cs.ct_min_val = 0xFFFF;
 }
 
-void cw_reset_timing(uint16_t tim)
+void cw_reset_threshold(uint16_t thresh)
 {
-   tim = (tim < CWMOD_THRESHOLD_MIN) ? CWMOD_THRESHOLD_MIN : tim;
-   ps.cs.keydown_threshold = tim;
-   ps.cs.keyup_threshold = tim >> 1;
+   if ((thresh >> 5) > ps.cs.ct_min_val)
+        thresh >>= 1;
+   //printf("thresh=%d %d\n",thresh,ps.cs.ct_min_val);
+   thresh = (thresh < CWMOD_THRESHOLD_MIN) ? CWMOD_THRESHOLD_MIN : thresh;
+   ps.cs.keydown_threshold = thresh;
+   ps.cs.keyup_threshold = ps.cs.keydown_threshold >> 1;
    ps.cs.ct_average = 0;
    ps.cs.ct_sum = 0;
+   ps.cs.ct_min_val = 0xFFFF;
 }
 
 void cw_new_sample(void)
@@ -190,14 +197,17 @@ void cw_new_sample(void)
           case 4: mag_sample = ps.cs.ct_smooth_sum >> 4; break;
       }
     }
+    if (ps.cs.ct_min_val > mag_sample)
+        ps.cs.ct_min_val = mag_sample;
+
     if (ps.cs.keydown_threshold <= CWMOD_THRESHOLD_MIN)
     {
        if ((++ps.cs.ct_average) >= (1 << (CWMOD_AVG_CT_PWR2-2)))
-          cw_reset_timing( (ps.cs.ct_sum) >> (CWMOD_AVG_CT_PWR2-1) );
+          cw_reset_threshold( (ps.cs.ct_sum) >> (CWMOD_AVG_CT_PWR2-2) );
     } else
     {
        if ((++ps.cs.ct_average) >= (1 << (CWMOD_AVG_CT_PWR2)))
-          cw_reset_timing( (ps.cs.ct_sum) >> (CWMOD_AVG_CT_PWR2+1) );
+          cw_reset_threshold( (ps.cs.ct_sum) >> (CWMOD_AVG_CT_PWR2) );
     }
     ps.cs.state_ctr++;
     if (ps.cs.key_state)
@@ -245,7 +255,6 @@ void cw_find_two_greatest(uint8_t array[], uint8_t length, uint8_t sep,
             gr = i;
         }
     }
-    *e1 = gr;
 
     gr_val = 0;
     for (i=1;i<length;i++)
@@ -260,7 +269,16 @@ void cw_find_two_greatest(uint8_t array[], uint8_t length, uint8_t sep,
             }
         }
     }
-    *e2 = gr2;
+
+    if (gr < gr2)
+    {
+        *e1 = gr;
+        *e2 = gr2;
+    } else
+    {
+        *e1 = gr2;
+        *e2 = gr;
+    }
 }
 
 void cw_decode_process(void)
@@ -300,23 +318,35 @@ void cw_decode_process(void)
 #endif
 
 
-    uint8_t g1, g2;
+    uint8_t g1m, g2m, g1s, g2s;
 
     cw_find_two_greatest(ps.cs.histogram_marks, sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]),
-                        2, &g1, &g2);
+                        2, &g1m, &g2m);
 
-    //printf(" lm: %d/%d ",g1,g2);
 
-    ps.cs.dit_dah_threshold = cwmod_timing_histogram_bins[(g1+g2)/2];
+    ps.cs.dit_dah_threshold = cwmod_timing_histogram_bins[(g1m+g2m)/2];
 
-    if (!ps.cs.spaces_from_mark_timing)
+    if (ps.cs.spaces_from_mark_timing)
+    {
+        g1s = g1m;
+        g2s = g2m;
+    } else
     {
         cw_find_two_greatest(ps.cs.histogram_spaces, sizeof(ps.cs.histogram_spaces)/sizeof(ps.cs.histogram_spaces[0]),
-                         2, &g1, &g2);
+                         2, &g1s, &g2s);
+        int8_t temp1 = g1s-g2m;
+        int8_t temp2 = g2s-g1m;
+        if (temp1 < 0) temp1 = -temp1;
+        if (temp2 < 0) temp2 = -temp2;
+        if ((temp1 < 2) || (temp2 < 2))
+        {
+            g1s = g1m;
+            g2s = g2m;
+        }
     }
-    //printf(" %d/%d\n",g1,g2);
+   // printf(" lm: %d/%d %d/%d\n",g1m,g2m,g1s,g2s);
 
-    ps.cs.intrainterspace_threshold = cwmod_timing_histogram_bins[(g1+g2)/2];
+    ps.cs.intrainterspace_threshold = cwmod_timing_histogram_bins[(g1s+g2s)/2];
     ps.cs.interspaceword_threshold = 3*ps.cs.intrainterspace_threshold;
 
 
@@ -366,10 +396,10 @@ void cw_decode_process(void)
     // printf("!!!\n");
 
 
-    for (g1=0;g1<(sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]));g1++)
-        ps.cs.histogram_marks[g1] >>= 1;
-    for (g1=0;g1<(sizeof(ps.cs.histogram_spaces)/sizeof(ps.cs.histogram_spaces[0]));g1++)
-        ps.cs.histogram_spaces[g1] >>= 1;
+    for (g1m=0;g1m<(sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]));g1m++)
+        ps.cs.histogram_marks[g1m] = (((uint16_t)ps.cs.histogram_marks[g1m])+((uint16_t)ps.cs.histogram_marks[g1m])+((uint16_t)ps.cs.histogram_marks[g1m])) >> 2;
+    for (g1m=0;g1m<(sizeof(ps.cs.histogram_spaces)/sizeof(ps.cs.histogram_spaces[0]));g1m++)
+        ps.cs.histogram_spaces[g1m] = (((uint16_t)ps.cs.histogram_spaces[g1m])+((uint16_t)ps.cs.histogram_spaces[g1m])+((uint16_t)ps.cs.histogram_spaces[g1m])) >> 2;
 
 }
 
@@ -384,12 +414,11 @@ const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\n1ea-pro
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\cootie-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wxdewcc-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\ejm8-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\px-1-processed.wav";
 
 void test_cwmod_decode()
 {
    FILE *fp = fopen(filename,"rb");
-   cw_initialize(0, 1, 2, 6);
+   cw_initialize(0, 0, 2, 6);
    ds.slow_samp_num = 4;
    int samplecount = 0;
 
@@ -402,6 +431,7 @@ void test_cwmod_decode()
    fseek(fp,44*sizeof(uint8_t),SEEK_SET);
    while (!feof(fp))
    {
+       if ((ftell(fp) % 8000) == 0) sleep(1);
        int16_t sample;
        fread((void *)&sample,1,sizeof(int16_t),fp);
        sample = sample / 32 + 512;

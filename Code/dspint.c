@@ -38,9 +38,6 @@ dsp_state       ds;
 dsp_state_fixed df;
 protocol_state  ps;
 
-volatile scamp_frame_fifo scamp_input_fifo;
-volatile scamp_frame_fifo scamp_output_fifo;
-
 /* initialize frame fifo */
 void scamp_initialize_frame_fifo(volatile scamp_frame_fifo *dff)
 {
@@ -148,19 +145,19 @@ void dsp_initialize_scamp(uint8_t mod_type)
     ps.ss.mod_type = mod_type;
     switch (ps.ss.mod_type)
     {
-        case SCAMP_OOK_FAST:  df.buffer_size = 32;
+        case SCAMP_OOK_FAST:   df.buffer_size = 32;
                                ps.ss.demod_edge_window = 3;
                                ps.ss.fsk = 0;
                                break;
-        case SCAMP_OOK:       df.buffer_size = 64;
+        case SCAMP_OOK:        df.buffer_size = 64;
                                ps.ss.fsk = 0;
                                ps.ss.demod_edge_window = 5;
                                break;
-        case SCAMP_FSK:       df.buffer_size = 60;
+        case SCAMP_FSK:        df.buffer_size = 60;
                                ps.ss.fsk = 1;
                                ps.ss.demod_edge_window = 5;
                                break;
-        case SCAMP_FSK_FAST:  df.buffer_size = 24;
+        case SCAMP_FSK_FAST:   df.buffer_size = 24;
                                ps.ss.fsk = 1;
                                ps.ss.demod_edge_window = 2;
                                break;
@@ -196,12 +193,12 @@ void dsp_initialize_scamp(uint8_t mod_type)
 /* initialize DSP for CW mode */
 void dsp_initialize_cw(uint8_t wide)
 {
-    df.buffer_size = 24;
-    df.dly_8 = 16;
+    df.buffer_size = 48;
+    df.dly_8 = 48;
     df.dly_12 = wide ? 12 : 24;
-    df.dly_16 = 16;
-    df.dly_20 = 20;
-    df.dly_24 = 24;
+    df.dly_16 = 48;
+    df.dly_20 = 40;
+    df.dly_24 = 48;
     dsp_reset_state();
 }
 
@@ -235,10 +232,6 @@ void dsp_interrupt_sample(uint16_t sample)
        } else
            return;
    }
-
-   /* we do this so that the square roots are computed in the interrupt cycle
-      before they are used to reduce the worst-case time for the interrupt
-      execution */
 
    prep_sample = (ds.count_8 & 0x03) == 0;
 
@@ -326,8 +319,8 @@ void dsp_interrupt_sample(uint16_t sample)
    if (prep_sample) ds.sample_ct++;
 }
 
-/* this is called by the interrupt handle with a new sample from the DAC.
-   first it updates the spectral channels.  then it figures out the magnitude of
+/* this is called by the interrupt handle to decode the SCAMP frames from
+   the spectral channels.  it figures out the magnitude of
    the signal given the current modulation type (OOK/FSK).  it tries to detect
    an edge to determine when the current bit has finished and when it should
    expect the next bit.  it resets the bit counter when the sync signal has
@@ -353,14 +346,14 @@ void scamp_decode_process(void)
     {
         case SCAMP_OOK_SLOW:
         case SCAMP_OOK_FAST:
-        case SCAMP_OOK:       demod_sample = ds.mag_value_16 - ps.ss.power_thr;
+        case SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
                                ds.ct_sum += ds.mag_value_16;
                                break;
         case SCAMP_FSK_SLOW:
-        case SCAMP_FSK:       demod_sample = ds.mag_value_20 - ds.mag_value_12;
+        case SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
                                ds.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
                                break;
-        case SCAMP_FSK_FAST:  demod_sample = ds.mag_value_12 - ds.mag_value_8;
+        case SCAMP_FSK_FAST:   demod_sample = ds.mag_value_12 - ds.mag_value_8;
                                ds.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
                                break;
     }
@@ -492,7 +485,7 @@ void scamp_decode_process(void)
           if ((ps.ss.bitflips_lag > ps.ss.bitflips_in_phase) && (ps.ss.bitflips_lag >= 5))
           /* we are at least one bit flip short, we probably fell a bit behind */
           {
-            scamp_insert_into_frame_fifo(&scamp_output_fifo, ds.current_word >> 1);
+            scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word >> 1);
             printf("inserted- word into fifo: %08X %02d %02d %02d -----------------------------\n",
                    ds.current_word >> 1, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
             /* start with the next word with one flip */
@@ -503,7 +496,7 @@ void scamp_decode_process(void)
              if (ps.ss.bitflips_in_phase >= 4)
              {
                /* otherwise we just place in buffer and the code word is probably aligned */
-               scamp_insert_into_frame_fifo(&scamp_output_fifo, ds.current_word);
+               scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word);
                printf("inserted0 word into fifo: %08X %02d %02d %02d -----------------------------\n",
                    ds.current_word, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
              }
@@ -661,6 +654,6 @@ void main(void)
 {
   //test_dsp_sample();
   test_cwmod_decode();
-  //printf("size=%d %d %d\n",sizeof(ds)+sizeof(df)+sizeof(scamp_input_fifo)+sizeof(scamp_output_fifo),ps.ss.fsk,df.buffer_size);
+  printf("size=%d\n",sizeof(ds)+sizeof(df)+sizeof(ps));
 }
 #endif /* DSPINT_DEBUG */

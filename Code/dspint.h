@@ -24,8 +24,15 @@ freely, subject to the following restrictions:
 #ifndef __DSPINT_H
 #define __DSPINT_H
 
+#define SCAMP_PROTOCOL
+#define CW_PROTOCOL
+
+#ifdef SCAMP_PROTOCOL
 #include "scamp.h"
+#endif /* SCAMP_PROTOCOL */
+#ifdef CW_PROTOCOL
 #include "cwmod.h"
+#endif /* CW_PROTOCOL */
 
 #ifdef SCAMP_VERY_SLOW_MODES
 #define DSPINT_MAX_SAMPLEBUFFER 128
@@ -111,8 +118,12 @@ extern dsp_state_fixed df;
 
 typedef union _protocol_state
 {
+#ifdef SCAMP_PROTOCOL
     scamp_state  ss;
+#endif
+#ifdef CW_PROTOCOL
     cwmod_state  cs;
+#endif
 } protocol_state;
 
 extern protocol_state  ps;

@@ -53,6 +53,7 @@ typedef struct _cwmod_state
   uint8_t   ct_smooth_ind_max;
   uint32_t  ct_smooth_sum;
   uint16_t  ct_smooth_mag[CWMOD_SMOOTH_MAX_LENGTH];
+  uint16_t  ct_min_val;
 
   uint8_t   spaces_from_mark_timing;
   uint8_t   key_state;
@@ -62,7 +63,7 @@ typedef struct _cwmod_state
   uint16_t  keyup_threshold;
   uint16_t  ct_average;
   uint32_t  ct_sum;
-
+  uint32_t  ct_sum_sq;
   uint8_t   timing_head;
   uint8_t   timing_tail;
   uint8_t   timing_peek_tail;

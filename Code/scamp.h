@@ -89,11 +89,10 @@ typedef struct _scamp_state
   int16_t   cur_bit;
 
   int16_t   demod_buffer[SCAMP_MAX_DEMODBUFFER];
-} scamp_state;
 
-//extern scamp_state     ss;
-extern volatile scamp_frame_fifo scamp_input_fifo;
-extern volatile scamp_frame_fifo scamp_output_fifo;
+  volatile scamp_frame_fifo scamp_input_fifo;
+  volatile scamp_frame_fifo scamp_output_fifo;
+} scamp_state;
 
 uint8_t scamp_insert_into_frame_fifo(volatile scamp_frame_fifo *dff, uint32_t frame);
 uint32_t scamp_remove_from_frame_fifo(volatile scamp_frame_fifo *dff);
