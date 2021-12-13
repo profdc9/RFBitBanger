@@ -26,7 +26,7 @@ freely, subject to the following restrictions:
 
 #define SCAMP_VERY_SLOW_MODES
 
-#define SCAMP_PWR_THR_DEF 32
+#define SCAMP_PWR_THR_DEF 16
 #define SCAMP_AVG_CT_PWR2 9
 
 #define SCAMP_OOK_FAST 0

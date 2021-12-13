@@ -397,18 +397,24 @@ void cw_decode_process(void)
 
 
     for (g1m=0;g1m<(sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]));g1m++)
-        ps.cs.histogram_marks[g1m] = (((uint16_t)ps.cs.histogram_marks[g1m])+((uint16_t)ps.cs.histogram_marks[g1m])+((uint16_t)ps.cs.histogram_marks[g1m])) >> 2;
+    {
+        uint16_t temp = ps.cs.histogram_marks[g1m];
+        ps.cs.histogram_marks[g1m] = (temp+temp+temp) >> 2;
+    }
     for (g1m=0;g1m<(sizeof(ps.cs.histogram_spaces)/sizeof(ps.cs.histogram_spaces[0]));g1m++)
-        ps.cs.histogram_spaces[g1m] = (((uint16_t)ps.cs.histogram_spaces[g1m])+((uint16_t)ps.cs.histogram_spaces[g1m])+((uint16_t)ps.cs.histogram_spaces[g1m])) >> 2;
+    {
+        uint16_t temp = ps.cs.histogram_spaces[g1m];
+        ps.cs.histogram_spaces[g1m] = (temp+temp+temp) >> 2;
 
+    }
 }
 
 #ifdef CWMOD_DEBUG
 
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\kw4ti-msg.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wnu-processed.wav";
-const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\n1ea-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\vix-processed.wav";
+//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\n1ea-processed.wav";
+const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\vix-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\px-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\kfs-processed.wav";
 //const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\cootie-processed.wav";
@@ -431,10 +437,10 @@ void test_cwmod_decode()
    fseek(fp,44*sizeof(uint8_t),SEEK_SET);
    while (!feof(fp))
    {
-       if ((ftell(fp) % 8000) == 0) sleep(1);
+      // if ((ftell(fp) % 16000) == 0) sleep(1);
        int16_t sample;
        fread((void *)&sample,1,sizeof(int16_t),fp);
-       sample = sample / 32 + 512;
+       sample = sample / 64 + 512;
 //       if ((sample<200) || (sample > 800)) printf("sample=%d\n",sample);
        /* if ((samplecount/1024) & 0x1) sample = 512;
         else

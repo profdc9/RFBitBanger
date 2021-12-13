@@ -568,9 +568,9 @@ float gaussian_deviate(float stddev)
     return stddev*sqrt(-2*log(x))*cos(2.0*M_PI*y);
 }
 
-#define MOD_TEST 1
+#define MOD_TEST 2
 
-#if MOD_TEST==2
+#if MOD_TEST==0
 #define MOD_TYPE SCAMP_OOK_FAST
 #define MOD_REP 32
 #define MOD_CHAN1 16.0
@@ -631,9 +631,10 @@ void test_dsp_sample(void)
     for (c=0;c<samples;c++)
     {
         uint8_t last_sample_ct = 0;
-        cbit = bits[(c+7)/MOD_REP];
+        int8_t spacing = 10*(sin(c*2.0*M_PI/1000.0));
+        cbit = bits[(c+12+spacing)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*64.0)+512.0) + gaussian_deviate(64.0);
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + gaussian_deviate(64.0);
       //  if ((c>4000) && (c<6000)) samp = gaussian_deviate(48.0)+512;
         dsp_interrupt_sample(samp);
         scamp_decode_process();
@@ -652,8 +653,8 @@ void test_dsp_sample(void)
 
 void main(void)
 {
-  //test_dsp_sample();
-  test_cwmod_decode();
+  test_dsp_sample();
+  //test_cwmod_decode();
   printf("size=%d\n",sizeof(ds)+sizeof(df)+sizeof(ps));
 }
 #endif /* DSPINT_DEBUG */
