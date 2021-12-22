@@ -411,15 +411,21 @@ void cw_decode_process(void)
 
 #ifdef CWMOD_DEBUG
 
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\kw4ti-msg.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wnu-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\n1ea-processed.wav";
-const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\vix-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\px-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\kfs-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\cootie-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\wxdewcc-processed.wav";
-//const char filename[]="d:\\projects\\RFBitBanger\\Ignore\\processed-cw\\ejm8-processed.wav";
+#define CWDIR "e:\\nov-15-2021-backup\\projects\\RFBitBangerNew\\Ignore\\processed-cw\\"
+
+//const char filename[]=CWDIR"kw4ti-msg.wav";
+//const char filename[]=CWDIR"wnu-processed.wav";
+//const char filename[]=CWDIR"n1ea-processed.wav";
+//const char filename[]=CWDIR"vix-processed.wav";
+//const char filename[]=CWDIR"px-processed.wav";
+//const char filename[]=CWDIR"kfs-processed.wav";
+//const char filename[]=CWDIR"cootie-processed.wav";
+//const char filename[]=CWDIR"wxdewcc-processed.wav";
+//const char filename[]=CWDIR"ejm8-processed.wav";
+//const char filename[]=CWDIR"offair1-processed.wav";
+//const char filename[]=CWDIR"offair2-processed.wav";
+//const char filename[]=CWDIR"offair3-processed.wav";
+const char filename[]=CWDIR"offair4-processed.wav";
 
 void test_cwmod_decode()
 {
@@ -440,7 +446,7 @@ void test_cwmod_decode()
       // if ((ftell(fp) % 16000) == 0) sleep(1);
        int16_t sample;
        fread((void *)&sample,1,sizeof(int16_t),fp);
-       sample = sample / 64 + 512;
+       sample = sample / 32 + 512;
 //       if ((sample<200) || (sample > 800)) printf("sample=%d\n",sample);
        /* if ((samplecount/1024) & 0x1) sample = 512;
         else

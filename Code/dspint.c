@@ -151,11 +151,11 @@ void dsp_initialize_scamp(uint8_t mod_type)
                                break;
         case SCAMP_OOK:        df.buffer_size = 64;
                                ps.ss.fsk = 0;
-                               ps.ss.demod_edge_window = 5;
+                               ps.ss.demod_edge_window = 4;
                                break;
         case SCAMP_FSK:        df.buffer_size = 60;
                                ps.ss.fsk = 1;
-                               ps.ss.demod_edge_window = 5;
+                               ps.ss.demod_edge_window = 4;
                                break;
         case SCAMP_FSK_FAST:   df.buffer_size = 24;
                                ps.ss.fsk = 1;
@@ -163,12 +163,12 @@ void dsp_initialize_scamp(uint8_t mod_type)
                                break;
 #ifdef SCAMP_VERY_SLOW_MODES
         case SCAMP_OOK_SLOW:  df.buffer_size = 128;
-                               ps.ss.demod_edge_window = 5;
+                               ps.ss.demod_edge_window = 4;
                                ps.ss.fsk = 0;
                                break;
         case SCAMP_FSK_SLOW:  df.buffer_size = 120;
                                ps.ss.fsk = 1;
-                               ps.ss.demod_edge_window = 5;
+                               ps.ss.demod_edge_window = 4;
                                break;
 #endif // SCAMP_VERY_SLOW_MODES
     }
@@ -568,7 +568,7 @@ float gaussian_deviate(float stddev)
     return stddev*sqrt(-2*log(x))*cos(2.0*M_PI*y);
 }
 
-#define MOD_TEST 2
+#define MOD_TEST 3
 
 #if MOD_TEST==0
 #define MOD_TYPE SCAMP_OOK_FAST
@@ -625,16 +625,17 @@ void test_dsp_sample(void)
                                 1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
                                 1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
                                 0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
+                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
                                 1,0,1,1,1, 1,0,1,1,1 };
     samples = sizeof(bits)*MOD_REP;
     FILE *fp = write_wav_file("synth.wav",samples,repeats);
     for (c=0;c<samples;c++)
     {
         uint8_t last_sample_ct = 0;
-        int8_t spacing = 10*(sin(c*2.0*M_PI/1000.0));
+        int8_t spacing = 0*(sin(c*2.0*M_PI/1000.0));
         cbit = bits[(c+12+spacing)/MOD_REP];
         freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*128.0)+512.0) + gaussian_deviate(64.0);
+        samp = ((sin(2.0*M_PI*c/freq+1.0*M_PI)*64.0)+512.0) + gaussian_deviate(32.0);
       //  if ((c>4000) && (c<6000)) samp = gaussian_deviate(48.0)+512;
         dsp_interrupt_sample(samp);
         scamp_decode_process();
@@ -653,8 +654,8 @@ void test_dsp_sample(void)
 
 void main(void)
 {
-  test_dsp_sample();
-  //test_cwmod_decode();
+  //test_dsp_sample();
+  test_cwmod_decode();
   printf("size=%d\n",sizeof(ds)+sizeof(df)+sizeof(ps));
 }
 #endif /* DSPINT_DEBUG */
