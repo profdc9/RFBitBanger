@@ -77,8 +77,10 @@ public:
   void command(uint8_t);
 
   void pollButtons();
-  uint8_t readButton(uint8_t);
-  bool getButtonPressed(uint8_t);
+  void clearButtons();
+  uint8_t readButton(uint8_t b);
+  bool getButtonPressed(uint8_t b);
+  bool waitButtonPressed(uint8_t b);
   
   using Print::write;
 private:

@@ -48,6 +48,12 @@ LiquidCrystalButtons::LiquidCrystalButtons(uint8_t rs,  uint8_t enable,
 #define SETDATALINEINPUTS() setDataLineOutput(INPUT)
 #endif
 
+void LiquidCrystalButtons::clearButtons()
+{
+  for (uint8_t i=0; i<4; i++)
+    _button_pressed[i] = false;
+}
+
 void LiquidCrystalButtons::pollButtons()
 {
   SETDATALINEINPUTS();
@@ -66,7 +72,7 @@ void LiquidCrystalButtons::pollButtons()
         {
            _state_count[i] = 0;
            _last_state[i] = state;
-           if (!_button_pressed[i])
+           if ((!state) && (!_button_pressed[i]))
               _button_pressed[i] = true;
         } else _state_count[i]++;
      }
@@ -77,6 +83,17 @@ bool LiquidCrystalButtons::getButtonPressed(uint8_t b)
 {
   bool state = _button_pressed[b];
   if (state) _button_pressed[b] = false;
+  return state;
+}
+
+bool LiquidCrystalButtons::waitButtonPressed(uint8_t b)
+{
+  bool state = getButtonPressed(b);
+  if (!state)
+  {
+    while (!(_last_state[b]))
+      pollButtons();
+  }
   return state;
 }
 
