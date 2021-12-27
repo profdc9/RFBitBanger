@@ -1,4 +1,4 @@
-update=12/25/2021 11:07:16 PM
+update=12/27/2021 12:17:52 AM
 version=1
 last_client=kicad
 [pcbnew]
@@ -66,6 +66,7 @@ LibName34=triplewindingtransformer
 LibName35=relay
 LibName36=SamplingTransformer
 LibName37=mini-din_6pins_ver4
+LibName38=doublewindingtransformer
 [schematic_editor]
 version=1
 PageLayoutDescrFile=

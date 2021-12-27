@@ -70,7 +70,7 @@ void setup() {
   //lcd.print("hello, world!");
   lcd.setCursor(0,0);
   lcdPrintFlash(freqmenutitle);
-  digitalWrite(TRANSMIT_PIN,HIGH);
+  digitalWrite(TRANSMIT_PIN,LOW);
 }
 
 void loop() {
