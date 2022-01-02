@@ -1925,17 +1925,6 @@ Wire Wire Line
 Connection ~ 1250 6000
 Wire Wire Line
 	2200 6150 2200 6200
-$Comp
-L Conn_01x05 J10
-U 1 1 61CE6260
-P 4800 2900
-F 0 "J10" H 4800 3200 50  0000 C CNN
-F 1 "Conn_01x05" H 4800 2600 50  0000 C CNN
-F 2 "Pin_Headers:Pin_Header_Straight_1x05_Pitch2.54mm" H 4800 2900 50  0001 C CNN
-F 3 "" H 4800 2900 50  0001 C CNN
-	1    4800 2900
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	3950 2800 3950 2900
 Wire Wire Line
@@ -1970,21 +1959,8 @@ Wire Wire Line
 	950  2200 950  2050
 Wire Wire Line
 	3250 2650 3200 2650
-Text GLabel 4150 3500 3    60   Input ~ 0
-MOSI
 Text GLabel 4300 3500 3    60   Input ~ 0
 SCK
-$Comp
-L R R75
-U 1 1 61CE922E
-P 4150 3300
-F 0 "R75" V 4230 3300 50  0000 C CNN
-F 1 "1k" V 4150 3300 50  0000 C CNN
-F 2 "Resistors_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 4080 3300 50  0001 C CNN
-F 3 "" H 4150 3300 50  0001 C CNN
-	1    4150 3300
-	1    0    0    -1  
-$EndComp
 $Comp
 L R R76
 U 1 1 61CE938A
@@ -2001,11 +1977,16 @@ Wire Wire Line
 Wire Wire Line
 	4300 2800 4600 2800
 Wire Wire Line
-	4150 3150 4150 2700
-Wire Wire Line
-	4150 2700 4600 2700
-Wire Wire Line
 	4300 3450 4300 3500
-Wire Wire Line
-	4150 3450 4150 3500
+$Comp
+L Conn_01x04 J10
+U 1 1 61D154E8
+P 4800 2900
+F 0 "J10" H 4800 3100 50  0000 C CNN
+F 1 "Conn_01x04" H 4800 2600 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 4800 2900 50  0001 C CNN
+F 3 "" H 4800 2900 50  0001 C CNN
+	1    4800 2900
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
