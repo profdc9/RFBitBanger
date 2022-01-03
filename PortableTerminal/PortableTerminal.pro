@@ -1,4 +1,4 @@
-update=1/2/2022 7:19:00 PM
+update=1/2/2022 8:17:45 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -64,6 +64,7 @@ LibName32=valves
 LibName33=microsd_spi_cd
 LibName34=mini-din_6pins_ver4
 LibName35=rcajack
+LibName36=doublewindingtransformer
 [schematic_editor]
 version=1
 PageLayoutDescrFile=
