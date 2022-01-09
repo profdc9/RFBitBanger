@@ -41,8 +41,8 @@ LiquidCrystalButtons::LiquidCrystalButtons(uint8_t rs,  uint8_t enable,
 #define SETDATALINEFAST
 
 #ifdef SETDATALINEFAST
-#define SETDATALINEOUTPUTS() { DDRD |= 0x80; DDRB |= 0x07; }
-#define SETDATALINEINPUTS() { DDRD &= ~0x80; DDRB &= ~0x07; }
+#define SETDATALINEOUTPUTS() { DDRD |= 0xE0; DDRB |= 0x01; }
+#define SETDATALINEINPUTS() { DDRD &= ~0xE0; DDRB &= ~0x01; }
 #else
 #define SETDATALINEOUTPUTS() setDataLineOutput(OUTPUT)
 #define SETDATALINEINPUTS() setDataLineOutput(INPUT)
@@ -104,10 +104,8 @@ uint8_t LiquidCrystalButtons::readButton(uint8_t b)
 
 void LiquidCrystalButtons::setDataLineOutput(uint8_t val)
 {
-  for (uint8_t i=0; i<4; ++i)
-  {
+  for (uint8_t i=0; i<4; i++)
     pinMode(_data_pins[i], val);
-  } 
 }
 
 void LiquidCrystalButtons::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {

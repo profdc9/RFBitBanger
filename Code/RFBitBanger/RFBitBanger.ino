@@ -30,14 +30,16 @@
 #include "si5351simple.h"
 #include "ui.h"
 
-#define LCDB_RS A2
-#define LCDB_E A3
-#define LCDB_DB4 7
-#define LCDB_DB5 8
-#define LCDB_DB6 9
-#define LCDB_DB7 10
+#define LCDB_RS A3
+#define LCDB_E A2
+#define LCDB_DB4 5
+#define LCDB_DB5 6
+#define LCDB_DB6 7
+#define LCDB_DB7 8
 
-#define TRANSMIT_PIN 5
+#define TRANSMIT_PIN 9
+#define BACKLIGHT_PIN 11
+#define MUTEAUDIO_PIN 4
 
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
 si5351simple si5351(8,27000000u);
@@ -64,6 +66,8 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(57600);
   pinMode(TRANSMIT_PIN,OUTPUT);
+  pinMode(BACKLIGHT_PIN,OUTPUT);
+  pinMode(MUTEAUDIO_PIN,OUTPUT);
   si5351.start();
   lcd.begin(20,4);
   // Print a message to the LCD.
@@ -71,14 +75,17 @@ void setup() {
   lcd.setCursor(0,0);
   lcdPrintFlash(freqmenutitle);
   digitalWrite(TRANSMIT_PIN,LOW);
+  digitalWrite(MUTEAUDIO_PIN,LOW);
+  digitalWrite(BACKLIGHT_PIN,HIGH);
 }
 
 void loop() {
   static uint32_t n = 0;
   static uint8_t pos = 0;
   scroll_number(&n, &pos, 0, 99999999, 8, 0, NULL);
-  lcd.setCursor(0,2);
-  lcd.print(n);
+  digitalWrite(MUTEAUDIO_PIN,n & 0x01);
+  //lcd.setCursor(0,2);
+  //lcd.print(n);
 
   si5351_synth_regs s_regs;
   si5351_multisynth_regs m_regs;
