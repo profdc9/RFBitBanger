@@ -1998,4 +1998,9 @@ Wire Wire Line
 	8050 4200 7800 4200
 Wire Wire Line
 	7800 4200 7800 4150
+Wire Wire Line
+	9650 1450 9650 1900
+Wire Wire Line
+	9650 1900 9200 1900
+Connection ~ 9200 1900
 $EndSCHEMATC

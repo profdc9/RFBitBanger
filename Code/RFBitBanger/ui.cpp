@@ -47,7 +47,7 @@ void lcdPrintFlash(const char *str)
 {
   for (;;)
   {
-    char c = pgm_read_byte(str++);
+    char c = pgm_read_byte_near(str++);
     if (c==0) break;
     lcd.write(c);
   }
