@@ -25,6 +25,9 @@
 #ifndef _RFBITBANGER_H
 #define _RFBITBANGER_H
 
+extern PS2Keyboard PSkey;
+extern LiquidCrystalButtons lcd;
+
 void idle_task(void);
 
 #endif /* _RFBITBANGER_H */

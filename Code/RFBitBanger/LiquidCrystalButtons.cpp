@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include "Arduino.h"
+#include <Arduino.h>
+#include <avr/pgmspace.h>
 
 // When the display powers up, it is configured as follows:
 //
@@ -108,6 +109,81 @@ void LiquidCrystalButtons::setDataLineOutput(uint8_t val)
     pinMode(_data_pins[i], val);
 }
 
+const uint8_t defaultCharTable[] PROGMEM = 
+{
+  0b00010000,  // character 0
+  0b00010000,
+  0b00010000,
+  0b00010000,
+  0b00010000,
+  0b00010000,
+  0b00010000,
+  0b00010000,
+
+  0b00011000,  // character 1
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+
+  0b00011100,  // character 2
+  0b00011100,
+  0b00011100,
+  0b00011100,
+  0b00011100,
+  0b00011100,
+  0b00011100,
+  0b00011100,
+
+  0b00011110,  // character 3
+  0b00011110,
+  0b00011110,
+  0b00011110,
+  0b00011110,
+  0b00011110,
+  0b00011110,
+  0b00011110,
+
+  0b00000000,  // character 4
+  0b00000000,
+  0b00000000,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+
+  0b00000000,  // character 5
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+
+  0b00000000,  // character 6
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+  0b00011111,
+
+  0b00000000,  // character 7
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000
+};
+
 void LiquidCrystalButtons::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
   if (lines > 1) {
     _displayfunction |= LCDB_2LINE;
@@ -149,6 +225,9 @@ void LiquidCrystalButtons::begin(uint8_t cols, uint8_t lines, uint8_t dotsize) {
 
   // finally, set # lines, font size, etc.
   command(LCDB_FUNCTIONSET | _displayfunction);  
+
+  for (uint8_t i=0;i<8;i++)
+    createChar(i, &defaultCharTable[i << 3]); 
 
   // turn the display on with no cursor or blinking default
   _displaycontrol = LCDB_DISPLAYON | LCDB_CURSOROFF | LCDB_BLINKOFF;  
@@ -265,8 +344,8 @@ void LiquidCrystalButtons::noAutoscroll(void) {
 void LiquidCrystalButtons::createChar(uint8_t location, uint8_t charmap[]) {
   location &= 0x7; // we only have 8 locations 0-7
   command(LCDB_SETCGRAMADDR | (location << 3));
-  for (int i=0; i<8; i++) {
-    write(charmap[i]);
+  for (uint8_t i=0; i<8; i++) {
+     write(pgm_read_byte_near(&charmap[i]));
   }
 }
 
