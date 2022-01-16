@@ -30,14 +30,19 @@
 #include "PS2Keyboard.h"
 #include "RFBitBanger.h"
 
+#undef BAR_GRAPH_DEBUG
 
-void lcdBarGraph(uint8_t num_bars, uint8_t width_bars, uint8_t row_bars, uint8_t col_bars, uint8_t bars[])
+void lcdBarGraph(bargraph_dat *bgd)
 {
-  for (uint8_t n=0; n<num_bars; n++)
+  for (uint8_t n=0; n<bgd->num_bars; n++)
   {
-    uint8_t ct = width_bars;
-    int8_t width = bars[n];
-    lcd.setCursor(col_bars,row_bars+n);
+    uint8_t ct = bgd->width_bars;
+    int8_t width = bgd->bars[n];
+    lcd.setCursor(bgd->col_bars,bgd->row_bars+n);
+#ifdef BAR_GRAPH_DEBUG
+    lcd.print(width);
+    lcd.print("    ");
+#else
     while ((width > 0) && (ct > 0))
     {
       if (width > 4) 
@@ -52,6 +57,7 @@ void lcdBarGraph(uint8_t num_bars, uint8_t width_bars, uint8_t row_bars, uint8_t
       lcd.write(' ');
       ct--;
     }
+#endif
   }
 }
 
@@ -132,76 +138,99 @@ uint32_t pow10(uint8_t n)
   return v;
 }
 
-void scroll_number(uint32_t *num, uint8_t *init_position,
-                   uint32_t minimum_number, uint32_t maximum_number,
-                   uint8_t digits, uint8_t decs, const char *prompt)
+void scroll_redraw(scroll_number_dat *snd)
+{
+  lcd.setCursor(snd->col,snd->row);
+  lcdPrintNum(snd->n, snd->digits, snd->decs);
+}
+
+void scroll_key(scroll_number_dat *snd)
 {
   uint8_t redraw = 1;
-  uint32_t n = *num;
-  uint8_t position = *init_position;
+  uint8_t key = PSkey.getkey();
 
-  if (prompt != NULL) lcdPrintFlash(prompt);
-  lcd.cursor();
-  lcd.blink();
-  for (;;)
+  lcd.setCursor(snd->col + snd->position + ((snd->decs != 0) && ((snd->position + snd->decs) >= snd->digits)), snd->row);
+  idle_task();
+  if (key == PS2KEY_ENTER)
+  { 
+    snd->entered = 1;
+    return;
+  } else if (((key >= '0') && (key <= '9')) && (snd->position < snd->digits))
   {
-    uint8_t key = PSkey.getkey();
-    idle_task();
-    if (redraw) 
+    uint32_t p10 = pow10(snd->digits - snd->position - 1);
+    uint8_t dig = (snd->n / p10) % 10;
+    int8_t dif =  key - '0' - dig;
+    if (dif != 0)
     {
-      lcd.setCursor(0,1);
-      lcdPrintNum(n, digits, decs);
-      lcd.setCursor(position + ((decs != 0) && ((position + decs) >= digits)), 1);
-      redraw = 0;
+        snd->n += ((int32_t)p10) * dif;
+        snd->changed = 1;
     }
-    if (key == PS2KEY_ENTER) break;
-    if (((key >= '0') && (key <= '9')) && (position < digits))
+    snd->position++;
+    key = 0;
+  } else if ((lcd.getButtonPressed(2) || (key == PS2KEY_LEFT)) && (snd->position > 0))
+  {
+    snd->position--;
+  } else if ((lcd.getButtonPressed(3) || (key == PS2KEY_RIGHT)) && (snd->position < snd->digits))
+  {
+    snd->position++;
+    redraw = 1;
+  } else if (lcd.getButtonPressed(0) || (key == PS2KEY_UP))
+  {
+    if (snd->position >= snd->digits)
     {
-      uint32_t p10 = pow10(digits - position - 1);
-      uint8_t dig = (n / p10) % 10;      
-      n += ((int32_t)p10) * (int8_t)(key - '0' - dig);
-      position++;
-      redraw = 1;
-      key = 0;
-      if (prompt == NULL) break;
+      snd->entered = 1;
+      return;
     }
-    if ((lcd.getButtonPressed(0) || (key == PS2KEY_LEFT)) && (position > 0))
+    uint32_t p10 = pow10(snd->digits - snd->position - 1);
+    if ((snd->n + p10) <= snd->maximum_number)
     {
-      position--;
-      redraw = 1;
+      snd->n += p10;
+      snd->changed = 1;
     }
-    if ((lcd.getButtonPressed(1) || (key == PS2KEY_RIGHT)) && (position < digits))
+  } else if (lcd.getButtonPressed(1) || (key == PS2KEY_DOWN))
+  {
+    if (snd->position >= snd->digits)
     {
-      position++;
-      redraw = 1;
+      snd->entered = 1;
+      return;
     }
-    if (lcd.getButtonPressed(2) || (key == PS2KEY_UP))
+    uint32_t p10 = pow10(snd->digits - snd->position - 1);
+    if (snd->n >= (snd->minimum_number + p10))
     {
-      if (position >= digits) break;
-      uint32_t p10 = pow10(digits - position - 1);
-      if ((n + p10) <= maximum_number)
-      {
-        n += p10;
-        if (prompt == NULL) break;
-      }
-      redraw = 1;
+      snd->n -= p10;
+      snd->changed = 1;
     }
-    if (lcd.getButtonPressed(3) || (key == PS2KEY_DOWN))
-    {
-      if (position >= digits) break;
-      uint32_t p10 = pow10(digits - position - 1);
-      if (n >= (minimum_number + p10))
-      {
-        n -= p10;
-        if (prompt == NULL) break;
-      }
-      redraw = 1;
-    }
-  }
-  *num = n;
-  *init_position = position;
+  } else redraw = 0;
+  if (redraw)
+    scroll_redraw(snd);
+}
+
+void scroll_number_start(scroll_number_dat *snd)
+{
+  snd->changed = 0;
+  snd->entered = 0;
+  scroll_redraw(snd);
+  lcd.cursor();
+  lcd.blink();  
+}
+
+void scroll_number_stop(scroll_number_dat *snd)
+{
   lcd.noBlink();
   lcd.noCursor();
+}
+
+void scroll_number(scroll_number_dat *snd)
+{
+  uint8_t redraw = 1;
+
+  scroll_number_start(snd);
+  for (;;)
+  {
+    scroll_key(snd);
+    if (snd->entered) break;
+  }
+  scroll_number_stop(snd);
   return;
 }
 

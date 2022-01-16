@@ -22,7 +22,11 @@ freely, subject to the following restrictions:
  */
 
 
-#define DSPINT_DEBUG
+#undef DSPINT_DEBUG
+
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
 
 #ifdef DSPINT_DEBUG
 #include <stdio.h>
@@ -191,6 +195,18 @@ void dsp_initialize_scamp(uint8_t mod_type)
 }
 
 /* initialize DSP for CW mode */
+void dsp_initialize_open(void)
+{
+    df.buffer_size = 48;
+    df.dly_8 = 48;
+    df.dly_12 = 48;
+    df.dly_16 = 48;
+    df.dly_20 = 40;
+    df.dly_24 = 48;
+    dsp_reset_state();
+}
+
+/* initialize DSP for CW mode */
 void dsp_initialize_cw(uint8_t wide)
 {
     df.buffer_size = 48;
@@ -202,29 +218,35 @@ void dsp_initialize_cw(uint8_t wide)
     dsp_reset_state();
 }
 
+//   uint16_t ux = (x < 0 ? -x : x); \
+//   uint16_t uy = (y < 0 ? -y : y); \
+
 /* this is an approximation to the sqrt(x^2+y^2) function that approximates the
    circular set as an octagon.  seems to work quite well */
 #define SET_DSP_SQRT_APPROX(s,x,y) do { \
-   uint16_t ux = (x < 0 ? -x : x); \
-   uint16_t uy = (y < 0 ? -y : y); \
+   uint16_t ux,uy; \
+   ux = ((x)>>16); \
+   ux = (ux & 0x8000) ? ~ux : ux; \
+   uy = ((y)>>16); \
+   uy = (uy & 0x8000) ? ~uy : uy; \
    s = ((ux + uy) >> 1)+(uy > ux ? uy : ux); \
 } while(0)
 
 #define SHIFTBACK(x,bits) ((x) < 0 ? -((-x) >> (bits)) : ((x) >> (bits)))
 
 // For 2000 Hz sample rate
-const int16_t cos8[] = {  16384,-11585,0,11585,-16384,11585,0,-11585 };  // 750 Hz
-const int16_t sin8[] = {  0,11585,-16384,11585,0,-11585,16384,-11585 };
-const int16_t cos12[] = { 16384,-8192,-8192,16384,-8192,-8192,16384,-8192,-8192,16384,-8192,-8192 }; // 667 Hz
-const int16_t sin12[] = { 0,14189,-14189,0,14189,-14189,0,14189,-14189,0,14189,-14189 };
-const int16_t cos16[] = { 16384,-6270,-11585,15137,0,-15137,11585,6270,-16384,6270,11585,-15137,0,15137,-11585,-6270 };  // 625 Hz
-const int16_t sin16[] = { 0,15137,-11585,-6270,16384,-6270,-11585,15137,0,-15137,11585,6270,-16384,6270,11585,-15137 };
-const int16_t cos20[] = { 16384,-5063,-13255,13255,5063,-16384,5063,13255,-13255,-5063,16384,-5063,-13255,13255,5063,-16384,5063,13255,-13255,-5063 };  // 600 Hz
-const int16_t sin20[] = { 0,15582,-9630,-9630,15582,0,-15582,9630,9630,-15582,0,15582,-9630,-9630,15582,0,-15582,9630,9630,-15582 };
-const int16_t cos24[] = { 16384,-4240,-14189,11585,8192,-15826,0,15826,-8192,-11585,14189,4240,-16384,4240,14189,-11585,-8192,15826,0,-15826,8192,11585,-14189,-4240 }; // 583 Hz
-const int16_t sin24[] = { 0,15826,-8192,-11585,14189,4240,-16384,4240,14189,-11585,-8192,15826,0,-15826,8192,11585,-14189,-4240,16384,-4240,-14189,11585,8192,-15826 };
+const int16_t cos8[] PROGMEM = {  16384,-11585,0,11585,-16384,11585,0,-11585 };  // 750 Hz
+const int16_t sin8[] PROGMEM = {  0,11585,-16384,11585,0,-11585,16384,-11585 };
+const int16_t cos12[] PROGMEM = { 16384,-8192,-8192,16384,-8192,-8192,16384,-8192,-8192,16384,-8192,-8192 }; // 667 Hz
+const int16_t sin12[] PROGMEM = { 0,14189,-14189,0,14189,-14189,0,14189,-14189,0,14189,-14189 };
+const int16_t cos16[] PROGMEM = { 16384,-6270,-11585,15137,0,-15137,11585,6270,-16384,6270,11585,-15137,0,15137,-11585,-6270 };  // 625 Hz
+const int16_t sin16[] PROGMEM = { 0,15137,-11585,-6270,16384,-6270,-11585,15137,0,-15137,11585,6270,-16384,6270,11585,-15137 };
+const int16_t cos20[] PROGMEM = { 16384,-5063,-13255,13255,5063,-16384,5063,13255,-13255,-5063,16384,-5063,-13255,13255,5063,-16384,5063,13255,-13255,-5063 };  // 600 Hz
+const int16_t sin20[] PROGMEM = { 0,15582,-9630,-9630,15582,0,-15582,9630,9630,-15582,0,15582,-9630,-9630,15582,0,-15582,9630,9630,-15582 };
+const int16_t cos24[] PROGMEM = { 16384,-4240,-14189,11585,8192,-15826,0,15826,-8192,-11585,14189,4240,-16384,4240,14189,-11585,-8192,15826,0,-15826,8192,11585,-14189,-4240 }; // 583 Hz
+const int16_t sin24[] PROGMEM = { 0,15826,-8192,-11585,14189,4240,-16384,4240,14189,-11585,-8192,15826,0,-15826,8192,11585,-14189,-4240,16384,-4240,-14189,11585,8192,-15826 };
 
-#if EXTRA_CHANNELS
+#ifdef EXTRA_CHANNELS
 const int16_t cos4[] = {16384,0,-16384,0};  // 500 Hz
 const int16_t sin4[] = {0,16384,0,-16384};
 const int16_t cos8n[] = { 16384,11585,0,-11585,-16384,-11585,0,11585 }; // 250 Hz
@@ -267,8 +289,8 @@ void dsp_interrupt_sample(uint16_t sample)
    /* update 8 count I & Q */
    b = (ds.sample_no < df.dly_8) ? (ds.sample_no + df.buffer_size - df.dly_8) : (ds.sample_no - df.dly_8);
    fir = sample - ds.sample_buffer[b];
-   ds.state_i_8 += SHIFTBACK((((int32_t)fir)*((int32_t)cos8[ds.count_8])),14);
-   ds.state_q_8 += SHIFTBACK((((int32_t)fir)*((int32_t)sin8[ds.count_8])),14);
+   ds.state_i_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos8[ds.count_8])));
+   ds.state_q_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin8[ds.count_8])));
    if (prep_sample)
        SET_DSP_SQRT_APPROX(ds.mag_value_8, ds.state_q_8, ds.state_i_8);
    ds.count_8 = (ds.count_8 >= 7) ? 0 : (ds.count_8 + 1);
@@ -276,8 +298,8 @@ void dsp_interrupt_sample(uint16_t sample)
    /* update 12 count I & Q */
    b = (ds.sample_no < df.dly_12) ? (ds.sample_no + df.buffer_size - df.dly_12) : (ds.sample_no - df.dly_12);
    fir = sample - ds.sample_buffer[b];
-   ds.state_i_12 += SHIFTBACK((((int32_t)fir)*((int32_t)cos12[ds.count_12])),14);
-   ds.state_q_12 += SHIFTBACK((((int32_t)fir)*((int32_t)sin12[ds.count_12])),14);
+   ds.state_i_12 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos12[ds.count_12])));
+   ds.state_q_12 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin12[ds.count_12])));
    if (prep_sample)
        SET_DSP_SQRT_APPROX(ds.mag_value_12, ds.state_q_12, ds.state_i_12);
    ds.count_12 = (ds.count_12 >= 11) ? 0 : (ds.count_12 + 1);
@@ -285,8 +307,8 @@ void dsp_interrupt_sample(uint16_t sample)
    /* update 16 count I & Q */
    b = (ds.sample_no < df.dly_16) ? (ds.sample_no + df.buffer_size - df.dly_16) : (ds.sample_no - df.dly_16);
    fir = sample - ds.sample_buffer[b];
-   ds.state_i_16 += SHIFTBACK((((int32_t)fir)*((int32_t)cos16[ds.count_16])),14);
-   ds.state_q_16 += SHIFTBACK((((int32_t)fir)*((int32_t)sin16[ds.count_16])),14);
+   ds.state_i_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos16[ds.count_16])));
+   ds.state_q_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin16[ds.count_16])));
    if (prep_sample)
         SET_DSP_SQRT_APPROX(ds.mag_value_16, ds.state_q_16, ds.state_i_16);
    ds.count_16 = (ds.count_16 >= 15) ? 0 : (ds.count_16 + 1);
@@ -294,8 +316,8 @@ void dsp_interrupt_sample(uint16_t sample)
    /* update 20 count I & Q */
    b = (ds.sample_no < df.dly_20) ? (ds.sample_no + df.buffer_size - df.dly_20) : (ds.sample_no - df.dly_20);
    fir = sample - ds.sample_buffer[b];
-   ds.state_i_20 += SHIFTBACK((((int32_t)fir)*((int32_t)cos20[ds.count_20])),14);
-   ds.state_q_20 += SHIFTBACK((((int32_t)fir)*((int32_t)sin20[ds.count_20])),14);
+   ds.state_i_20 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos20[ds.count_20])));
+   ds.state_q_20 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin20[ds.count_20])));
    if (prep_sample)
         SET_DSP_SQRT_APPROX(ds.mag_value_20, ds.state_q_20, ds.state_i_20);
    ds.count_20 = (ds.count_20 >= 19) ? 0 : (ds.count_20 + 1);
@@ -303,8 +325,8 @@ void dsp_interrupt_sample(uint16_t sample)
    /* update 24 count I & Q */
    b = (ds.sample_no < df.dly_24) ? (ds.sample_no + df.buffer_size - df.dly_24) : (ds.sample_no - df.dly_24);
    fir = sample - ds.sample_buffer[b];
-   ds.state_i_24 += SHIFTBACK((((int32_t)fir)*((int32_t)cos24[ds.count_24])),14);
-   ds.state_q_24 += SHIFTBACK((((int32_t)fir)*((int32_t)sin24[ds.count_24])),14);
+   ds.state_i_24 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos24[ds.count_24])));
+   ds.state_q_24 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin24[ds.count_24])));
    if (prep_sample)
         SET_DSP_SQRT_APPROX(ds.mag_value_24, ds.state_q_24, ds.state_i_24);
    ds.count_24 = (ds.count_24 >= 23) ? 0 : (ds.count_24 + 1);
@@ -343,12 +365,16 @@ void scamp_decode_process(void)
 
     switch (ps.ss.mod_type)
     {
+#ifdef SCAMP_VERY_SLOW_MODES
         case SCAMP_OOK_SLOW:
+#endif
         case SCAMP_OOK_FAST:
         case SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
                                ds.ct_sum += ds.mag_value_16;
                                break;
+#ifdef SCAMP_VERY_SLOW_MODES
         case SCAMP_FSK_SLOW:
+#endif
         case SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
                                ds.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
                                break;
@@ -509,9 +535,9 @@ void scamp_decode_process(void)
     }
 }
 
-#include "cwmod.c"
-
 #ifdef DSPINT_DEBUG
+
+#include "cwmod.c"
 
 typedef struct _wavefile_header
 {

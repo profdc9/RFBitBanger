@@ -35,7 +35,39 @@ void lcdPrintNum(uint32_t n, uint8_t digits, uint8_t decs);
 void scroll_number(uint32_t *num, uint8_t *init_position,
                    uint32_t minimum_number, uint32_t maximum_number,
                    uint8_t digits, uint8_t decs, const char *prompt);
-void lcdBarGraph(uint8_t num_bars, uint8_t width_bars, uint8_t row_bars, uint8_t col_bars, uint8_t bars[]);
+
+
+typedef struct _bargraph_dat
+{
+  uint8_t num_bars;
+  uint8_t width_bars;
+  uint8_t col_bars;
+  uint8_t row_bars;
+  uint8_t bars[4];
+} bargraph_dat;
+
+typedef struct _scroll_number_dat
+{
+  uint8_t col;
+  uint8_t row;
+  uint8_t digits;
+  uint8_t decs;
+  uint32_t minimum_number;
+  uint32_t maximum_number;
+
+  uint8_t position;
+  uint32_t n;
+  uint8_t entered;
+  uint8_t changed;
+} scroll_number_dat;
+
+void scroll_number(scroll_number_dat *snd);
+void scroll_number_stop(scroll_number_dat *snd);
+void scroll_number_start(scroll_number_dat *snd);
+void scroll_key(scroll_number_dat *snd);
+void scroll_redraw(scroll_number_dat *snd);
+
+void lcdBarGraph(bargraph_dat *bgd);
 
 
 #endif  /* _UI_H */

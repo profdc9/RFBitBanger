@@ -90,17 +90,17 @@ typedef struct _dsp_state
   uint8_t   count_20;
   uint8_t   count_24;
 
-  int16_t  state_i_8;
-  int16_t  state_i_12;
-  int16_t  state_i_16;
-  int16_t  state_i_20;
-  int16_t  state_i_24;
+  int32_t  state_i_8;
+  int32_t  state_i_12;
+  int32_t  state_i_16;
+  int32_t  state_i_20;
+  int32_t  state_i_24;
 
-  int16_t  state_q_8;
-  int16_t  state_q_12;
-  int16_t  state_q_16;
-  int16_t  state_q_20;
-  int16_t  state_q_24;
+  int32_t  state_q_8;
+  int32_t  state_q_12;
+  int32_t  state_q_16;
+  int32_t  state_q_20;
+  int32_t  state_q_24;
 
   uint32_t state_m_8;
   uint32_t state_m_12;
@@ -134,9 +134,10 @@ extern protocol_state  ps;
 
 void dsp_interrupt_sample(uint16_t sample);
 void dsp_new_sample(void);
-void dsp_initialize(uint8_t mod_type);
+void dsp_initialize_scamp(uint8_t mod_type);
 void dsp_initialize_cw(uint8_t wide);
 void dsp_reset_state(void);
+void dsp_initialize_open(void);
 
 void dsp_initialize_frame_fifo(volatile scamp_frame_fifo *dff);
 
