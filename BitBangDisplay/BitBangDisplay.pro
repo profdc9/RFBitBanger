@@ -1,4 +1,4 @@
-update=1/19/2022 8:50:49 PM
+update=1/19/2022 8:22:16 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -61,12 +61,6 @@ LibName29=opto
 LibName30=atmel
 LibName31=contrib
 LibName32=valves
-LibName33=si5351a
-LibName34=triplewindingtransformer
-LibName35=relay
-LibName36=SamplingTransformer
-LibName37=mini-din_6pins_ver4
-LibName38=doublewindingtransformer
 [schematic_editor]
 version=1
 PageLayoutDescrFile=

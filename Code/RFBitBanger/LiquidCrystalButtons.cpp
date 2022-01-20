@@ -67,10 +67,15 @@ void LiquidCrystalButtons::pollButtons()
   {
      uint8_t state = digitalRead(_data_pins[i]);
      if (state == _last_state[i])
+     {
+        uint8_t next = _current_push_delay[i] + 1;
+        if (next != 0)
+          _current_push_delay[i] = next;
         _state_count[i] = 0;
-     else 
+     } else 
      {  if (_state_count[i] > 50)
         {
+           _current_push_delay[i] = 0;
            _state_count[i] = 0;
            _last_state[i] = state;
            if ((!state) && (!_button_pressed[i]))
@@ -98,9 +103,20 @@ bool LiquidCrystalButtons::waitButtonPressed(uint8_t b)
   return state;
 }
 
+uint8_t LiquidCrystalButtons::readUnBounced(uint8_t b)
+{
+  return (!digitalRead(_data_pins[b]));
+}
+
 uint8_t LiquidCrystalButtons::readButton(uint8_t b)
 {
   return !(_last_state[b]);
+}
+
+uint8_t LiquidCrystalButtons::readButtonDelay(uint8_t b)
+{
+  if (_last_state[b]) return 0;
+  return _current_push_delay[b];
 }
 
 void LiquidCrystalButtons::setDataLineOutput(uint8_t val)

@@ -25,17 +25,24 @@
 #ifndef _UI_H
 #define _UI_H
 
-uint8_t do_menu(const char *items[], const char *prompt, uint8_t item);
+typedef struct _menu_str
+{
+  const char * const* items;
+  uint8_t col;
+  uint8_t row;
+  uint8_t width;
+  uint8_t item;
+} menu_str;
+
+
+uint8_t do_menu(menu_str *menu);
+void do_show_menu_item(menu_str *menu);
 bool show_messages(const char *message1, const char *message2);
 bool go_or_abort(const char *message);
 char *number_str(char *s, uint32_t n, uint8_t digits, uint8_t decs);
 void lcdPrint(const char *str);
 void lcdPrintFlash(const char *str);
 void lcdPrintNum(uint32_t n, uint8_t digits, uint8_t decs);
-void scroll_number(uint32_t *num, uint8_t *init_position,
-                   uint32_t minimum_number, uint32_t maximum_number,
-                   uint8_t digits, uint8_t decs, const char *prompt);
-
 
 typedef struct _bargraph_dat
 {
@@ -61,13 +68,14 @@ typedef struct _scroll_number_dat
   uint8_t changed;
 } scroll_number_dat;
 
-void scroll_number(scroll_number_dat *snd);
+
 void scroll_number_stop(scroll_number_dat *snd);
 void scroll_number_start(scroll_number_dat *snd);
 void scroll_key(scroll_number_dat *snd);
 void scroll_redraw(scroll_number_dat *snd);
 
 void lcdBarGraph(bargraph_dat *bgd);
-
+uint8_t abort_button_left(void);
+uint8_t abort_button_right(void);
 
 #endif  /* _UI_H */

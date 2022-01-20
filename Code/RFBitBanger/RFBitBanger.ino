@@ -51,19 +51,6 @@ LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7
 si5351simple si5351(8,27000000u);
 PS2Keyboard PSkey;
 
-const char mainmenutitle[] PROGMEM = "Menu";
-const char mainmenu1[] PROGMEM = "Optionmenu1";
-const char mainmenu2[] PROGMEM = "Optionmenu2";
-const char mainmenu3[] PROGMEM = "Optionmenu3";
-const char mainmenu4[] PROGMEM = "Optionmenu4";
-const char mainmenu5[] PROGMEM = "Optionmenu5";
-const char mainmenu6[] PROGMEM = "Optionmenu6";
-const char mainmenu7[] PROGMEM = "Optionmenu7";
-
-const char *const mainmenu[] PROGMEM = {mainmenu1,mainmenu2,mainmenu3,mainmenu4,mainmenu5,mainmenu6,mainmenu7,NULL };
-
-const char freqmenutitle[] PROGMEM = "Freq";
-
 void setupADC() {
   ADCSRA = 0;
   PRR &= ~PRADC;
@@ -84,8 +71,6 @@ void idle_task(void)
 volatile uint16_t adc_sample_0;
 volatile uint16_t adc_sample_1;
 
-volatile uint16_t melapsed;
-
 ISR(TIMER1_OVF_vect)
 {
   static uint8_t last_adc1 = 0;
@@ -96,7 +81,6 @@ ISR(TIMER1_OVF_vect)
     adc_sample = (((uint16_t) high) << 8) | low;
   } while (0);
   sei();
-  uint16_t m2 = micros();
   if (last_adc1)
   {
     last_adc1 = 0;
@@ -109,7 +93,6 @@ ISR(TIMER1_OVF_vect)
     ADMUX = (1 << REFS0);
     dsp_interrupt_sample(adc_sample);
   }
-  melapsed = micros() - m2;
 }
 
 void write_transmit_pwm(uint16_t pwm)
@@ -176,7 +159,7 @@ void tone_on(uint8_t freq, uint8_t vol)
 }
 
 void setup() {
-  dsp_initialize_open();
+  dsp_initialize_open(0);
   setupADC();
   setup_timers();
   PSkey.begin();
@@ -210,64 +193,161 @@ uint8_t map_16_to_bar(uint16_t b)
   return 40;
 }
 
-void sound_cue()
+scroll_number_dat snd_freq = { 0, 1, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
+bargraph_dat bgd = { 4, 8, 12, 0 };
+
+void set_frequency(uint32_t freq)
 {
-  uint8_t cueval = map_16_to_bar(ds.mag_value_16);
-  //TONE_ON(625,cueval);  
+   si5351_synth_regs s_regs;
+   si5351_multisynth_regs m_regs;
+  
+   si5351.calc_registers(freq, &s_regs, &m_regs);
+   si5351.set_registers(0, &s_regs, 0, &m_regs);
+   si5351.setOutputOnOff(0,1);
 }
 
-void tune_loop()
+void set_frequency_snd(void)
 {
-  uint16_t last_update_bars;
-  scroll_number_dat snd = { 12, 1, 8, 0, 0, 99999999, 0, 0, 0, 0 };
-  bargraph_dat bgd = { 4, 8, 0, 0 };
-  lcd.setCursor(12,0);
-  lcdPrintFlash(freqmenutitle);
-  scroll_number_start(&snd);
+  set_frequency(snd_freq.n);
+}
+
+void scroll_redraw_snd(void)
+{
+  scroll_redraw(&snd_freq);
+}
+
+void update_bars()
+{
+  static uint16_t last_update_bars;
+  uint16_t cur_update = millis();
+  if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
+  {
+    last_update_bars = cur_update;
+    bgd.bars[0] = map_16_to_bar(ds.mag_value_20);
+    bgd.bars[1] = map_16_to_bar(ds.mag_value_16);
+    bgd.bars[2] = map_16_to_bar(ds.mag_value_12);
+    bgd.bars[3] = map_16_to_bar(ds.mag_value_8);
+    lcdBarGraph(&bgd);
+  }
+}
+
+const char freqmenutitle[] PROGMEM = "Set Freq";
+const char scanfrqtitle[] PROGMEM = "Scan Frq";
+
+const char *const mainmenu[] PROGMEM = {freqmenutitle,scanfrqtitle,NULL };
+
+#define PTSAMPLECT ((volatile uint8_t *)&ds.sample_ct)
+
+uint16_t accumulate_all_channels(uint8_t ct)
+{
+  uint8_t last = *PTSAMPLECT;
+  uint32_t total = 0;
+  while (ct>0)
+  {
+    uint8_t sample_ct = *PTSAMPLECT;
+    if (last != sample_ct)
+    {
+      last = sample_ct;
+      total += ((uint32_t)ds.mag_value_8) + 
+         ((uint32_t)ds.mag_value_12) + 
+         ((uint32_t)ds.mag_value_16) +
+         ((uint32_t)ds.mag_value_20) +
+         ((uint32_t)ds.mag_value_24);
+      ct--;
+    }
+  } 
+  return total >> 8;
+}
+
+void increment_decrement_frequency(int16_t val)
+{
+  int32_t next_freq = snd_freq.n + val;
+  if (next_freq < snd_freq.minimum_number) return;
+  if (next_freq > snd_freq.maximum_number) return;
+  snd_freq.n = next_freq;
+  set_frequency_snd();
+}
+
+void scan_frequency_mode(uint8_t selected)
+{
+  int8_t signval = selected == 1 ? -1 : 1;
+  int8_t stepval = 100;
+  uint16_t avg = 0, maxsteps = 1000, val;
+  
+  dsp_initialize_open(0);
+  increment_decrement_frequency(300 * signval);
+  delay(250);
+  for (uint8_t i=0;i<7;i++)
+    avg += accumulate_all_channels(32) >> 2;
   for (;;)
   {
+    for (;;)
+    {
+      if ((--maxsteps) == 0) break;
+      increment_decrement_frequency(stepval * signval);
+      if ( ((selected == 1) && (abort_button_right())) ||
+           ((selected == 2) && (abort_button_left())) )
+      {
+        stepval = 0;
+        break;
+      }
+      scroll_redraw_snd();
+      update_bars();
+      val = accumulate_all_channels(32);
+      if (val < avg) continue;
+      if (stepval == 10) stepval = 0;
+      break;
+    }
+    if ((stepval == 0) || ((stepval == 100) && (maxsteps == 0))) break;
+    stepval = 10;
+    maxsteps = stepval == 100 ? 30 : 60;
+    signval = -signval;
+  }
+  dsp_initialize_open(0);
+  delay(300);
+}
+
+void set_frequency_mode(uint8_t selected)
+{
+  snd_freq.position = (selected == 1) ? 7 : 0;
+  scroll_number_start(&snd_freq);
+  while (!snd_freq.entered)
+  {
     idle_task();
-    scroll_key(&snd);
-    if (snd.changed)
+    scroll_key(&snd_freq);
+    if (snd_freq.changed)
     {
-       snd.changed = 0;
-       si5351_synth_regs s_regs;
-       si5351_multisynth_regs m_regs;
-  
-       si5351.calc_registers(snd.n, &s_regs, &m_regs);
-       si5351.set_registers(0, &s_regs, 0, &m_regs);
-       si5351.setOutputOnOff(0,1);
+       set_frequency_snd();
+       snd_freq.changed = 0;
     }
-    uint16_t cur_update = millis();
-    if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
-    {
-      last_update_bars = cur_update;
-      bgd.bars[0] = map_16_to_bar(ds.mag_value_20);
-      bgd.bars[1] = map_16_to_bar(ds.mag_value_16);
-      bgd.bars[2] = map_16_to_bar(ds.mag_value_12);
-      bgd.bars[3] = map_16_to_bar(ds.mag_value_8);
-      lcdBarGraph(&bgd);
-    }
-    sound_cue();
+    update_bars();
   }
 }
 
-#define SUBV(x,bits) ((x < 0) ? (-((-x) >> (bits))) : ((x) >> (bits)))
+uint8_t current_item;
 
-void loop44()
+void select_command_mode()
 {
-  static uint8_t c[]=" ";
-  c[0] = PSkey.getkey();
-  if (c[0] != 0xFF)
+  uint8_t selected;
+  menu_str mn = { mainmenu, 0, 0, 8, 0 };
+  mn.item = current_item;
+  scroll_redraw_snd();
+  do_show_menu_item(&mn);
+  do
   {
-    lcd.setCursor(0,0);
-    lcd.print((char *)c);
+    update_bars();
+    selected = do_menu(&mn);
+  } while (!selected);
+  current_item = mn.item;
+  switch (mn.item)
+  {
+    case 0: set_frequency_mode(selected);
+            break;
+    case 1: scan_frequency_mode(selected);
+            break;
   }
-  delay(500);
-  Serial.println(melapsed);
 }
 
 void loop() {
-  tune_loop();
-  //do_menu(mainmenu,mainmenutitle,0);
+  select_command_mode();
 }

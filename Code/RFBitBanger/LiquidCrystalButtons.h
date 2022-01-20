@@ -81,7 +81,9 @@ public:
   uint8_t readButton(uint8_t b);
   bool getButtonPressed(uint8_t b);
   bool waitButtonPressed(uint8_t b);
-  
+  uint8_t readButtonDelay(uint8_t b);
+  uint8_t readUnBounced(uint8_t b);
+
   using Print::write;
 private:
   void send(uint8_t, uint8_t);
@@ -104,6 +106,7 @@ private:
   uint16_t _last_millis;
   uint8_t _last_state[4];
   uint8_t _state_count[4];
+  uint8_t _current_push_delay[4];
   bool    _button_pressed[4];
 };
 

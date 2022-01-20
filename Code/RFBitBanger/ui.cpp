@@ -83,35 +83,70 @@ void lcdPrintFlash(const char *str)
   }
 }
 
-uint8_t do_menu(const char *items[], const char *prompt, uint8_t item)
+void lcdPrintFlashSpaces(const char *str, uint8_t len)
 {
-  for (;;)
+  while (len>0)
   {
-    lcd.clear();
-    lcdPrintFlash(prompt);
-    lcd.setCursor(0, 1);
-    lcdPrintFlash(pgm_read_word_near(&items[item]));
-    for (;;)
-    {
-      uint8_t key = PSkey.getkey();
-      idle_task();
-      if ((lcd.getButtonPressed(0) || (key == PS2KEY_UP)) && (item > 0)) 
-      {
-        item--;
-        break;
-      }
-      if ((lcd.getButtonPressed(1) || (key == PS2KEY_DOWN)) && (pgm_read_word_near(&items[item+1]) != NULL))
-      {
-        item++;
-        break;
-      }
-      if (lcd.waitButtonPressed(2) || (key == PS2KEY_ENTER))
-      {
-        lcd.clearButtons();
-        return item;
-      }
-    }
+    char c = pgm_read_byte_near(str++);
+    if (c==0) break;
+    lcd.write(c);
+    len--;
   }
+  while (len>0)
+  {
+    lcd.write(' ');
+    len--;
+  }
+}
+
+void do_show_menu_item(menu_str *menu)
+{
+  lcd.setCursor(menu->col, menu->row);
+  lcdPrintFlashSpaces(pgm_read_word_near(&menu->items[menu->item]),menu->width);
+}
+
+uint8_t button_left(uint8_t key)
+{
+  return (lcd.waitButtonPressed(2) || (key == PS2KEY_LEFT));
+}
+
+uint8_t button_right(uint8_t key)
+{
+  return (lcd.waitButtonPressed(3) || (key == PS2KEY_RIGHT));
+}
+
+uint8_t button_up(uint8_t key)
+{
+  return (lcd.getButtonPressed(0) || (key == PS2KEY_UP));
+}
+
+uint8_t button_down(uint8_t key)
+{
+  return (lcd.getButtonPressed(1) || (key == PS2KEY_DOWN));
+}
+
+uint8_t do_menu(menu_str *menu)
+{
+  uint8_t key = PSkey.getkey();
+  idle_task();
+  if (button_left(key))
+  {
+     lcd.clearButtons();
+     return 1;
+  } else if (button_right(key))
+  {
+     lcd.clearButtons();
+     return 2;  
+  } else if ((button_up(key)) && (menu->item > 0)) 
+  {
+     menu->item--;
+     do_show_menu_item(menu);
+  } else if ((button_down(key)) && (pgm_read_word_near(&menu->items[menu->item+1]) != NULL))
+  {
+     menu->item++;
+     do_show_menu_item(menu);
+  } 
+  return 0;
 }
 
 char *number_str(char *s, uint32_t n, uint8_t digits, uint8_t decs)
@@ -144,6 +179,18 @@ void scroll_redraw(scroll_number_dat *snd)
   lcdPrintNum(snd->n, snd->digits, snd->decs);
 }
 
+uint8_t abort_button_left(void)
+{
+  uint8_t key = PSkey.getkey();
+  return ((key == PS2KEY_LEFT) || lcd.readUnBounced(2));
+}
+
+uint8_t abort_button_right(void)
+{
+  uint8_t key = PSkey.getkey();
+  return ((key == PS2KEY_RIGHT) || lcd.readUnBounced(3));
+}
+
 void scroll_key(scroll_number_dat *snd)
 {
   uint8_t redraw = 1;
@@ -167,27 +214,27 @@ void scroll_key(scroll_number_dat *snd)
     }
     snd->position++;
     key = 0;
-  } else if ((lcd.getButtonPressed(2) || (key == PS2KEY_LEFT)) && (snd->position > 0))
+  } else if (button_left(key))
   {
-    snd->position--;
-  } else if ((lcd.getButtonPressed(3) || (key == PS2KEY_RIGHT)) && (snd->position < snd->digits))
+    if (snd->position > 0)
+        snd->position--;
+    else
+        snd->entered = 1;
+  } else if (button_right(key))
   {
-    snd->position++;
-    redraw = 1;
-  } else if (lcd.getButtonPressed(0) || (key == PS2KEY_UP))
+    if (snd->position < (snd->digits-1))
+        snd->position++;
+    else
+        snd->entered = 1;
+  } else if (button_up(key))
   {
-    if (snd->position >= snd->digits)
-    {
-      snd->entered = 1;
-      return;
-    }
     uint32_t p10 = pow10(snd->digits - snd->position - 1);
     if ((snd->n + p10) <= snd->maximum_number)
     {
       snd->n += p10;
       snd->changed = 1;
     }
-  } else if (lcd.getButtonPressed(1) || (key == PS2KEY_DOWN))
+  } else if (button_down(key))
   {
     if (snd->position >= snd->digits)
     {
@@ -211,12 +258,10 @@ void scroll_number_start(scroll_number_dat *snd)
   snd->entered = 0;
   scroll_redraw(snd);
   lcd.cursor();
-  lcd.blink();  
 }
 
 void scroll_number_stop(scroll_number_dat *snd)
 {
-  lcd.noBlink();
   lcd.noCursor();
 }
 
@@ -242,10 +287,11 @@ bool show_messages(const char *message1, const char *message2)
   lcd.setCursor(0,1);
   lcd.print(message2);
   for (;;) {
+     uint8_t key = PSkey.getkey();
      idle_task();
-     if (lcd.waitButtonPressed(0)) 
+     if (button_left(key)) 
        return false;
-     if (lcd.waitButtonPressed(1))
+     if (button_right(key))
        return true;
   }
 }

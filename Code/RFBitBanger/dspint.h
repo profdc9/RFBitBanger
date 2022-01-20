@@ -102,12 +102,6 @@ typedef struct _dsp_state
   int32_t  state_q_20;
   int32_t  state_q_24;
 
-  uint32_t state_m_8;
-  uint32_t state_m_12;
-  uint32_t state_m_16;
-  uint32_t state_m_20;
-  uint32_t state_m_24;
-
   uint16_t  mag_value_8;
   uint16_t  mag_value_12;
   uint16_t  mag_value_16;
@@ -137,7 +131,7 @@ void dsp_new_sample(void);
 void dsp_initialize_scamp(uint8_t mod_type);
 void dsp_initialize_cw(uint8_t wide);
 void dsp_reset_state(void);
-void dsp_initialize_open(void);
+void dsp_initialize_open(uint8_t wide);
 
 void dsp_initialize_frame_fifo(volatile scamp_frame_fifo *dff);
 
