@@ -469,12 +469,12 @@ $EndComp
 $Comp
 L Conn_01x02 J22
 U 1 1 61E72EDE
-P 6000 900
-F 0 "J22" H 6000 1000 50  0000 C CNN
-F 1 "SPEAKER" H 6000 700 50  0000 C CNN
-F 2 "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm" H 6000 900 50  0001 C CNN
-F 3 "" H 6000 900 50  0001 C CNN
-	1    6000 900 
+P 4550 1200
+F 0 "J22" H 4550 1300 50  0000 C CNN
+F 1 "SPEAKER" H 4550 1000 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm" H 4550 1200 50  0001 C CNN
+F 3 "" H 4550 1200 50  0001 C CNN
+	1    4550 1200
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -549,17 +549,6 @@ Text GLabel 2800 3600 2    60   Input ~ 0
 VO
 Text GLabel 1850 3700 0    60   Input ~ 0
 RW
-$Comp
-L Audio-Jack-3 J2
-U 1 1 61E88BBE
-P 5100 1000
-F 0 "J2" H 5050 1175 50  0000 C CNN
-F 1 "Audio-Jack-3" H 5200 930 50  0000 C CNN
-F 2 "BitBangDisplay:PJ-3240-35mm-stereo" H 5350 1100 50  0001 C CNN
-F 3 "" H 5350 1100 50  0001 C CNN
-	1    5100 1000
-	1    0    0    -1  
-$EndComp
 $Comp
 L Conn_01x01 J4
 U 1 1 61E88E38
@@ -662,13 +651,13 @@ $EndComp
 $Comp
 L C_Small C1
 U 1 1 61E8A31F
-P 5550 1150
-F 0 "C1" H 5560 1220 50  0000 L CNN
-F 1 "10 nF" H 5560 1070 50  0000 L CNN
-F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm" H 5550 1150 50  0001 C CNN
-F 3 "" H 5550 1150 50  0001 C CNN
-	1    5550 1150
-	1    0    0    -1  
+P 3700 1600
+F 0 "C1" H 3710 1670 50  0000 L CNN
+F 1 "10 nF" H 3710 1520 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm" H 3700 1600 50  0001 C CNN
+F 3 "" H 3700 1600 50  0001 C CNN
+	1    3700 1600
+	0    1    1    0   
 $EndComp
 $Comp
 L +5VP #PWR19
@@ -1203,16 +1192,6 @@ Wire Wire Line
 Wire Wire Line
 	2800 4000 2650 4000
 Wire Wire Line
-	5800 1300 5800 1000
-Wire Wire Line
-	4900 1100 4900 1300
-Wire Wire Line
-	5300 1000 5600 1000
-Wire Wire Line
-	5600 1000 5600 900 
-Wire Wire Line
-	5600 900  5800 900 
-Wire Wire Line
 	6950 2250 6950 2200
 Wire Wire Line
 	6950 2200 7150 2200
@@ -1220,14 +1199,6 @@ Wire Wire Line
 	6950 1450 6950 2000
 Wire Wire Line
 	6950 2000 7150 2000
-Wire Wire Line
-	4900 1300 5800 1300
-Wire Wire Line
-	5550 1050 5550 1000
-Connection ~ 5550 1000
-Wire Wire Line
-	5550 1250 5550 1300
-Connection ~ 5550 1300
 Wire Wire Line
 	4900 2100 4900 2550
 Wire Wire Line
@@ -1457,9 +1428,9 @@ F 3 "" H 8050 3450 50  0001 C CNN
 $EndComp
 Connection ~ 7700 3450
 Wire Wire Line
-	8450 3450 8450 3050
+	8450 3050 8450 3450
 Wire Wire Line
-	8200 3450 8450 3450
+	8450 3450 8200 3450
 $Comp
 L C_Small C12
 U 1 1 61E96153
@@ -1532,4 +1503,56 @@ Wire Wire Line
 Connection ~ 5900 2550
 Wire Wire Line
 	4250 3350 4350 3350
+$Comp
+L Audio-Jack-3_2Switches J2
+U 1 1 61E9A48E
+P 3550 1200
+F 0 "J2" H 3550 1490 50  0000 C CNN
+F 1 "Audio-Jack-3_2Switches" H 3400 1000 50  0000 L CNN
+F 2 "BitBangDisplay:PJ-3240-35mm-stereo" H 3800 1300 50  0001 C CNN
+F 3 "" H 3800 1300 50  0001 C CNN
+	1    3550 1200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3350 1400 3350 1950
+Wire Wire Line
+	3350 1600 3600 1600
+Wire Wire Line
+	3750 1200 4350 1200
+Wire Wire Line
+	3900 1100 3900 1600
+Wire Wire Line
+	3900 1600 3800 1600
+Connection ~ 3900 1200
+Wire Wire Line
+	4350 1300 4350 1950
+Wire Wire Line
+	4350 1950 3350 1950
+Connection ~ 3350 1600
+$Comp
+L Conn_01x02 J16
+U 1 1 61E9B47A
+P 4550 700
+F 0 "J16" H 4550 800 50  0000 C CNN
+F 1 "SPEAKER" H 4550 500 50  0000 C CNN
+F 2 "Connectors_Terminal_Blocks:TerminalBlock_bornier-2_P5.08mm" H 4550 700 50  0001 C CNN
+F 3 "" H 4550 700 50  0001 C CNN
+	1    4550 700 
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 1300 3850 1300
+Wire Wire Line
+	3850 1300 3850 700 
+Wire Wire Line
+	3850 700  4350 700 
+Wire Wire Line
+	4350 800  4100 800 
+Wire Wire Line
+	4100 800  4100 1300
+Wire Wire Line
+	4100 1300 4350 1300
+Wire Wire Line
+	3900 1100 3750 1100
 $EndSCHEMATC
