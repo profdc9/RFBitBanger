@@ -35,6 +35,7 @@ typedef struct _menu_str
 } menu_str;
 
 
+void set_horiz_menu_keys(uint8_t horiz);
 uint8_t do_menu(menu_str *menu);
 void do_show_menu_item(menu_str *menu);
 bool show_messages(const char *message1, const char *message2);

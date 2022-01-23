@@ -1,4 +1,3 @@
-
 /*  cwmod.c */
 
 /*
@@ -40,16 +39,16 @@ freely, subject to the following restrictions:
 #include "dspint.h"
 #include "cwmod.h"
 
-const uint8_t cwmod_bit_mask[8] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
+// const uint8_t cwmod_bit_mask[8] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
 
 /*  This is formula round(10 * 3^(n/4))  n=1 to 16 */
-const uint16_t cwmod_timing_histogram_bins[CWMOD_TIMING_BINS] =
+const uint16_t cwmod_timing_histogram_bins[CWMOD_TIMING_BINS] PROGMEM =
 {  13, 17, 23, 30, 39, 52, 68, 90, 118, 156, 205, 270, 355, 468, 615, 810 };
 
 
 /* FROM ITU-R M.1677-1 */
 /* zero dit, 1 dah */
-const cwmod_symbol morse_pattern[] =
+const cwmod_symbol morse_pattern[] PROGMEM =
 {
     { 0b010101,   6, '.' },
     { 0b110011,   6, ',' },
@@ -146,7 +145,7 @@ void cw_initialize(uint8_t wide, uint8_t spaces_from_mark_timing,
                    uint8_t smooth, uint8_t sticky_interval_length)
 {
    dsp_initialize_cw(wide);
-   memset(&ps.cs,'\000',sizeof(cs));
+   memset(&ps.cs,'\000',sizeof(ps.cs));
 
    ps.cs.protocol = PROTOCOL_CW;
    ps.cs.keydown_threshold = CWMOD_THRESHOLD_MIN;
@@ -301,7 +300,7 @@ void cw_decode_process(void)
     if (tim > 0)
     {
         for (bin=0; bin < CWMOD_TIMING_BINS; bin++)   /* search for histogram bin */
-            if (tim < cwmod_timing_histogram_bins[bin]) break;
+            if (tim < pgm_read_word_near(&cwmod_timing_histogram_bins[bin])) break;
         if (bin < CWMOD_TIMING_BINS)
         {
             if (is_mark) ps.cs.histogram_marks[bin]++;
@@ -328,7 +327,7 @@ void cw_decode_process(void)
                         2, &g1m, &g2m);
 
 
-    ps.cs.dit_dah_threshold = cwmod_timing_histogram_bins[(g1m+g2m)/2];
+    ps.cs.dit_dah_threshold = pgm_read_word_near(&cwmod_timing_histogram_bins[(g1m+g2m)/2]);
 
     if (ps.cs.spaces_from_mark_timing)
     {
@@ -350,7 +349,7 @@ void cw_decode_process(void)
     }
    // printf(" lm: %d/%d %d/%d\n",g1m,g2m,g1s,g2s);
 
-    ps.cs.intrainterspace_threshold = cwmod_timing_histogram_bins[(g1s+g2s)/2];
+    ps.cs.intrainterspace_threshold = pgm_read_word_near(&cwmod_timing_histogram_bins[(g1s+g2s)/2]);
     ps.cs.interspaceword_threshold = 3*ps.cs.intrainterspace_threshold;
 
 
@@ -378,13 +377,14 @@ void cw_decode_process(void)
                const cwmod_symbol *cws = &morse_pattern[0];
                while (cws < (&morse_pattern[(sizeof(morse_pattern)/sizeof(cwmod_symbol))]))
                {
-                   int8_t diff = ps.cs.num_ditdahs - cws->num;
+                   int8_t diff = ps.cs.num_ditdahs - pgm_read_byte_near(&cws->num);
                    if (diff >= 0)
                    {
                        uint8_t test = ps.cs.cur_ditdahs >> diff;
-                       if (cws->cwbits == test)
+                       if (pgm_read_byte_near(&cws->cwbits) == test)
                        {
-                            printf("%c",cws->symbol);
+                            //printf("%c",cws->symbol);
+                            decode_insert_into_fifo(pgm_read_byte_near(&cws->symbol));
                             break;
                        }
                    }
@@ -392,8 +392,9 @@ void cw_decode_process(void)
                }
                ps.cs.num_ditdahs = 0;
                ps.cs.cur_ditdahs = 0;
-               if (tim > ps.cs.interspaceword_threshold)
-                   printf(" ");
+             //  if (tim > ps.cs.interspaceword_threshold)
+             //      printf(" ");
+               decode_insert_into_fifo(' ');
             }
         }
     }

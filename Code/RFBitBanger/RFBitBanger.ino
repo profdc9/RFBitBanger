@@ -158,8 +158,16 @@ void tone_on(uint8_t freq, uint8_t vol)
     OCR2B = vol;
 }
 
+uint8_t current_protocol;
+
+void set_protocol(uint8_t protocol)
+{
+   dsp_initialize_protocol(protocol);
+   current_protocol = protocol;  
+}
+
 void setup() {
-  dsp_initialize_open(0);
+  set_protocol(0);
   setupADC();
   setup_timers();
   PSkey.begin();
@@ -223,7 +231,7 @@ void update_bars()
   if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
   {
     last_update_bars = cur_update;
-    bgd.bars[0] = map_16_to_bar(ds.mag_value_20);
+    bgd.bars[0] = map_16_to_bar(ps.rs.protocol == PROTOCOL_RTTY ? ds.mag_value_24 : ds.mag_value_20);
     bgd.bars[1] = map_16_to_bar(ds.mag_value_16);
     bgd.bars[2] = map_16_to_bar(ds.mag_value_12);
     bgd.bars[3] = map_16_to_bar(ds.mag_value_8);
@@ -232,9 +240,17 @@ void update_bars()
 }
 
 const char freqmenutitle[] PROGMEM = "Set Freq";
-const char scanfrqtitle[] PROGMEM = "Scan Frq";
+const char scanfasttitle[] PROGMEM = "ScanFast";
+const char scanslowtitle[] PROGMEM = "ScanSlow";
+const char tranmodetitle[] PROGMEM = "TranMode";
 
-const char *const mainmenu[] PROGMEM = {freqmenutitle,scanfrqtitle,NULL };
+const char *const mainmenu[] PROGMEM = {freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
+
+const char cwtitle[] PROGMEM = "CW";
+const char rttytitle[] PROGMEM = "RTTY";
+const char scamptitle[] PROGMEM = "SCAMP";
+
+const char *const protocolmenu[] PROGMEM = {cwtitle,rttytitle,scamptitle,NULL };
 
 #define PTSAMPLECT ((volatile uint8_t *)&ds.sample_ct)
 
@@ -248,11 +264,7 @@ uint16_t accumulate_all_channels(uint8_t ct)
     if (last != sample_ct)
     {
       last = sample_ct;
-      total += ((uint32_t)ds.mag_value_8) + 
-         ((uint32_t)ds.mag_value_12) + 
-         ((uint32_t)ds.mag_value_16) +
-         ((uint32_t)ds.mag_value_20) +
-         ((uint32_t)ds.mag_value_24);
+      total += dsp_get_signal_magnitude();
       ct--;
     }
   } 
@@ -268,13 +280,12 @@ void increment_decrement_frequency(int16_t val)
   set_frequency_snd();
 }
 
-void scan_frequency_mode(uint8_t selected)
+void scan_frequency_mode(uint8_t selected, uint8_t initial_step)
 {
   int8_t signval = selected == 1 ? -1 : 1;
-  int8_t stepval = 100;
+  int8_t stepval = initial_step;
   uint16_t avg = 0, maxsteps = 1000, val;
   
-  dsp_initialize_open(0);
   increment_decrement_frequency(300 * signval);
   delay(250);
   for (uint8_t i=0;i<7;i++)
@@ -303,7 +314,6 @@ void scan_frequency_mode(uint8_t selected)
     maxsteps = stepval == 100 ? 30 : 60;
     signval = -signval;
   }
-  dsp_initialize_open(0);
   delay(300);
 }
 
@@ -322,6 +332,23 @@ void set_frequency_mode(uint8_t selected)
     }
     update_bars();
   }
+}
+
+void set_transmission_mode(void)
+{  
+  uint8_t selected;
+  menu_str mn = { protocolmenu, 0, 1, 8, 0 };
+  mn.item = ps.ss.protocol;
+  do_show_menu_item(&mn);
+  set_horiz_menu_keys(1);
+  do
+  {
+    update_bars();
+    selected = do_menu(&mn);
+  } while (!selected);
+  set_horiz_menu_keys(0);
+  if (current_protocol != mn.item)
+     set_protocol(mn.item);
 }
 
 uint8_t current_item;
@@ -343,7 +370,11 @@ void select_command_mode()
   {
     case 0: set_frequency_mode(selected);
             break;
-    case 1: scan_frequency_mode(selected);
+    case 1: scan_frequency_mode(selected,100);
+            break;
+    case 2: scan_frequency_mode(selected,10);
+            break;
+    case 3: set_transmission_mode();
             break;
   }
 }

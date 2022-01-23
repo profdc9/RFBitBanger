@@ -99,30 +99,57 @@ void lcdPrintFlashSpaces(const char *str, uint8_t len)
   }
 }
 
+static uint8_t horiz_keys = 0;
+
+void set_horiz_menu_keys(uint8_t horiz)
+{
+  horiz_keys = horiz;
+}
+
 void do_show_menu_item(menu_str *menu)
 {
   lcd.setCursor(menu->col, menu->row);
   lcdPrintFlashSpaces(pgm_read_word_near(&menu->items[menu->item]),menu->width);
 }
 
-uint8_t button_left(uint8_t key)
+uint8_t button_left_actual(uint8_t key)
 {
   return (lcd.waitButtonPressed(2) || (key == PS2KEY_LEFT));
 }
 
-uint8_t button_right(uint8_t key)
+uint8_t button_right_actual(uint8_t key)
 {
   return (lcd.waitButtonPressed(3) || (key == PS2KEY_RIGHT));
 }
 
-uint8_t button_up(uint8_t key)
+uint8_t button_up_actual(uint8_t key)
 {
   return (lcd.getButtonPressed(0) || (key == PS2KEY_UP));
 }
 
-uint8_t button_down(uint8_t key)
+uint8_t button_down_actual(uint8_t key)
 {
   return (lcd.getButtonPressed(1) || (key == PS2KEY_DOWN));
+}
+
+uint8_t button_left(uint8_t key)
+{
+  return horiz_keys ? button_up_actual(key) : button_left_actual(key);
+}
+
+uint8_t button_right(uint8_t key)
+{
+  return horiz_keys ? button_down_actual(key) : button_right_actual(key);
+}
+
+uint8_t button_up(uint8_t key)
+{
+    return horiz_keys ? button_left_actual(key) : button_up_actual(key);
+}
+
+uint8_t button_down(uint8_t key)
+{
+  return horiz_keys ? button_right_actual(key) : button_down_actual(key);
 }
 
 uint8_t do_menu(menu_str *menu)

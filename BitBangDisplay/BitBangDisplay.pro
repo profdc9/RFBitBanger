@@ -1,4 +1,4 @@
-update=1/19/2022 8:22:16 PM
+update=1/22/2022 1:21:05 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -61,6 +61,7 @@ LibName29=opto
 LibName30=atmel
 LibName31=contrib
 LibName32=valves
+LibName33=lcd1602extrapins
 [schematic_editor]
 version=1
 PageLayoutDescrFile=

@@ -42,6 +42,36 @@ dsp_state       ds;
 dsp_state_fixed df;
 protocol_state  ps;
 
+decode_fifo decfifo;
+
+/* initialize decode fifo */
+void decode_initialize_fifo(void)
+{
+    decfifo.head = decfifo.tail = 0;
+}
+
+/* insert a character into the decode fifo.  this is intended to be interrupt safe */
+uint8_t decode_insert_into_fifo(uint8_t c)
+{
+    uint8_t next = decfifo.head >= (DECODE_FIFO_LENGTH - 1) ? 0 : (decfifo.head+1);
+    if (next == decfifo.tail) return 0;
+    decfifo.decodes[next] = c;
+    decfifo.head = next;;
+    return 1;
+}
+
+/* remove a character from the decode fifo.  this is intended to be interrupt safe */
+uint16_t decode_remove_from_fifo(void)
+{
+    uint8_t c, next;
+    if (decfifo.tail == decfifo.head) return 0xFFFF;
+    next = decfifo.tail >= (DECODE_FIFO_LENGTH - 1) ? 0 : (decfifo.tail+1);
+    c = decfifo.decodes[next];
+    decfifo.tail = next;
+    return c;
+}
+
+
 /* initialize frame fifo */
 void scamp_initialize_frame_fifo(volatile scamp_frame_fifo *dff)
 {
@@ -194,31 +224,10 @@ void dsp_initialize_scamp(uint8_t mod_type)
        ps.ss.edge_thr = ps.ss.power_thr << 1;
 }
 
-/* initialize DSP for listening mode */
-void dsp_initialize_open(uint8_t wide)
-{
-    df.buffer_size = 48;
-    if (wide)
-    {
-      df.dly_8 = 16;
-      df.dly_12 = 24;
-      df.dly_16 = 16;
-      df.dly_20 = 20;
-      df.dly_24 = 24;
-    } else
-    {
-      df.dly_8 = 48;
-      df.dly_12 = 48;
-      df.dly_16 = 48;
-      df.dly_20 = 40;
-      df.dly_24 = 48;
-    }
-    dsp_reset_state();
-}
-
 /* initialize DSP for CW mode */
 void dsp_initialize_cw(uint8_t wide)
 {
+    ps.cs.protocol = PROTOCOL_CW;
     df.buffer_size = 48;
     df.dly_8 = 48;
     df.dly_12 = wide ? 12 : 24;
@@ -228,8 +237,55 @@ void dsp_initialize_cw(uint8_t wide)
     dsp_reset_state();
 }
 
-//   uint16_t ux = (x < 0 ? -x : x); \
-//   uint16_t uy = (y < 0 ? -y : y); \
+void dsp_initialize_rtty(void)
+{
+    ps.rs.protocol = PROTOCOL_RTTY;
+    df.buffer_size = 48;
+    df.dly_8 = 48;
+    df.dly_16 = 48;
+    df.dly_20 = 40;
+    df.dly_24 = 48;
+    dsp_reset_state();
+}
+
+void dsp_initialize_protocol(uint8_t protocol)
+{
+  switch (protocol)
+  {
+     case 0: dsp_initialize_scamp(SCAMP_FSK);
+             break;
+     case 1: dsp_initialize_cw(0);
+             break;
+     case 2: dsp_initialize_rtty();
+             break;
+  }
+}
+
+uint16_t dsp_get_signal_magnitude(void)
+{
+  switch (ps.cs.protocol)
+  {
+    case PROTOCOL_CW:     return ds.mag_value_12;
+    case PROTOCOL_RTTY:   return ds.mag_value_8 + ds.mag_value_24;
+    case PROTOCOL_SCAMP: 
+    {
+      switch (ps.ss.mod_type)
+      {
+#ifdef SCAMP_VERY_SLOW_MODES
+        case SCAMP_OOK_SLOW:
+#endif
+        case SCAMP_OOK_FAST:
+        case SCAMP_OOK:        return ds.mag_value_16;
+#ifdef SCAMP_VERY_SLOW_MODES
+        case SCAMP_FSK_SLOW:
+#endif
+        case SCAMP_FSK:        return ds.mag_value_12 + ds.mag_value_20;
+        case SCAMP_FSK_FAST:   return ds.mag_value_8 + ds.mag_value_12;
+      }
+    }
+  }
+  return ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24;
+}
 
 /* this is an approximation to the sqrt(x^2+y^2) function that approximates the
    circular set as an octagon.  seems to work quite well */
@@ -407,7 +463,7 @@ void scamp_decode_process(void)
             ps.ss.edge_thr = ps.ss.power_thr;
        else
             ps.ss.edge_thr = ps.ss.power_thr << 1;
-       printf("power %d edge %d min %d ---------------------------------\n",ps.ss.power_thr,ps.ss.edge_thr,ps.ss.power_thr_min);
+       //printf("power %d edge %d min %d ---------------------------------\n",ps.ss.power_thr,ps.ss.edge_thr,ps.ss.power_thr_min);
        ds.ct_average = 0;
        ds.ct_sum = 0;
     }
@@ -480,7 +536,7 @@ void scamp_decode_process(void)
     //printf("received: %08X %05d %02d %02d %02d %02d %02d %02d\n", ds.current_word, ps.ss.cur_bit, ds.current_bit_no, hamming_weight, ps.ss.polarity, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
     if (hamming_weight < (ps.ss.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
     {
-        printf("resync!\n");
+        //printf("resync!\n");
         scamp_reset_codeword();
         ps.ss.resync = 1;
         return;
@@ -521,8 +577,8 @@ void scamp_decode_process(void)
           /* we are at least one bit flip short, we probably fell a bit behind */
           {
             scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word >> 1);
-            printf("inserted- word into fifo: %08X %02d %02d %02d -----------------------------\n",
-                   ds.current_word >> 1, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
+            //printf("inserted- word into fifo: %08X %02d %02d %02d -----------------------------\n",
+                   //ds.current_word >> 1, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
             /* start with the next word with one flip */
             ds.current_bit_no = 1;
             ps.ss.bitflips_ctr = 1;
@@ -532,8 +588,8 @@ void scamp_decode_process(void)
              {
                /* otherwise we just place in buffer and the code word is probably aligned */
                scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word);
-               printf("inserted0 word into fifo: %08X %02d %02d %02d -----------------------------\n",
-                   ds.current_word, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
+               //printf("inserted0 word into fifo: %08X %02d %02d %02d -----------------------------\n",
+                   //ds.current_word, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
              }
              ds.current_bit_no = 0;
              ps.ss.bitflips_ctr = 0;

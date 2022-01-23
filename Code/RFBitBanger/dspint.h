@@ -30,6 +30,7 @@ extern "C" {
 
 #define SCAMP_PROTOCOL
 #define CW_PROTOCOL
+#define RTTY_PROTOCOL
 
 #ifdef SCAMP_PROTOCOL
 #include "scamp.h"
@@ -37,6 +38,9 @@ extern "C" {
 #ifdef CW_PROTOCOL
 #include "cwmod.h"
 #endif /* CW_PROTOCOL */
+#ifdef RTTY_PROTOCOL
+#include "rtty.h"
+#endif /* RTTY_PROTOCOL */
 
 #ifdef SCAMP_VERY_SLOW_MODES
 #define DSPINT_MAX_SAMPLEBUFFER 128
@@ -51,6 +55,7 @@ extern "C" {
 
 #define PROTOCOL_SCAMP   0
 #define PROTOCOL_CW      1
+#define PROTOCOL_RTTY    2
 
 /* this is stuff that is initialized when the modulation mode
    is changed and doesn't change otherwise */
@@ -122,6 +127,9 @@ typedef union _protocol_state
 #ifdef CW_PROTOCOL
     cwmod_state  cs;
 #endif
+#ifdef RTTY_PROTOCOL
+    rtty_state   rs;
+#endif
 } protocol_state;
 
 extern protocol_state  ps;
@@ -130,10 +138,27 @@ void dsp_interrupt_sample(uint16_t sample);
 void dsp_new_sample(void);
 void dsp_initialize_scamp(uint8_t mod_type);
 void dsp_initialize_cw(uint8_t wide);
+void dsp_initialize_rtty(void);
 void dsp_reset_state(void);
-void dsp_initialize_open(uint8_t wide);
+uint16_t dsp_get_signal_magnitude(void);
+
+void dsp_initialize_protocol(uint8_t protocol);
 
 void dsp_initialize_frame_fifo(volatile scamp_frame_fifo *dff);
+
+#define DECODE_FIFO_LENGTH 16
+
+/* structure for decode fifo */
+typedef struct _decode_fifo
+{
+    uint8_t   head;
+    uint8_t   tail;
+    uint8_t   decodes[DECODE_FIFO_LENGTH];
+} decode_fifo;
+
+void decode_initialize_fifo(void);
+uint8_t decode_insert_into_fifo(uint8_t c);
+uint16_t decode_remove_from_fifo(void);
 
 #ifdef __cplusplus
 }

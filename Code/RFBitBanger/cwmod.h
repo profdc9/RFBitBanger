@@ -87,8 +87,6 @@ typedef struct _cwmod_state
   uint8_t   cur_ditdahs;
 } cwmod_state;
 
-extern cwmod_state       cs;
-
 #ifdef __cplusplus
 }
 #endif

@@ -103,10 +103,10 @@ private:
   uint8_t _numlines;
   uint8_t _row_offsets[4];
 
-  uint16_t _last_millis;
+  uint16_t  _last_millis;
+  uint8_t _repeated_state[4];
   uint8_t _last_state[4];
   uint8_t _state_count[4];
-  uint8_t _current_push_delay[4];
   bool    _button_pressed[4];
 };
 
