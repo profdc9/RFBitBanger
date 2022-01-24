@@ -164,11 +164,11 @@ uint8_t do_menu(menu_str *menu)
   {
      lcd.clearButtons();
      return 2;  
-  } else if ((button_up(key)) && (menu->item > 0)) 
+  } else if ((button_down(key)) && (menu->item > 0)) 
   {
      menu->item--;
      do_show_menu_item(menu);
-  } else if ((button_down(key)) && (pgm_read_word_near(&menu->items[menu->item+1]) != NULL))
+  } else if ((button_up(key)) && (pgm_read_word_near(&menu->items[menu->item+1]) != NULL))
   {
      menu->item++;
      do_show_menu_item(menu);
