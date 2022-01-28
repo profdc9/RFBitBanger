@@ -186,7 +186,7 @@ void setup() {
 
 #define UPDATE_MILLIS_BARS 100
 
-uint8_t map_16_to_bar(uint16_t b)
+uint8_t map_16_to_bar_40(uint16_t b)
 {
   if (b < 64)
     return (b >> 3);                  // 0 to 64 is 0 to 7
@@ -201,8 +201,16 @@ uint8_t map_16_to_bar(uint16_t b)
   return 40;
 }
 
+uint8_t map_16_to_bar_20(uint16_t b)
+{
+  return map_16_to_bar_40(b) >> 1;
+}
+
 scroll_number_dat snd_freq = { 0, 1, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
+#ifdef BIG_BAR_GRAPH
 bargraph_dat bgd = { 4, 8, 12, 0 };
+#endif
+bargraph_dat bgs = { 1, 4, 12, 1 };
 
 void set_frequency(uint32_t freq)
 {
@@ -224,34 +232,6 @@ void scroll_redraw_snd(void)
   scroll_redraw(&snd_freq);
 }
 
-void update_bars()
-{
-  static uint16_t last_update_bars;
-  uint16_t cur_update = millis();
-  if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
-  {
-    last_update_bars = cur_update;
-    bgd.bars[0] = map_16_to_bar(ps.rs.protocol == PROTOCOL_RTTY ? ds.mag_value_24 : ds.mag_value_20);
-    bgd.bars[1] = map_16_to_bar(ds.mag_value_16);
-    bgd.bars[2] = map_16_to_bar(ds.mag_value_12);
-    bgd.bars[3] = map_16_to_bar(ds.mag_value_8);
-    lcdBarGraph(&bgd);
-  }
-}
-
-const char freqmenutitle[] PROGMEM = "Set Freq";
-const char scanfasttitle[] PROGMEM = "ScanFast";
-const char scanslowtitle[] PROGMEM = "ScanSlow";
-const char tranmodetitle[] PROGMEM = "TranMode";
-
-const char *const mainmenu[] PROGMEM = {freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
-
-const char cwtitle[] PROGMEM = "CW";
-const char rttytitle[] PROGMEM = "RTTY";
-const char scamptitle[] PROGMEM = "SCAMP";
-
-const char *const protocolmenu[] PROGMEM = {cwtitle,rttytitle,scamptitle,NULL };
-
 #define PTSAMPLECT ((volatile uint8_t *)&ds.sample_ct)
 
 uint16_t accumulate_all_channels(uint8_t ct)
@@ -270,6 +250,40 @@ uint16_t accumulate_all_channels(uint8_t ct)
   } 
   return total >> 8;
 }
+
+void update_bars()
+{
+  static uint16_t last_update_bars;
+  uint16_t cur_update = millis();
+  if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
+  {
+    last_update_bars = cur_update;
+#ifdef BIG_BAR_GRAPH
+    bgd.bars[0] = map_16_to_bar_40(ps.rs.protocol == PROTOCOL_RTTY ? ds.mag_value_24 : ds.mag_value_20);
+    bgd.bars[1] = map_16_to_bar_40(ds.mag_value_16);
+    bgd.bars[2] = map_16_to_bar_40(ds.mag_value_12);
+    bgd.bars[3] = map_16_to_bar_40(ds.mag_value_8);
+    lcdBarGraph(&bgd);
+#endif
+    bgs.bars[0] = map_16_to_bar_20(dsp_get_signal_magnitude());
+    //lcd.setCursor(9,1);
+    //lcdPrintNum(bgs.bars[0],3,0);
+    lcdBarGraph(&bgs);
+  }
+}
+
+const char freqmenutitle[] PROGMEM = "Set Freq";
+const char scanfasttitle[] PROGMEM = "ScanFast";
+const char scanslowtitle[] PROGMEM = "ScanSlow";
+const char tranmodetitle[] PROGMEM = "TranMode";
+
+const char *const mainmenu[] PROGMEM = {freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
+
+const char cwtitle[] PROGMEM = "CW";
+const char rttytitle[] PROGMEM = "RTTY";
+const char scamptitle[] PROGMEM = "SCAMP";
+
+const char *const protocolmenu[] PROGMEM = {cwtitle,rttytitle,scamptitle,NULL };
 
 void increment_decrement_frequency(int16_t val)
 {

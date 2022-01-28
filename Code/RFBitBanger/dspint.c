@@ -252,21 +252,22 @@ void dsp_initialize_protocol(uint8_t protocol)
 {
   switch (protocol)
   {
-     case 0: dsp_initialize_scamp(SCAMP_FSK);
+     case 0: dsp_initialize_cw(0);
              break;
-     case 1: dsp_initialize_cw(0);
+     case 1: dsp_initialize_rtty();
              break;
-     case 2: dsp_initialize_rtty();
+     case 2: dsp_initialize_scamp(SCAMP_FSK);
              break;
   }
 }
 
 uint16_t dsp_get_signal_magnitude(void)
 {
+#if 1
   switch (ps.cs.protocol)
   {
     case PROTOCOL_CW:     return ds.mag_value_12;
-    case PROTOCOL_RTTY:   return ds.mag_value_8 + ds.mag_value_24;
+    case PROTOCOL_RTTY:   return (ds.mag_value_8 + ds.mag_value_24) >> 1;
     case PROTOCOL_SCAMP: 
     {
       switch (ps.ss.mod_type)
@@ -279,12 +280,13 @@ uint16_t dsp_get_signal_magnitude(void)
 #ifdef SCAMP_VERY_SLOW_MODES
         case SCAMP_FSK_SLOW:
 #endif
-        case SCAMP_FSK:        return ds.mag_value_12 + ds.mag_value_20;
+        case SCAMP_FSK:        return (ds.mag_value_12 + ds.mag_value_20) >> 1;
         case SCAMP_FSK_FAST:   return ds.mag_value_8 + ds.mag_value_12;
       }
     }
   }
-  return ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24;
+#endif
+  return (ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24) >> 2;
 }
 
 /* this is an approximation to the sqrt(x^2+y^2) function that approximates the
