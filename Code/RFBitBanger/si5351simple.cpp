@@ -107,7 +107,7 @@ void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs,
 	   case 1: synth_base = SI5351_SYNTH_PLL_B; break;
    }
 
-   setSourceAndPower(multisynth_no, 0, 0, 0, 0);
+   setSourceAndPower(multisynth_no, 0, 0, 0, 0, 0);
    if (synth_base != 0xFF)
    {
 	   for (i=0;i<8;i++) si5351_write(synth_base+i, s_regs->regs[i]);
@@ -115,97 +115,80 @@ void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs,
    for (i=0;i<8;i++) si5351_write(multisynth_base+i, m_regs->regs[i]);
    si5351_write(multisynth_no+165, m_regs->offset);
 	   
-   si5351_write(177, synth_no ? 0x20 : 0x80);
-   setSourceAndPower(multisynth_no, m_regs->offset != 0, 1, synth_no, 3);
+   setSourceAndPower(multisynth_no, m_regs->offset != 0, 1, synth_no, 3, m_regs->inv);
+   si5351_write(177, synth_no ? 0x80 : 0x20);
 }									 
 
-void si5351simple::calc_registers(uint32_t frequency, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs)
+static void calc_multisynth_registers(uint8_t regs[], uint8_t R, uint32_t a, uint32_t b, uint32_t c)
+{
+  uint32_t P1, P2, P3;
+
+  P3 = (b << 7) / c;
+  P1 = (a << 7) + P3 - 512;
+  P2 = (b << 7) - c * P3;
+  P3 = c;
+  
+  regs[0] = (P3 >> 8) & 0xFF;
+  regs[1] = P3 & 0xFF;
+  regs[2] = (((uint8_t)(P1 >> 16)) & 0x03) | (R << 4);
+  regs[3] = (P1 >> 8) & 0xFF;
+  regs[4] = P1 & 0xFF;  
+  regs[5] = ((uint8_t)(P3 >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F);
+  regs[6] = (P2 >> 8) & 0xFF;
+  regs[7] = P2 & 0xFF;
+}
+
+void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs)
 {
   #define c 1048574               // "c" part of Feedback-Multiplier from XTAL to PLL
   uint32_t fvco;                  // VCO frequency (600-900 MHz) of PLL
-  uint32_t outdivider;            // Output divider in range [4,6,8-900], even numbers preferred
-  uint8_t R = 1;                  // Additional Output Divider in range [1,2,4,...128]
-  uint8_t a;                      // "a" part of Feedback-Multiplier from XTAL to PLL in range [15,90]
+  uint8_t R = 0;                  // Additional Output Divider in range [1,2,4,...128]
+  uint8_t mult_ratio;
+  uint16_t a;                      // "a" part of Feedback-Multiplier from XTAL to PLL in range [15,90]
   uint32_t b;                     // "b" part of Feedback-Multiplier from XTAL to PLL
-  uint32_t f;                        // floating variable, needed in calculation
-  uint32_t MS0_P1;                // Si5351a Output Divider register MS0_P1, P2 and P3 are hardcoded below
-  uint32_t MSNA_P1;               // Si5351a Feedback Multisynth register MSNA_P1
-  uint32_t MSNA_P2;               // Si5351a Feedback Multisynth register MSNA_P2
-  uint32_t MSNA_P3;               // Si5351a Feedback Multisynth register MSNA_P3
 
-  outdivider = 900000000 / frequency;  // With 900 MHz beeing the maximum internal PLL-Frequency
-  
-  while (outdivider > 900)
-  {                               // If output divider out of range (>900) use additional Output divider
-    R <<= 1;
-    outdivider >>= 1;
-  }
-  if (outdivider & 0x01) outdivider--;  // finds the even divider which delivers the intended Frequency
-
-  fvco = outdivider * R * frequency;   // Calculate the PLL-Frequency (given the even divider)
-
-  switch (R)
-  {                                    // Convert the Output Divider to the bit-setting required in register 44
-    case 1: R = 0; break;              // Bits [6:4] = 000
-    case 2: R = 16; break;             // Bits [6:4] = 001
-    case 4: R = 32; break;             // Bits [6:4] = 010
-    case 8: R = 48; break;             // Bits [6:4] = 011
-    case 16: R = 64; break;            // Bits [6:4] = 100
-    case 32: R = 80; break;            // Bits [6:4] = 101
-    case 64: R = 96; break;            // Bits [6:4] = 110
-    case 128: R = 112; break;          // Bits [6:4] = 111
-  }
-
-  a = fvco / xo_freq;                   // Multiplier to get from Quartz-Oscillator Freq. to PLL-Freq.
-  f = fvco - a * xo_freq;               // Multiplier = a+b/c
-  f = (((uint64_t)f) * c) / xo_freq;    // 64-bit precision is needed here
-  b = f;
-
-  MS0_P1 = (outdivider << 7) - 512;     // Calculation of Output Divider registers MS0_P1 to MS0_P3
-                                        // MS0_P2 = 0 and MS0_P3 = 1; these values are hardcoded, see below
-
-  f = (b << 7) / c;                     // Calculation of Feedback Multisynth registers MSNA_P1 to MSNA_P3
-  MSNA_P1 = (a << 7) + f - 512;
-  MSNA_P2 = f;
-  MSNA_P2 = (b << 7) - MSNA_P2 * c; 
-  MSNA_P3 = c;
-
-  s_regs->regs[0] = (MSNA_P3 & 65280) >> 8;
-  s_regs->regs[1] = MSNA_P3 & 255; 
-  s_regs->regs[2] = (MSNA_P1 & 196608) >> 16; 
-  s_regs->regs[3] = (MSNA_P1 & 65280) >> 8;
-  s_regs->regs[4] = MSNA_P1 & 255;
-  s_regs->regs[5] = ((MSNA_P3 & 983040) >> 12) | ((MSNA_P2 & 983040) >> 16);
-  s_regs->regs[6] = (MSNA_P2 & 65280) >> 8;
-  s_regs->regs[7] = MSNA_P2 & 255;
-
-  m_regs->offset = 0;
-  m_regs->regs[0] = 0;
-  m_regs->regs[1] = 1;
-  m_regs->regs[5] = 0;
-  m_regs->regs[6] = 0;
-  m_regs->regs[7] = 0;
-
-  if (outdivider == 4)
+  if (phase >= 0x80)
   {
-    m_regs->regs[2] = 12 | R;
-    m_regs->regs[3] = 0;
-  	m_regs->regs[4] = 0;
-  } else
-  {	  
-	  m_regs->regs[2] = ((MS0_P1 & 196608) >> 16) | R;
-	  m_regs->regs[3] = (MS0_P1 & 65280) >> 8;
-	  m_regs->regs[4] = MS0_P1 & 255;
+    phase -= 0x80;
+    m_regs->inv = 1;
+  } else m_regs->inv = 0;
+
+   if (frequency < 5000000)
+      mult_ratio = 15;
+   else if (frequency < 7000000)
+      mult_ratio = 22;
+   else mult_ratio = 33;  
+
+  if (s_regs != NULL)
+      calc_multisynth_registers(s_regs->regs, 0, mult_ratio, 0, 1);
+  
+  fvco = xo_freq * mult_ratio;
+
+  for (;;)
+  {
+      a = (fvco / frequency);
+      if (a <= 900) break;
+      frequency <<= 1;
+      R += 1;
   }
+
+  b = fvco - a * frequency;
+  b = (((uint64_t)b) * c) / frequency;
+
+  if (phase)
+     m_regs->offset = (uint8_t)((((uint32_t)a)*phase) >> 6) & 0x7F;
+  else
+     m_regs->offset = 0;
+  calc_multisynth_registers(m_regs->regs, R, a, b, c);
 }
 
 // off_on = 0 is off, off_on = 1 is on
 // pll_source = 1 is PLLB, pll_source = 0 is PLLA
 // power=0 2mA, power=1 4 mA, power=2 6 mA, power=3 8 mA
-void si5351simple::setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power)
+void si5351simple::setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power, uint8_t inv)
 {                        
   if (power > 3) return;
-  si5351_write(clock_no+16, (off_on ? 0 : 0x80) + (frac ? 0 : 0x40) + (pll_source ? 0x20 : 0x00) + power + 0x0C);
+  si5351_write(clock_no+16, (off_on ? 0 : 0x80) + (frac ? 0 : 0x40) + (pll_source ? 0x20 : 0x00) + (inv ? 0x10 : 0x00) + power + 0x0C);
 }
 
 void si5351simple::setOutputOnOff(uint8_t clock_no, uint8_t off_on)
@@ -233,7 +216,12 @@ void si5351simple::start(void)
   si5351_synth_regs s_regs;
   si5351_multisynth_regs m_regs;
   
-  calc_registers(5000000, &s_regs, &m_regs);
+  calc_registers(7000000, 0, &s_regs, &m_regs);
   set_registers(0, &s_regs, 0, &m_regs);
+
+  //calc_registers(7000000, 64, &s_regs, &m_regs);
+  //set_registers(0, &s_regs, 1, &m_regs);
+
   setOutputOnOff(0,1);
+  //setOutputOnOff(1,0);
 }

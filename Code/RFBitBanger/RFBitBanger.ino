@@ -45,7 +45,7 @@
 #define TRANSMIT_PIN 9
 #define BACKLIGHT_PIN 11
 #define MUTEAUDIO_PIN 4
-#define BEEPOUT_BIN 3
+#define BEEPOUT_PIN 3
 
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
 si5351simple si5351(8,27000000u);
@@ -118,7 +118,6 @@ void setup_timers(void)
   write_transmit_pwm(1);
   write_tuning_pwm(0);
   TIMSK1 = (1<<TOIE1);
-
   TIMSK2 = 0;
   sei();
 }
@@ -130,7 +129,7 @@ void tone_off(void)
 {
   if (tone_state)
   {
-    pinMode(BEEPOUT_BIN,INPUT);
+    pinMode(BEEPOUT_PIN,INPUT);
     tone_state = 0;
   }
 }
@@ -145,7 +144,7 @@ void tone_on(uint8_t freq, uint8_t vol)
 {
   if ((!tone_state) || (freq != tone_last_freq))
   {
-    if (!tone_state) pinMode(BEEPOUT_BIN,OUTPUT);  
+    if (!tone_state) pinMode(BEEPOUT_PIN,OUTPUT);  
     TCCR2B = 0;
     OCR2A = freq;
     OCR2B = vol;
@@ -156,6 +155,15 @@ void tone_on(uint8_t freq, uint8_t vol)
     tone_state = 1;
   } else
     OCR2B = vol;
+}
+
+void setup_tone_pcm(void)
+{
+   TCCR2B = (1 << CS20);  // 1 divider
+   TCCR2A = (1<<COM2B1) | (1 << WGM21) | (1 << WGM20); // fast pwm
+   TCNT2 = 0;
+   OCR2B = 0;
+   pinMode(BEEPOUT_PIN,OUTPUT);
 }
 
 uint8_t current_protocol;
@@ -170,6 +178,7 @@ void setup() {
   set_protocol(0);
   setupADC();
   setup_timers();
+//  setup_tone_pcm();
   PSkey.begin();
   // put your setup code here, to run once:
   Serial.begin(57600);
@@ -217,7 +226,7 @@ void set_frequency(uint32_t freq)
    si5351_synth_regs s_regs;
    si5351_multisynth_regs m_regs;
   
-   si5351.calc_registers(freq, &s_regs, &m_regs);
+   si5351.calc_registers(freq, 0, &s_regs, &m_regs);
    si5351.set_registers(0, &s_regs, 0, &m_regs);
    si5351.setOutputOnOff(0,1);
 }
@@ -225,6 +234,7 @@ void set_frequency(uint32_t freq)
 void set_frequency_snd(void)
 {
   set_frequency(snd_freq.n);
+  delay(2);
 }
 
 void scroll_redraw_snd(void)
@@ -234,7 +244,7 @@ void scroll_redraw_snd(void)
 
 #define PTSAMPLECT ((volatile uint8_t *)&ds.sample_ct)
 
-uint16_t accumulate_all_channels(uint8_t ct)
+uint16_t accumulate_all_channels(uint8_t ct, uint8_t allchannels)
 {
   uint8_t last = *PTSAMPLECT;
   uint32_t total = 0;
@@ -244,7 +254,7 @@ uint16_t accumulate_all_channels(uint8_t ct)
     if (last != sample_ct)
     {
       last = sample_ct;
-      total += dsp_get_signal_magnitude();
+      total += dsp_get_signal_magnitude(allchannels);
       ct--;
     }
   } 
@@ -265,7 +275,7 @@ void update_bars()
     bgd.bars[3] = map_16_to_bar_40(ds.mag_value_8);
     lcdBarGraph(&bgd);
 #endif
-    bgs.bars[0] = map_16_to_bar_20(dsp_get_signal_magnitude());
+    bgs.bars[0] = map_16_to_bar_20(dsp_get_signal_magnitude(0));
     //lcd.setCursor(9,1);
     //lcdPrintNum(bgs.bars[0],3,0);
     lcdBarGraph(&bgs);
@@ -294,41 +304,71 @@ void increment_decrement_frequency(int16_t val)
   set_frequency_snd();
 }
 
-void scan_frequency_mode(uint8_t selected, uint8_t initial_step)
+uint8_t scan_frequency(int8_t stepval, uint8_t allchannels, uint16_t maxsteps)
 {
-  int8_t signval = selected == 1 ? -1 : 1;
-  int8_t stepval = initial_step;
-  uint16_t avg = 0, maxsteps = 1000, val;
-  
-  increment_decrement_frequency(300 * signval);
-  delay(250);
-  for (uint8_t i=0;i<7;i++)
-    avg += accumulate_all_channels(32) >> 2;
+  uint16_t avg;
+  uint8_t aborted = 0;
+
+  avg = 0;
+  for (uint8_t i=0;i<8;i++)
+     avg += accumulate_all_channels(64,allchannels);
+  avg >>= 3; 
   for (;;)
   {
-    for (;;)
+    uint16_t val;
+
+    if (maxsteps == 0)
     {
-      if ((--maxsteps) == 0) break;
-      increment_decrement_frequency(stepval * signval);
-      if ( ((selected == 1) && (abort_button_right())) ||
-           ((selected == 2) && (abort_button_left())) )
-      {
-        stepval = 0;
-        break;
-      }
-      scroll_redraw_snd();
-      update_bars();
-      val = accumulate_all_channels(32);
-      if (val < avg) continue;
-      if (stepval == 10) stepval = 0;
+      aborted = 2;
+      break;
+    } else --maxsteps;
+    increment_decrement_frequency(stepval);
+    scroll_redraw_snd();
+    update_bars();
+    if ( ((stepval < 0) && (abort_button_right())) ||
+         ((stepval >= 0) && (abort_button_left())) )
+    if ((abort_button_right()) || (abort_button_left()))
+    {
+      aborted = 1;
       break;
     }
-    if ((stepval == 0) || ((stepval == 100) && (maxsteps == 0))) break;
-    stepval = 10;
-    maxsteps = stepval == 100 ? 30 : 60;
-    signval = -signval;
+    val = accumulate_all_channels(64,allchannels);
+    if (val > (avg*2)) break;
+    avg = (15*avg+val) >> 4;    
   }
-  delay(300);
+  if (aborted == 1)
+  {
+    delay(250);
+    lcd.clearButtons();
+  }
+  return aborted;
+}
+
+uint8_t scan_refine(uint8_t dir, uint8_t iter)
+{
+  uint8_t code;
+  for (uint8_t i=0;i<iter;i++)
+  {
+     code = scan_frequency(dir ? -10 : 10, 1, 50);
+     if (code < 2) break;
+     dir = !dir;
+  }
+  return code;
+}
+
+uint8_t scan_frequency_mode(uint8_t dir, uint8_t stepval)
+{
+  uint8_t code;
+  for (;;)
+  {
+    code = scan_frequency(dir ? -stepval : stepval, 0, 1000);
+    if (code == 0)
+    {
+      increment_decrement_frequency(dir ? 250 : -250);
+      code = scan_refine(dir, 5);
+      if (code < 2) return code;
+    } else return code;
+  }
 }
 
 void set_frequency_mode(uint8_t selected)
@@ -384,9 +424,9 @@ void select_command_mode()
   {
     case 0: set_frequency_mode(selected);
             break;
-    case 1: scan_frequency_mode(selected,100);
+    case 1: scan_frequency_mode(selected == 1, 100);
             break;
-    case 2: scan_frequency_mode(selected,10);
+    case 2: scan_frequency_mode(selected == 1, 30);
             break;
     case 3: set_transmission_mode();
             break;

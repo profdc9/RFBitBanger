@@ -140,7 +140,7 @@ void dsp_initialize_scamp(uint8_t mod_type);
 void dsp_initialize_cw(uint8_t wide);
 void dsp_initialize_rtty(void);
 void dsp_reset_state(void);
-uint16_t dsp_get_signal_magnitude(void);
+uint16_t dsp_get_signal_magnitude(uint8_t allchannels);
 
 void dsp_initialize_protocol(uint8_t protocol);
 

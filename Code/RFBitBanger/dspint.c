@@ -261,31 +261,32 @@ void dsp_initialize_protocol(uint8_t protocol)
   }
 }
 
-uint16_t dsp_get_signal_magnitude(void)
+uint16_t dsp_get_signal_magnitude(uint8_t allchannels)
 {
-#if 1
-  switch (ps.cs.protocol)
+  if (!allchannels)
   {
-    case PROTOCOL_CW:     return ds.mag_value_12;
-    case PROTOCOL_RTTY:   return (ds.mag_value_8 + ds.mag_value_24) >> 1;
-    case PROTOCOL_SCAMP: 
+    switch (ps.cs.protocol)
     {
-      switch (ps.ss.mod_type)
+      case PROTOCOL_CW:     return ds.mag_value_12;
+      case PROTOCOL_RTTY:   return (ds.mag_value_8 + ds.mag_value_24) >> 1;
+      case PROTOCOL_SCAMP: 
       {
+        switch (ps.ss.mod_type)
+        {
 #ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_OOK_SLOW:
+          case SCAMP_OOK_SLOW:
 #endif
-        case SCAMP_OOK_FAST:
-        case SCAMP_OOK:        return ds.mag_value_16;
+          case SCAMP_OOK_FAST:
+          case SCAMP_OOK:        return ds.mag_value_16;
 #ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_FSK_SLOW:
+          case SCAMP_FSK_SLOW:
 #endif
-        case SCAMP_FSK:        return (ds.mag_value_12 + ds.mag_value_20) >> 1;
-        case SCAMP_FSK_FAST:   return ds.mag_value_8 + ds.mag_value_12;
+          case SCAMP_FSK:        return (ds.mag_value_12 + ds.mag_value_20) >> 1;
+          case SCAMP_FSK_FAST:   return ds.mag_value_8 + ds.mag_value_12;
+        }
       }
     }
   }
-#endif
   return (ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24) >> 2;
 }
 

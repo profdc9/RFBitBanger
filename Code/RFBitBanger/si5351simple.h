@@ -45,16 +45,16 @@ typedef struct _si5351_multisynth_regs
 {
   uint8_t regs[8];
   uint8_t offset;
+  uint8_t inv;
 } si5351_multisynth_regs;
 
 class si5351simple  {
 public:
   si5351simple(uint8_t cap, uint32_t xo_freq); 
   void start(void);
-  void calc_registers(uint32_t frequency, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs);
-  void setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power);
-  void set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, 
-					 uint8_t multisynth_no, si5351_multisynth_regs *m_regs);
+  void calc_registers(uint32_t frequency, uint8_t phase, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs);
+  void setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power, uint8_t inv);
+  void set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, uint8_t multisynth_no, si5351_multisynth_regs *m_regs);
   void setOutputOnOff(uint8_t clock_no, uint8_t off_on);
 
 private:
