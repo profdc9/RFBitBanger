@@ -327,7 +327,6 @@ uint8_t scan_frequency(int8_t stepval, uint8_t allchannels, uint16_t maxsteps)
     update_bars();
     if ( ((stepval < 0) && (abort_button_right())) ||
          ((stepval >= 0) && (abort_button_left())) )
-    if ((abort_button_right()) || (abort_button_left()))
     {
       aborted = 1;
       break;
