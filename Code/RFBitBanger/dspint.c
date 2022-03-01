@@ -362,7 +362,8 @@ void dsp_interrupt_sample(uint16_t sample)
    ds.state_q_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin8[ds.count_8])));
    if (prep_sample)
        SET_DSP_SQRT_APPROX(ds.mag_value_8, ds.state_q_8, ds.state_i_8);
-   ds.count_8 = (ds.count_8 >= 7) ? 0 : (ds.count_8 + 1);
+   //ds.count_8 = (ds.count_8 >= 7) ? 0 : (ds.count_8 + 1);
+   ds.count_8 = (ds.count_8+1) & 0x07;
 
    /* update 12 count I & Q */
    b = (ds.sample_no < df.dly_12) ? (ds.sample_no + df.buffer_size - df.dly_12) : (ds.sample_no - df.dly_12);
@@ -380,7 +381,8 @@ void dsp_interrupt_sample(uint16_t sample)
    ds.state_q_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin16[ds.count_16])));
    if (prep_sample)
         SET_DSP_SQRT_APPROX(ds.mag_value_16, ds.state_q_16, ds.state_i_16);
-   ds.count_16 = (ds.count_16 >= 15) ? 0 : (ds.count_16 + 1);
+   //ds.count_16 = (ds.count_16 >= 15) ? 0 : (ds.count_16 + 1);
+   ds.count_16 = (ds.count_16+1) & 0x0F;
 
    /* update 20 count I & Q */
    b = (ds.sample_no < df.dly_20) ? (ds.sample_no + df.buffer_size - df.dly_20) : (ds.sample_no - df.dly_20);
@@ -402,8 +404,8 @@ void dsp_interrupt_sample(uint16_t sample)
 
    /* store in circular buffer so that is can be subtracted from the end
       to make a moving average filter */
-   ds.sample_buffer[ds.sample_no++] = sample;
-   if (ds.sample_no >= df.buffer_size)
+   ds.sample_buffer[ds.sample_no] = sample;
+   if ((++ds.sample_no) >= df.buffer_size)
       ds.sample_no = 0;
 
    if (prep_sample) ds.sample_ct++;

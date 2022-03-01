@@ -35,6 +35,7 @@ LiquidCrystalButtons::LiquidCrystalButtons(uint8_t rs,  uint8_t enable,
   _data_pins[1] = d5;
   _data_pins[2] = d6;
   _data_pins[3] = d7; 
+  _data_pins[4] = rs;
 
   _displayfunction = LCDB_1LINE;
 }
@@ -42,8 +43,8 @@ LiquidCrystalButtons::LiquidCrystalButtons(uint8_t rs,  uint8_t enable,
 #define SETDATALINEFAST
 
 #ifdef SETDATALINEFAST
-#define SETDATALINEOUTPUTS() { DDRD |= 0xE0; DDRB |= 0x01; }
-#define SETDATALINEINPUTS() { DDRD &= ~0xE0; DDRB &= ~0x01; }
+#define SETDATALINEOUTPUTS() { DDRD |= 0xE0; DDRB |= 0x01; DDRC |= 0x08; }
+#define SETDATALINEINPUTS() { DDRD &= ~0xE0; DDRB &= ~0x01; DDRC &= ~0x08; }
 #else
 #define SETDATALINEOUTPUTS() setDataLineOutput(OUTPUT)
 #define SETDATALINEINPUTS() setDataLineOutput(INPUT)
@@ -51,7 +52,7 @@ LiquidCrystalButtons::LiquidCrystalButtons(uint8_t rs,  uint8_t enable,
 
 void LiquidCrystalButtons::clearButtons()
 {
-  for (uint8_t i=0; i<4; i++)
+  for (uint8_t i=0; i<5; i++)
     _button_pressed[i] = false;
 }
 
@@ -65,7 +66,7 @@ void LiquidCrystalButtons::pollButtons()
   if ((m -_last_millis) < 5) return;
   _last_millis = m; 
   
-  for (uint8_t i=0; i<4; i++)
+  for (uint8_t i=0; i<5; i++)
   {
      uint8_t state = digitalRead(_data_pins[i]);
      if (state == _last_state[i])

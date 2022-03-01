@@ -92,7 +92,7 @@ private:
 
   uint8_t _rs_pin; // LOW: command.  HIGH: character.
   uint8_t _enable_pin; // activated by a HIGH pulse.
-  uint8_t _data_pins[4];
+  uint8_t _data_pins[5];
 
   uint8_t _displayfunction;
   uint8_t _displaycontrol;
@@ -104,10 +104,10 @@ private:
   uint8_t _row_offsets[4];
 
   uint16_t  _last_millis;
-  uint8_t _repeated_state[4];
-  uint8_t _last_state[4];
-  uint8_t _state_count[4];
-  bool    _button_pressed[4];
+  uint8_t _repeated_state[5];
+  uint8_t _last_state[5];
+  uint8_t _state_count[5];
+  bool    _button_pressed[5];
 };
 
 #endif
