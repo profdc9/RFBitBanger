@@ -56,24 +56,43 @@ typedef struct _bargraph_dat
 
 typedef struct _scroll_number_dat
 {
-  uint8_t col;
-  uint8_t row;
-  uint8_t digits;
-  uint8_t decs;
-  uint32_t minimum_number;
-  uint32_t maximum_number;
+  uint8_t     col;
+  uint8_t     row;
+  uint8_t     digits;
+  uint8_t     decs;
+  uint32_t    minimum_number;
+  uint32_t    maximum_number;
 
-  uint8_t position;
-  uint32_t n;
-  uint8_t entered;
-  uint8_t changed;
+  uint8_t     position;
+  uint32_t    n;
+  uint8_t     entered;
+  uint8_t     changed;
 } scroll_number_dat;
 
+typedef struct _scroll_alpha_dat
+{
+  uint8_t        col;
+  uint8_t        row;
+  uint8_t        displen;
+  uint8_t        numchars;
+  uint8_t       *buffer;
+  const uint8_t *validchars;
+  uint8_t        num_validchars;
+  uint8_t        position;
+  uint8_t        cursorpos;
+  uint8_t        changed;
+  uint8_t        entered;
+} scroll_alpha_dat;
 
 void scroll_number_stop(scroll_number_dat *snd);
 void scroll_number_start(scroll_number_dat *snd);
-void scroll_key(scroll_number_dat *snd);
-void scroll_redraw(scroll_number_dat *snd);
+void scroll_number_key(scroll_number_dat *snd);
+void scroll_number_redraw(scroll_number_dat *snd);
+
+void scroll_alpha_stop(scroll_alpha_dat *sad);
+void scroll_alpha_start(scroll_alpha_dat *sad);
+void scroll_alpha_key(scroll_alpha_dat *sad);
+void scroll_alpha_redraw(scroll_alpha_dat *sad);
 
 void lcdBarGraph(bargraph_dat *bgd);
 uint8_t abort_button_left(void);

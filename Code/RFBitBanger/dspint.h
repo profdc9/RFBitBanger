@@ -53,22 +53,21 @@ extern "C" {
 
 #define SCAMP_BLANK_CODEWORD 0xAAAAAAAA
 
-#define PROTOCOL_SCAMP   0
-#define PROTOCOL_CW      1
-#define PROTOCOL_RTTY    2
+#define PROTOCOL_FASTSCAN 0 
+#define PROTOCOL_CW       1
+#define PROTOCOL_RTTY     2
+#define PROTOCOL_SCAMP    3
 
 /* this is stuff that is initialized when the modulation mode
    is changed and doesn't change otherwise */
 typedef struct _dsp_state_fixed
 {
   uint8_t   buffer_size;
-
   uint8_t   dly_8;
   uint8_t   dly_12;
   uint8_t   dly_16;
   uint8_t   dly_20;
   uint8_t   dly_24;
-
 } dsp_state_fixed;
 
 /* this is the current state of the demodulator and is designed
@@ -89,6 +88,7 @@ typedef struct _dsp_state
   int8_t    current_bit_no;
   uint32_t  current_word;
 
+  uint8_t   count;
   uint8_t   count_8;
   uint8_t   count_12;
   uint8_t   count_16;
@@ -139,8 +139,9 @@ void dsp_new_sample(void);
 void dsp_initialize_scamp(uint8_t mod_type);
 void dsp_initialize_cw(uint8_t wide);
 void dsp_initialize_rtty(void);
+void dsp_initialize_fastscan(void);
 void dsp_reset_state(void);
-uint16_t dsp_get_signal_magnitude(uint8_t allchannels);
+uint16_t dsp_get_signal_magnitude(void);
 
 void dsp_initialize_protocol(uint8_t protocol);
 

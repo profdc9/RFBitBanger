@@ -175,7 +175,7 @@ void set_protocol(uint8_t protocol)
 }
 
 void setup() {
-  set_protocol(0);
+  set_protocol(PROTOCOL_CW);
   setupADC();
   setup_timers();
 //  setup_tone_pcm();
@@ -215,11 +215,11 @@ uint8_t map_16_to_bar_20(uint16_t b)
   return map_16_to_bar_40(b) >> 1;
 }
 
-scroll_number_dat snd_freq = { 0, 1, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
+scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
 #ifdef BIG_BAR_GRAPH
 bargraph_dat bgd = { 4, 8, 12, 0 };
 #endif
-bargraph_dat bgs = { 1, 4, 12, 1 };
+bargraph_dat bgs = { 1, 4, 12, 0 };
 
 void set_frequency(uint32_t freq)
 {
@@ -239,12 +239,12 @@ void set_frequency_snd(void)
 
 void scroll_redraw_snd(void)
 {
-  scroll_redraw(&snd_freq);
+  scroll_number_redraw(&snd_freq);
 }
 
 #define PTSAMPLECT ((volatile uint8_t *)&ds.sample_ct)
 
-uint16_t accumulate_all_channels(uint8_t ct, uint8_t allchannels)
+uint16_t accumulate_all_channels(uint8_t ct)
 {
   uint8_t last = *PTSAMPLECT;
   uint32_t total = 0;
@@ -254,7 +254,7 @@ uint16_t accumulate_all_channels(uint8_t ct, uint8_t allchannels)
     if (last != sample_ct)
     {
       last = sample_ct;
-      total += dsp_get_signal_magnitude(allchannels);
+      total += dsp_get_signal_magnitude();
       ct--;
     }
   } 
@@ -275,19 +275,20 @@ void update_bars()
     bgd.bars[3] = map_16_to_bar_40(ds.mag_value_8);
     lcdBarGraph(&bgd);
 #endif
-    bgs.bars[0] = map_16_to_bar_20(dsp_get_signal_magnitude(0));
+    bgs.bars[0] = map_16_to_bar_20(dsp_get_signal_magnitude());
     //lcd.setCursor(9,1);
     //lcdPrintNum(bgs.bars[0],3,0);
     lcdBarGraph(&bgs);
   }
 }
 
-const char freqmenutitle[] PROGMEM = "Set Freq";
-const char scanfasttitle[] PROGMEM = "ScanFast";
-const char scanslowtitle[] PROGMEM = "ScanSlow";
-const char tranmodetitle[] PROGMEM = "TranMode";
+const char transmittitle[] PROGMEM = "Tx ";
+const char freqmenutitle[] PROGMEM = "Frq";
+const char scanfasttitle[] PROGMEM = "ScF";
+const char scanslowtitle[] PROGMEM = "ScS";
+const char tranmodetitle[] PROGMEM = "TrM";
 
-const char *const mainmenu[] PROGMEM = {freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
+const char *const mainmenu[] PROGMEM = {transmittitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
 
 const char cwtitle[] PROGMEM = "CW";
 const char rttytitle[] PROGMEM = "RTTY";
@@ -304,14 +305,14 @@ void increment_decrement_frequency(int16_t val)
   set_frequency_snd();
 }
 
-uint8_t scan_frequency(int8_t stepval, uint8_t allchannels, uint16_t maxsteps)
+uint8_t scan_frequency(int8_t stepval, uint16_t maxsteps)
 {
   uint16_t avg;
   uint8_t aborted = 0;
 
   avg = 0;
   for (uint8_t i=0;i<8;i++)
-     avg += accumulate_all_channels(64,allchannels);
+     avg += accumulate_all_channels(64);
   avg >>= 3; 
   for (;;)
   {
@@ -331,7 +332,7 @@ uint8_t scan_frequency(int8_t stepval, uint8_t allchannels, uint16_t maxsteps)
       aborted = 1;
       break;
     }
-    val = accumulate_all_channels(64,allchannels);
+    val = accumulate_all_channels(64);
     if (val > (avg*2)) break;
     avg = (15*avg+val) >> 4;    
   }
@@ -346,21 +347,24 @@ uint8_t scan_frequency(int8_t stepval, uint8_t allchannels, uint16_t maxsteps)
 uint8_t scan_refine(uint8_t dir, uint8_t iter)
 {
   uint8_t code;
+  dsp_initialize_protocol(current_protocol);
   for (uint8_t i=0;i<iter;i++)
   {
-     code = scan_frequency(dir ? -10 : 10, 1, 50);
+     code = scan_frequency(dir ? -10 : 10, 50);
      if (code < 2) break;
      dir = !dir;
   }
+  dsp_initialize_fastscan();
   return code;
 }
 
 uint8_t scan_frequency_mode(uint8_t dir, uint8_t stepval)
 {
   uint8_t code;
+  dsp_initialize_fastscan();
   for (;;)
   {
-    code = scan_frequency(dir ? -stepval : stepval, 0, 1000);
+    code = scan_frequency(dir ? -stepval : stepval, 1000);
     if (code == 0)
     {
       increment_decrement_frequency(dir ? 250 : -250);
@@ -368,6 +372,7 @@ uint8_t scan_frequency_mode(uint8_t dir, uint8_t stepval)
       if (code < 2) return code;
     } else return code;
   }
+  dsp_initialize_protocol(current_protocol);
 }
 
 void set_frequency_mode(uint8_t selected)
@@ -377,7 +382,7 @@ void set_frequency_mode(uint8_t selected)
   while (!snd_freq.entered)
   {
     idle_task();
-    scroll_key(&snd_freq);
+    scroll_number_key(&snd_freq);
     if (snd_freq.changed)
     {
        set_frequency_snd();
@@ -390,7 +395,7 @@ void set_frequency_mode(uint8_t selected)
 void set_transmission_mode(void)
 {  
   uint8_t selected;
-  menu_str mn = { protocolmenu, 0, 1, 8, 0 };
+  menu_str mn = { protocolmenu, 0, 0, 8, 0 };
   mn.item = ps.ss.protocol;
   do_show_menu_item(&mn);
   set_horiz_menu_keys(1);
@@ -401,15 +406,44 @@ void set_transmission_mode(void)
   } while (!selected);
   set_horiz_menu_keys(0);
   if (current_protocol != mn.item)
-     set_protocol(mn.item);
+     set_protocol(mn.item+1);
 }
 
-uint8_t current_item;
+uint8_t sad_buffer[80];
+const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
+                                           ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
+                                           '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
+                                           '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
+                                           'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
+                                           'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
+                                           'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
+                                           0x5C,   '^',    '`',    '~' };
+                                     
+scroll_alpha_dat sad_buf = { 0, 1, 16, sizeof(sad_buffer), sad_buffer, sad_validchars, sizeof(sad_validchars), 0, 0, 0, 0 };
+
+void transmit_mode(uint8_t selected)
+{
+  sad_buf.position = (selected == 1) ? (sad_buf.numchars-1) : 0;
+  scroll_alpha_start(&sad_buf);
+  while (!sad_buf.entered)
+  {
+    idle_task();
+    scroll_alpha_key(&sad_buf);
+    if (sad_buf.changed)
+    {
+/*       set_frequency_snd(); */
+       snd_freq.changed = 0;
+    }
+    update_bars();
+  }
+}
+
+uint8_t current_item = 1;
 
 void select_command_mode()
 {
   uint8_t selected;
-  menu_str mn = { mainmenu, 0, 0, 8, 0 };
+  menu_str mn = { mainmenu, 9, 0, 8, 0 };
   mn.item = current_item;
   scroll_redraw_snd();
   do_show_menu_item(&mn);
@@ -421,13 +455,15 @@ void select_command_mode()
   current_item = mn.item;
   switch (mn.item)
   {
-    case 0: set_frequency_mode(selected);
+    case 0: transmit_mode(selected);
             break;
-    case 1: scan_frequency_mode(selected == 1, 100);
+    case 1: set_frequency_mode(selected);
             break;
-    case 2: scan_frequency_mode(selected == 1, 30);
+    case 2: scan_frequency_mode(selected == 1, 100);
             break;
-    case 3: set_transmission_mode();
+    case 3: scan_frequency_mode(selected == 1, 30);
+            break;
+    case 4: set_transmission_mode();
             break;
   }
 }

@@ -61,7 +61,7 @@ uint8_t repeat_states_next_ctr = 30;
 
 void LiquidCrystalButtons::pollButtons()
 {
-  SETDATALINEINPUTS();
+  //SETDATALINEINPUTS();
   uint16_t m = millis();
   if ((m -_last_millis) < 5) return;
   _last_millis = m; 
@@ -123,7 +123,7 @@ uint8_t LiquidCrystalButtons::readButton(uint8_t b)
 
 void LiquidCrystalButtons::setDataLineOutput(uint8_t val)
 {
-  for (uint8_t i=0; i<4; i++)
+  for (uint8_t i=0; i<5; i++)
     pinMode(_data_pins[i], val);
 }
 
@@ -407,8 +407,8 @@ void LiquidCrystalButtons::write4bits(uint8_t value) {
   }
 
   pulseEnable();
-
+/*
   for (uint8_t i = 0; i < 4; i++) {
     digitalWrite(_data_pins[i], 0);
-  }
+  } */
 }

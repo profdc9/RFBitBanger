@@ -162,19 +162,44 @@ void scamp_reset_codeword(void)
    ps.ss.bitflips_ctr = 0;
 }
 
+void dsp_reset_fixed_state(void)
+{
+  cli();
+  memset(&df,'\000',sizeof(dsp_state_fixed));
+  memset(&ps,'\000',sizeof(protocol_state));
+  sei();  
+}
+
 /* reset state of buffer in case we get some kind
    of a dc offset mismatch */
 
 void dsp_reset_state(void)
 {
-   memset(&ds,'\000',sizeof(dsp_state));
+  cli();
+  memset(&ds,'\000',sizeof(dsp_state));
+  sei();
+}
+
+/* initialize the buffer including the signs to be subtracted
+   from the end of the buffer */
+void dsp_initialize_fastscan(void)
+{
+    dsp_reset_fixed_state();
+    ps.ss.protocol = PROTOCOL_FASTSCAN;
+    df.buffer_size = 24;
+    df.dly_8 = 8;
+    df.dly_12 = 12;
+    df.dly_16 = 16;
+    df.dly_20 = 20;
+    df.dly_24 = 24; 
+    dsp_reset_state();
 }
 
 /* initialize the buffer including the signs to be subtracted
    from the end of the buffer */
 void dsp_initialize_scamp(uint8_t mod_type)
 {
-    memset(&ps.ss,'\000',sizeof(scamp_state));
+    dsp_reset_fixed_state();
     ps.ss.protocol = PROTOCOL_SCAMP;
     ps.ss.mod_type = mod_type;
     switch (ps.ss.mod_type)
@@ -182,35 +207,39 @@ void dsp_initialize_scamp(uint8_t mod_type)
         case SCAMP_OOK_FAST:   df.buffer_size = 32;
                                ps.ss.demod_edge_window = 3;
                                ps.ss.fsk = 0;
+                               df.dly_16 = 32;
                                break;
         case SCAMP_OOK:        df.buffer_size = 64;
                                ps.ss.fsk = 0;
                                ps.ss.demod_edge_window = 4;
+                               df.dly_16 = 64;
                                break;
         case SCAMP_FSK:        df.buffer_size = 60;
                                ps.ss.fsk = 1;
                                ps.ss.demod_edge_window = 4;
+                               df.dly_12 = 60;
+                               df.dly_20 = 60;
                                break;
         case SCAMP_FSK_FAST:   df.buffer_size = 24;
                                ps.ss.fsk = 1;
                                ps.ss.demod_edge_window = 2;
+                               df.dly_8 = 24;
+                               df.dly_24 = 24;
                                break;
 #ifdef SCAMP_VERY_SLOW_MODES
         case SCAMP_OOK_SLOW:  df.buffer_size = 128;
                                ps.ss.demod_edge_window = 4;
                                ps.ss.fsk = 0;
+                               df.dly_16 = 64;
                                break;
         case SCAMP_FSK_SLOW:  df.buffer_size = 120;
                                ps.ss.fsk = 1;
                                ps.ss.demod_edge_window = 4;
+                               df.dly_12 = 60;
+                               df.dly_20 = 60;
                                break;
 #endif // SCAMP_VERY_SLOW_MODES
     }
-    df.dly_8 = (df.buffer_size / 8) * 8;
-    df.dly_12 = (df.buffer_size / 12) * 12;
-    df.dly_16 = (df.buffer_size / 16) * 16;
-    df.dly_20 = (df.buffer_size / 20) * 20;
-    df.dly_24 = (df.buffer_size / 24) * 24;
     ps.ss.demod_samples_per_bit = df.buffer_size / 4;
     ps.ss.power_thr_min = ((uint16_t)df.buffer_size) * SCAMP_PWR_THR_DEF * (ps.ss.fsk ? 2 : 1);
     dsp_reset_state();
@@ -227,23 +256,19 @@ void dsp_initialize_scamp(uint8_t mod_type)
 /* initialize DSP for CW mode */
 void dsp_initialize_cw(uint8_t wide)
 {
+    dsp_reset_fixed_state();
     ps.cs.protocol = PROTOCOL_CW;
     df.buffer_size = 48;
-    df.dly_8 = 48;
     df.dly_12 = wide ? 12 : 24;
-    df.dly_16 = 48;
-    df.dly_20 = 40;
-    df.dly_24 = 48;
     dsp_reset_state();
 }
 
 void dsp_initialize_rtty(void)
 {
+    dsp_reset_fixed_state();
     ps.rs.protocol = PROTOCOL_RTTY;
     df.buffer_size = 48;
     df.dly_8 = 48;
-    df.dly_16 = 48;
-    df.dly_20 = 40;
     df.dly_24 = 48;
     dsp_reset_state();
 }
@@ -252,42 +277,20 @@ void dsp_initialize_protocol(uint8_t protocol)
 {
   switch (protocol)
   {
-     case 0: dsp_initialize_cw(0);
-             break;
-     case 1: dsp_initialize_rtty();
-             break;
-     case 2: dsp_initialize_scamp(SCAMP_FSK);
-             break;
+     case PROTOCOL_FASTSCAN:    dsp_initialize_fastscan();
+                                break;
+     case PROTOCOL_CW:          dsp_initialize_cw(0);
+                                break;
+     case PROTOCOL_RTTY:        dsp_initialize_rtty();
+                                break;
+     case PROTOCOL_SCAMP:       dsp_initialize_scamp(SCAMP_FSK);
+                                break;
   }
 }
 
-uint16_t dsp_get_signal_magnitude(uint8_t allchannels)
+uint16_t dsp_get_signal_magnitude(void)
 {
-  if (!allchannels)
-  {
-    switch (ps.cs.protocol)
-    {
-      case PROTOCOL_CW:     return ds.mag_value_12;
-      case PROTOCOL_RTTY:   return (ds.mag_value_8 + ds.mag_value_24) >> 1;
-      case PROTOCOL_SCAMP: 
-      {
-        switch (ps.ss.mod_type)
-        {
-#ifdef SCAMP_VERY_SLOW_MODES
-          case SCAMP_OOK_SLOW:
-#endif
-          case SCAMP_OOK_FAST:
-          case SCAMP_OOK:        return ds.mag_value_16;
-#ifdef SCAMP_VERY_SLOW_MODES
-          case SCAMP_FSK_SLOW:
-#endif
-          case SCAMP_FSK:        return (ds.mag_value_12 + ds.mag_value_20) >> 1;
-          case SCAMP_FSK_FAST:   return ds.mag_value_8 + ds.mag_value_12;
-        }
-      }
-    }
-  }
-  return (ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24) >> 2;
+  return (ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24) >> 1;
 }
 
 /* this is an approximation to the sqrt(x^2+y^2) function that approximates the
@@ -298,6 +301,12 @@ uint16_t dsp_get_signal_magnitude(uint8_t allchannels)
    ux = (ux & 0x8000) ? ~ux : ux; \
    uy = ((y)>>16); \
    uy = (uy & 0x8000) ? ~uy : uy; \
+   s = ((ux + uy) >> 1)+(uy > ux ? uy : ux); \
+} while(0)
+
+#define SET_DSP_SQRT_APPROX_16(s,x,y) do { \
+   uint16_t ux = (x < 0 ? -x : x); \
+   uint16_t uy = (y < 0 ? -y : y); \
    s = ((ux + uy) >> 1)+(uy > ux ? uy : ux); \
 } while(0)
 
@@ -353,54 +362,69 @@ void dsp_interrupt_sample(uint16_t sample)
            return;
    }
 
-   prep_sample = (ds.count_8 & 0x03) == 0;
+   prep_sample = (ds.count++ & 0x03) == 0;
 
-   /* update 8 count I & Q */
-   b = (ds.sample_no < df.dly_8) ? (ds.sample_no + df.buffer_size - df.dly_8) : (ds.sample_no - df.dly_8);
-   fir = sample - ds.sample_buffer[b];
-   ds.state_i_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos8[ds.count_8])));
-   ds.state_q_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin8[ds.count_8])));
-   if (prep_sample)
-       SET_DSP_SQRT_APPROX(ds.mag_value_8, ds.state_q_8, ds.state_i_8);
-   //ds.count_8 = (ds.count_8 >= 7) ? 0 : (ds.count_8 + 1);
-   ds.count_8 = (ds.count_8+1) & 0x07;
+   if (df.dly_8 != 0)
+   {
+     /* update 8 count I & Q */
+     b = (ds.sample_no < df.dly_8) ? (ds.sample_no + df.buffer_size - df.dly_8) : (ds.sample_no - df.dly_8);
+     fir = sample - ds.sample_buffer[b];
+     ds.state_i_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos8[ds.count_8])));
+     ds.state_q_8 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin8[ds.count_8])));
+     if (prep_sample)
+        SET_DSP_SQRT_APPROX(ds.mag_value_8, ds.state_q_8, ds.state_i_8);
+     //ds.count_8 = (ds.count_8 >= 7) ? 0 : (ds.count_8 + 1);
+     ds.count_8 = (ds.count_8+1) & 0x07;
+   }
 
-   /* update 12 count I & Q */
-   b = (ds.sample_no < df.dly_12) ? (ds.sample_no + df.buffer_size - df.dly_12) : (ds.sample_no - df.dly_12);
-   fir = sample - ds.sample_buffer[b];
-   ds.state_i_12 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos12[ds.count_12])));
-   ds.state_q_12 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin12[ds.count_12])));
-   if (prep_sample)
+   if (df.dly_12 != 0)
+   {
+     /* update 12 count I & Q */
+     b = (ds.sample_no < df.dly_12) ? (ds.sample_no + df.buffer_size - df.dly_12) : (ds.sample_no - df.dly_12);
+     fir = sample - ds.sample_buffer[b];
+     ds.state_i_12 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos12[ds.count_12])));
+     ds.state_q_12 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin12[ds.count_12])));
+     if (prep_sample)
        SET_DSP_SQRT_APPROX(ds.mag_value_12, ds.state_q_12, ds.state_i_12);
-   ds.count_12 = (ds.count_12 >= 11) ? 0 : (ds.count_12 + 1);
+     ds.count_12 = (ds.count_12 >= 11) ? 0 : (ds.count_12 + 1);
+   }
 
-   /* update 16 count I & Q */
-   b = (ds.sample_no < df.dly_16) ? (ds.sample_no + df.buffer_size - df.dly_16) : (ds.sample_no - df.dly_16);
-   fir = sample - ds.sample_buffer[b];
-   ds.state_i_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos16[ds.count_16])));
-   ds.state_q_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin16[ds.count_16])));
-   if (prep_sample)
-        SET_DSP_SQRT_APPROX(ds.mag_value_16, ds.state_q_16, ds.state_i_16);
-   //ds.count_16 = (ds.count_16 >= 15) ? 0 : (ds.count_16 + 1);
-   ds.count_16 = (ds.count_16+1) & 0x0F;
+   if (df.dly_16 != 0)
+   {
+     /* update 16 count I & Q */
+     b = (ds.sample_no < df.dly_16) ? (ds.sample_no + df.buffer_size - df.dly_16) : (ds.sample_no - df.dly_16);
+     fir = sample - ds.sample_buffer[b];
+     ds.state_i_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos16[ds.count_16])));
+     ds.state_q_16 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin16[ds.count_16])));
+     if (prep_sample)
+       SET_DSP_SQRT_APPROX(ds.mag_value_16, ds.state_q_16, ds.state_i_16);
+     //ds.count_16 = (ds.count_16 >= 15) ? 0 : (ds.count_16 + 1);
+     ds.count_16 = (ds.count_16+1) & 0x0F;
+   }
 
-   /* update 20 count I & Q */
-   b = (ds.sample_no < df.dly_20) ? (ds.sample_no + df.buffer_size - df.dly_20) : (ds.sample_no - df.dly_20);
-   fir = sample - ds.sample_buffer[b];
-   ds.state_i_20 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos20[ds.count_20])));
-   ds.state_q_20 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin20[ds.count_20])));
-   if (prep_sample)
+   if (df.dly_20 != 0)
+   {
+     /* update 20 count I & Q */
+     b = (ds.sample_no < df.dly_20) ? (ds.sample_no + df.buffer_size - df.dly_20) : (ds.sample_no - df.dly_20);
+     fir = sample - ds.sample_buffer[b];
+     ds.state_i_20 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos20[ds.count_20])));
+     ds.state_q_20 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin20[ds.count_20])));
+     if (prep_sample)
         SET_DSP_SQRT_APPROX(ds.mag_value_20, ds.state_q_20, ds.state_i_20);
-   ds.count_20 = (ds.count_20 >= 19) ? 0 : (ds.count_20 + 1);
+     ds.count_20 = (ds.count_20 >= 19) ? 0 : (ds.count_20 + 1);
+   }
 
-   /* update 24 count I & Q */
-   b = (ds.sample_no < df.dly_24) ? (ds.sample_no + df.buffer_size - df.dly_24) : (ds.sample_no - df.dly_24);
-   fir = sample - ds.sample_buffer[b];
-   ds.state_i_24 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos24[ds.count_24])));
-   ds.state_q_24 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin24[ds.count_24])));
-   if (prep_sample)
+   if (df.dly_24 != 0)
+   {
+     /* update 24 count I & Q */
+     b = (ds.sample_no < df.dly_24) ? (ds.sample_no + df.buffer_size - df.dly_24) : (ds.sample_no - df.dly_24);
+     fir = sample - ds.sample_buffer[b];
+     ds.state_i_24 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&cos24[ds.count_24])));
+     ds.state_q_24 += ((int32_t)fir)*((int32_t)((int16_t)pgm_read_word_near(&sin24[ds.count_24])));
+     if (prep_sample)
         SET_DSP_SQRT_APPROX(ds.mag_value_24, ds.state_q_24, ds.state_i_24);
-   ds.count_24 = (ds.count_24 >= 23) ? 0 : (ds.count_24 + 1);
+     ds.count_24 = (ds.count_24 >= 23) ? 0 : (ds.count_24 + 1);
+   }
 
    /* store in circular buffer so that is can be subtracted from the end
       to make a moving average filter */

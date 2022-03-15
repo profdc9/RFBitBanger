@@ -200,12 +200,6 @@ uint32_t pow10(uint8_t n)
   return v;
 }
 
-void scroll_redraw(scroll_number_dat *snd)
-{
-  lcd.setCursor(snd->col,snd->row);
-  lcdPrintNum(snd->n, snd->digits, snd->decs);
-}
-
 uint8_t abort_button_left(void)
 {
   uint8_t key = PSkey.getkey();
@@ -218,7 +212,13 @@ uint8_t abort_button_right(void)
   return ((key == PS2KEY_RIGHT) || lcd.readUnBounced(3));
 }
 
-void scroll_key(scroll_number_dat *snd)
+void scroll_number_redraw(scroll_number_dat *snd)
+{
+  lcd.setCursor(snd->col,snd->row);
+  lcdPrintNum(snd->n, snd->digits, snd->decs);
+}
+
+void scroll_number_key(scroll_number_dat *snd)
 {
   uint8_t redraw = 1;
   uint8_t key = PSkey.getkey();
@@ -239,7 +239,8 @@ void scroll_key(scroll_number_dat *snd)
         snd->n += ((int32_t)p10) * dif;
         snd->changed = 1;
     }
-    snd->position++;
+    if (snd->position < snd->digits)
+        snd->position++;
     key = 0;
   } else if (button_left(key))
   {
@@ -276,14 +277,14 @@ void scroll_key(scroll_number_dat *snd)
     }
   } else redraw = 0;
   if (redraw)
-    scroll_redraw(snd);
+    scroll_number_redraw(snd);
 }
 
 void scroll_number_start(scroll_number_dat *snd)
 {
   snd->changed = 0;
   snd->entered = 0;
-  scroll_redraw(snd);
+  scroll_number_redraw(snd);
   lcd.cursor();
 }
 
@@ -292,19 +293,113 @@ void scroll_number_stop(scroll_number_dat *snd)
   lcd.noCursor();
 }
 
-void scroll_number(scroll_number_dat *snd)
+void scroll_alpha_redraw(scroll_alpha_dat *sad)
+{
+  uint8_t startpos, dp;
+  
+  dp = sad->displen >> 1;
+  if (sad->position < dp)
+     startpos = 0;
+  else if (sad->position > (sad->numchars - dp))
+     startpos = sad->numchars - sad->displen;
+  else 
+     startpos = sad->position - dp;
+  sad->cursorpos = sad->position - startpos;
+  lcd.setCursor(sad->col,sad->row);
+  for (dp=0;dp<sad->displen;dp++) 
+     lcd.write(sad->buffer[dp+startpos]);
+}
+
+uint8_t scroll_alpha_find_key(scroll_alpha_dat *sad, uint8_t key)
+{
+  uint8_t cnt;
+
+  for (cnt=0;cnt<sad->num_validchars;cnt++)
+  {
+    uint8_t cmp_key = (uint8_t)pgm_read_byte_near(&sad->validchars[cnt]);
+    if (key == cmp_key) return cnt;
+  }
+  return 0xFF;
+}
+
+void scroll_alpha_key(scroll_alpha_dat *sad)
 {
   uint8_t redraw = 1;
+  uint8_t key = PSkey.getkey();
 
-  scroll_number_start(snd);
-  for (;;)
+  lcd.setCursor(sad->col + sad->cursorpos, sad->row);
+  idle_task();
+  if (key == PS2KEY_ENTER)
+  { 
+    sad->entered = 1;
+    return;
+  } else if (button_left(key))
   {
-    scroll_key(snd);
-    if (snd->entered) break;
-  }
-  scroll_number_stop(snd);
-  return;
+    if (sad->position > 0)
+        sad->position--;
+    else
+        sad->entered = 1;
+  } else if (button_right(key))
+  {
+    if (sad->position < (sad->numchars-1))
+        sad->position++;
+    else
+        sad->entered = 1;
+  } else if (button_up(key))
+  {
+    uint8_t curkey = sad->buffer[sad->position];
+    uint8_t val = scroll_alpha_find_key(sad,curkey);
+    if (val != 0xFF)
+    {
+      if ((++val) >= sad->num_validchars) val = 0;
+      sad->buffer[sad->position] = (uint8_t)pgm_read_byte_near(&sad->validchars[val]);
+      sad->changed = 1;
+    }
+  } else if (button_down(key))
+  {
+    uint8_t curkey = sad->buffer[sad->position];
+    uint8_t val = scroll_alpha_find_key(sad,curkey);
+    if (val != 0xFF)
+    {
+      if (val == 0) val = sad->num_validchars - 1;
+        else val--;
+      sad->buffer[sad->position] = (uint8_t)pgm_read_byte_near(&sad->validchars[val]);
+      sad->changed = 1;
+    }
+  } else
+  {
+    if (key != PS2KEY_NONE)
+    {
+      key = (key >= 'a') && (key <= 'z') ? key - 32 : key;
+      uint8_t val = scroll_alpha_find_key(sad,key);
+      if (val != 0xFF) 
+      {
+        sad->buffer[sad->position] = key;
+        sad->changed = 1;
+        if (sad->position < (sad->numchars-1))
+            sad->position++;
+      }
+    } else redraw = 0;
+  } 
+  if (redraw)
+    scroll_alpha_redraw(sad);
 }
+
+void scroll_alpha_stop(scroll_alpha_dat *sad)
+{
+  lcd.noCursor();
+}
+
+void scroll_alpha_start(scroll_alpha_dat *sad)
+{
+  sad->changed = 0;
+  sad->entered = 0;
+  if (sad->buffer[0] == 0)
+     memset(sad->buffer,' ',sad->numchars);
+  scroll_alpha_redraw(sad);
+  lcd.cursor();
+}
+
 
 bool show_messages(const char *message1, const char *message2)
 {
