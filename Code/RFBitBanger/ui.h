@@ -38,8 +38,7 @@ typedef struct _menu_str
 void set_horiz_menu_keys(uint8_t horiz);
 uint8_t do_menu(menu_str *menu);
 void do_show_menu_item(menu_str *menu);
-bool show_messages(const char *message1, const char *message2);
-bool go_or_abort(const char *message);
+bool show_lr(uint8_t row, const char *message);
 char *number_str(char *s, uint32_t n, uint8_t digits, uint8_t decs);
 void lcdPrint(const char *str);
 void lcdPrintFlash(const char *str);
@@ -47,11 +46,10 @@ void lcdPrintNum(uint32_t n, uint8_t digits, uint8_t decs);
 
 typedef struct _bargraph_dat
 {
-  uint8_t num_bars;
   uint8_t width_bars;
   uint8_t col_bars;
   uint8_t row_bars;
-  uint8_t bars[4];
+  uint8_t bars;
 } bargraph_dat;
 
 typedef struct _scroll_number_dat

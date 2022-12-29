@@ -216,10 +216,7 @@ uint8_t map_16_to_bar_20(uint16_t b)
 }
 
 scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
-#ifdef BIG_BAR_GRAPH
-bargraph_dat bgd = { 4, 8, 12, 0 };
-#endif
-bargraph_dat bgs = { 1, 4, 12, 0 };
+bargraph_dat bgs = { 4, 12, 0 };
 
 void set_frequency(uint32_t freq)
 {
@@ -268,16 +265,7 @@ void update_bars()
   if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
   {
     last_update_bars = cur_update;
-#ifdef BIG_BAR_GRAPH
-    bgd.bars[0] = map_16_to_bar_40(ps.rs.protocol == PROTOCOL_RTTY ? ds.mag_value_24 : ds.mag_value_20);
-    bgd.bars[1] = map_16_to_bar_40(ds.mag_value_16);
-    bgd.bars[2] = map_16_to_bar_40(ds.mag_value_12);
-    bgd.bars[3] = map_16_to_bar_40(ds.mag_value_8);
-    lcdBarGraph(&bgd);
-#endif
-    bgs.bars[0] = map_16_to_bar_20(dsp_get_signal_magnitude());
-    //lcd.setCursor(9,1);
-    //lcdPrintNum(bgs.bars[0],3,0);
+    bgs.bars = map_16_to_bar_20(dsp_get_signal_magnitude());
     lcdBarGraph(&bgs);
   }
 }
@@ -295,6 +283,8 @@ const char rttytitle[] PROGMEM = "RTTY";
 const char scamptitle[] PROGMEM = "SCAMP";
 
 const char *const protocolmenu[] PROGMEM = {cwtitle,rttytitle,scamptitle,NULL };
+
+const char righttx[] PROGMEM = "Rt Txmit Lf Abt";
 
 void increment_decrement_frequency(int16_t val)
 {
@@ -429,10 +419,18 @@ void transmit_mode(uint8_t selected)
   {
     idle_task();
     scroll_alpha_key(&sad_buf);
+    if (sad_buf.entered)
+    {
+       uint8_t resp = show_lr(1,righttx);
+       scroll_alpha_redraw(&sad_buf);
+       if (resp)
+       {
+        /*do txmit */
+       } else break;
+    }
     if (sad_buf.changed)
     {
 /*       set_frequency_snd(); */
-       snd_freq.changed = 0;
     }
     update_bars();
   }

@@ -30,19 +30,11 @@
 #include "PS2Keyboard.h"
 #include "RFBitBanger.h"
 
-#undef BAR_GRAPH_DEBUG
-
 void lcdBarGraph(bargraph_dat *bgd)
 {
-  for (uint8_t n=0; n<bgd->num_bars; n++)
-  {
     uint8_t ct = bgd->width_bars;
-    int8_t width = bgd->bars[n];
-    lcd.setCursor(bgd->col_bars,bgd->row_bars+n);
-#ifdef BAR_GRAPH_DEBUG
-    lcd.print(width);
-    lcd.print("    ");
-#else
+    int8_t width = bgd->bars;
+    lcd.setCursor(bgd->col_bars,bgd->row_bars);
     while ((width > 0) && (ct > 0))
     {
       if (width > 4) 
@@ -57,8 +49,6 @@ void lcdBarGraph(bargraph_dat *bgd)
       lcd.write(' ');
       ct--;
     }
-#endif
-  }
 }
 
 void lcdPrint(const char *str) 
@@ -130,6 +120,11 @@ uint8_t button_up_actual(uint8_t key)
 uint8_t button_down_actual(uint8_t key)
 {
   return (lcd.getButtonPressed(1) || (key == PS2KEY_DOWN));
+}
+
+uint8_t button_enter(uint8_t key)
+{
+  return (lcd.getButtonPressed(4) || (key == 0x0D));
 }
 
 uint8_t button_left(uint8_t key)
@@ -329,7 +324,7 @@ void scroll_alpha_key(scroll_alpha_dat *sad)
 
   lcd.setCursor(sad->col + sad->cursorpos, sad->row);
   idle_task();
-  if (key == PS2KEY_ENTER)
+  if (button_enter(key))
   { 
     sad->entered = 1;
     return;
@@ -400,14 +395,11 @@ void scroll_alpha_start(scroll_alpha_dat *sad)
   lcd.cursor();
 }
 
-
-bool show_messages(const char *message1, const char *message2)
+bool show_lr(uint8_t row, const char *message)
 {
   lcd.clearButtons();
-  lcd.clear();
-  lcd.print(message1);
-  lcd.setCursor(0,1);
-  lcd.print(message2);
+  lcd.setCursor(0,row);
+  lcdPrintFlashSpaces(message,16);
   for (;;) {
      uint8_t key = PSkey.getkey();
      idle_task();
@@ -416,9 +408,4 @@ bool show_messages(const char *message1, const char *message2)
      if (button_right(key))
        return true;
   }
-}
-
-bool go_or_abort(const char *message)
-{
-  return show_messages(message, "Rt cont,lft abrt");
 }
