@@ -1,0 +1,287 @@
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:switches
+LIBS:relays
+LIBS:motors
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:BandPassFilter-cache
+EELAYER 25 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L GND #PWR01
+U 1 1 63AA78E8
+P 2400 3850
+F 0 "#PWR01" H 2400 3600 50  0001 C CNN
+F 1 "GND" H 2400 3700 50  0000 C CNN
+F 2 "" H 2400 3850 50  0001 C CNN
+F 3 "" H 2400 3850 50  0001 C CNN
+	1    2400 3850
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR02
+U 1 1 63AA797C
+P 4300 3800
+F 0 "#PWR02" H 4300 3550 50  0001 C CNN
+F 1 "GND" H 4300 3650 50  0000 C CNN
+F 2 "" H 4300 3800 50  0001 C CNN
+F 3 "" H 4300 3800 50  0001 C CNN
+	1    4300 3800
+	1    0    0    -1  
+$EndComp
+$Comp
+L C_Small C1
+U 1 1 63AA79DA
+P 2550 3600
+F 0 "C1" H 2560 3670 50  0000 L CNN
+F 1 "C1" H 2560 3520 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 2550 3600 50  0001 C CNN
+F 3 "" H 2550 3600 50  0001 C CNN
+	1    2550 3600
+	-1   0    0    1   
+$EndComp
+$Comp
+L GND #PWR03
+U 1 1 63AA7AA6
+P 2550 3850
+F 0 "#PWR03" H 2550 3600 50  0001 C CNN
+F 1 "GND" H 2550 3700 50  0000 C CNN
+F 2 "" H 2550 3850 50  0001 C CNN
+F 3 "" H 2550 3850 50  0001 C CNN
+	1    2550 3850
+	1    0    0    -1  
+$EndComp
+$Comp
+L L_Small L2
+U 1 1 63AA7ACA
+P 2650 3400
+F 0 "L2" H 2680 3440 50  0000 L CNN
+F 1 "L2" H 2680 3360 50  0000 L CNN
+F 2 "BandPassFilter:L_Toroid_Horizontal_D12.7mm_Compact" H 2650 3400 50  0001 C CNN
+F 3 "" H 2650 3400 50  0001 C CNN
+	1    2650 3400
+	0    -1   -1   0   
+$EndComp
+$Comp
+L C_Small C2
+U 1 1 63AA7B73
+P 2900 3400
+F 0 "C2" H 2910 3470 50  0000 L CNN
+F 1 "C2" H 2910 3320 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 2900 3400 50  0001 C CNN
+F 3 "" H 2900 3400 50  0001 C CNN
+	1    2900 3400
+	0    -1   -1   0   
+$EndComp
+$Comp
+L C_Small C3
+U 1 1 63AA7C3C
+P 3250 3400
+F 0 "C3" H 3260 3470 50  0000 L CNN
+F 1 "C3" H 3260 3320 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 3250 3400 50  0001 C CNN
+F 3 "" H 3250 3400 50  0001 C CNN
+	1    3250 3400
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	2400 3850 2400 3500
+Wire Wire Line
+	2400 3500 2300 3500
+Wire Wire Line
+	2550 3400 2550 3500
+Wire Wire Line
+	2550 3850 2550 3700
+Connection ~ 2550 3400
+$Comp
+L C_Small C4
+U 1 1 63AA7CEF
+P 3550 3600
+F 0 "C4" H 3560 3670 50  0000 L CNN
+F 1 "C4" H 3560 3520 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 3550 3600 50  0001 C CNN
+F 3 "" H 3550 3600 50  0001 C CNN
+	1    3550 3600
+	-1   0    0    1   
+$EndComp
+$Comp
+L GND #PWR04
+U 1 1 63AA7D49
+P 3550 3850
+F 0 "#PWR04" H 3550 3600 50  0001 C CNN
+F 1 "GND" H 3550 3700 50  0000 C CNN
+F 2 "" H 3550 3850 50  0001 C CNN
+F 3 "" H 3550 3850 50  0001 C CNN
+	1    3550 3850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3550 3850 3550 3700
+Wire Wire Line
+	3550 3500 3550 3350
+$Comp
+L C_Small C6
+U 1 1 63AA7DB8
+P 4150 3600
+F 0 "C6" H 4160 3670 50  0000 L CNN
+F 1 "C6" H 4160 3520 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 4150 3600 50  0001 C CNN
+F 3 "" H 4150 3600 50  0001 C CNN
+	1    4150 3600
+	-1   0    0    1   
+$EndComp
+$Comp
+L GND #PWR05
+U 1 1 63AA7E12
+P 4150 3800
+F 0 "#PWR05" H 4150 3550 50  0001 C CNN
+F 1 "GND" H 4150 3650 50  0000 C CNN
+F 2 "" H 4150 3800 50  0001 C CNN
+F 3 "" H 4150 3800 50  0001 C CNN
+	1    4150 3800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4150 3800 4150 3700
+Wire Wire Line
+	4150 3500 4150 3350
+Wire Wire Line
+	3950 3350 4300 3350
+$Comp
+L C_Small C5
+U 1 1 63AA7EBD
+P 3800 3200
+F 0 "C5" H 3810 3270 50  0000 L CNN
+F 1 "C5" H 3810 3120 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 3800 3200 50  0001 C CNN
+F 3 "" H 3800 3200 50  0001 C CNN
+	1    3800 3200
+	0    -1   -1   0   
+$EndComp
+$Comp
+L L_Small L3
+U 1 1 63AA7F47
+P 3800 3550
+F 0 "L3" H 3830 3590 50  0000 L CNN
+F 1 "L3" H 3830 3510 50  0000 L CNN
+F 2 "BandPassFilter:L_Toroid_Horizontal_D12.7mm_Compact" H 3800 3550 50  0001 C CNN
+F 3 "" H 3800 3550 50  0001 C CNN
+	1    3800 3550
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	3700 3200 3650 3200
+Wire Wire Line
+	3650 3000 3650 3550
+Wire Wire Line
+	3650 3550 3700 3550
+Wire Wire Line
+	3950 3550 3900 3550
+Wire Wire Line
+	3950 3000 3950 3550
+Wire Wire Line
+	3950 3200 3900 3200
+Connection ~ 3950 3350
+Connection ~ 4150 3350
+Connection ~ 3550 3350
+Connection ~ 3650 3350
+$Comp
+L Conn_01x04 J1
+U 1 1 63ABBF6F
+P 4500 3450
+F 0 "J1" H 4500 3650 50  0000 C CNN
+F 1 "OUT" H 4500 3150 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 4500 3450 50  0001 C CNN
+F 3 "" H 4500 3450 50  0001 C CNN
+	1    4500 3450
+	1    0    0    1   
+$EndComp
+$Comp
+L Conn_01x04 J2
+U 1 1 63ABBFCF
+P 2100 3500
+F 0 "J2" H 2100 3700 50  0000 C CNN
+F 1 "INP" H 2100 3200 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 2100 3500 50  0001 C CNN
+F 3 "" H 2100 3500 50  0001 C CNN
+	1    2100 3500
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	4300 3450 4300 3800
+Connection ~ 4300 3550
+Wire Wire Line
+	4300 3350 4300 3250
+Wire Wire Line
+	2300 3500 2300 3600
+Wire Wire Line
+	2300 3300 2300 3400
+Wire Wire Line
+	2300 3400 2550 3400
+Wire Wire Line
+	3450 3350 3650 3350
+Wire Wire Line
+	3350 3400 3450 3400
+Wire Wire Line
+	3450 3400 3450 3350
+Wire Wire Line
+	3150 3400 3000 3400
+Wire Wire Line
+	2800 3400 2750 3400
+$Comp
+L C_Small C7
+U 1 1 63ABC991
+P 3800 3000
+F 0 "C7" H 3810 3070 50  0000 L CNN
+F 1 "C7" H 3810 2920 50  0000 L CNN
+F 2 "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm" H 3800 3000 50  0001 C CNN
+F 3 "" H 3800 3000 50  0001 C CNN
+	1    3800 3000
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	3650 3000 3700 3000
+Connection ~ 3650 3200
+Wire Wire Line
+	3950 3000 3900 3000
+Connection ~ 3950 3200
+$EndSCHEMATC
