@@ -91,9 +91,28 @@ void scroll_alpha_stop(scroll_alpha_dat *sad);
 void scroll_alpha_start(scroll_alpha_dat *sad);
 void scroll_alpha_key(scroll_alpha_dat *sad);
 void scroll_alpha_redraw(scroll_alpha_dat *sad);
+void scroll_alpha_clear(scroll_alpha_dat *sad);
+
+typedef struct _scroll_readout_dat
+{
+  uint8_t        col;
+  uint8_t        row;
+  uint8_t        displen;
+  uint8_t        numchars;
+  uint8_t       *buffer;
+  uint8_t        position;
+  uint8_t        exited;
+  uint8_t        notchanged;
+} scroll_readout_dat;
 
 void lcdBarGraph(bargraph_dat *bgd);
 uint8_t abort_button_left(void);
 uint8_t abort_button_right(void);
+
+void scroll_readout_initialize(scroll_readout_dat *srd);
+void scroll_readout_add_character(scroll_readout_dat *srd, uint8_t ch);
+void scroll_readout_back_character(scroll_readout_dat *srd, uint8_t ch);
+void scroll_readout_display(scroll_readout_dat *srd);
+void scroll_readout_key(scroll_readout_dat *srd);
 
 #endif  /* _UI_H */

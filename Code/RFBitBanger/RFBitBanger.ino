@@ -48,8 +48,16 @@
 #define BEEPOUT_PIN 3
 
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
-si5351simple si5351(8,27000000u);
+si5351simple si5351(8,25000000u);
 PS2Keyboard PSkey;
+
+void setupCompare()
+{
+  ADCSRB = ACME | ADTS0;  // select ADC1 as the source for negative comparator input
+  ACSR = ACBG | ACIS1; // select ACBG for positive comparator input, falling edge interrupt
+                       // enable ACIC later...
+  DIDR1 = 0;
+}
 
 void setupADC() {
   ADCSRA = 0;
@@ -70,6 +78,21 @@ void idle_task(void)
 
 volatile uint16_t adc_sample_0;
 volatile uint16_t adc_sample_1;
+
+uint8_t srd_buffer[80];
+scroll_readout_dat srd_buf = { 0, 1, 16, sizeof(srd_buffer), srd_buffer, 0 };
+
+uint8_t sad_buffer[80];
+const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
+                                           ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
+                                           '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
+                                           '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
+                                           'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
+                                           'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
+                                           'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
+                                           0x5C,   '^',    '`',    '~' };
+                                     
+scroll_alpha_dat sad_buf = { 0, 0, 16, sizeof(sad_buffer), sad_buffer, sad_validchars, sizeof(sad_validchars), 0, 0, 0, 0 };
 
 ISR(TIMER1_OVF_vect)
 {
@@ -174,10 +197,13 @@ void set_protocol(uint8_t protocol)
    current_protocol = protocol;  
 }
 
+
 void setup() {
   set_protocol(PROTOCOL_CW);
   setupADC();
+  setupCompare();
   setup_timers();
+  scroll_readout_initialize(&srd_buf);
 //  setup_tone_pcm();
   PSkey.begin();
   // put your setup code here, to run once:
@@ -190,7 +216,6 @@ void setup() {
   lcd.begin(20,4);
   digitalWrite(TRANSMIT_PIN,LOW);
   digitalWrite(MUTEAUDIO_PIN,LOW);
-  digitalWrite(BACKLIGHT_PIN,HIGH);
 }
 
 #define UPDATE_MILLIS_BARS 100
@@ -214,6 +239,7 @@ uint8_t map_16_to_bar_20(uint16_t b)
 {
   return map_16_to_bar_40(b) >> 1;
 }
+
 
 scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
 bargraph_dat bgs = { 4, 12, 0 };
@@ -270,13 +296,19 @@ void update_bars()
   }
 }
 
+void update_readout()
+{
+  scroll_readout_display(&srd_buf);  
+}
+
 const char transmittitle[] PROGMEM = "Tx ";
+const char receivetitle[] PROGMEM = "Rxv";
 const char freqmenutitle[] PROGMEM = "Frq";
 const char scanfasttitle[] PROGMEM = "ScF";
 const char scanslowtitle[] PROGMEM = "ScS";
 const char tranmodetitle[] PROGMEM = "TrM";
 
-const char *const mainmenu[] PROGMEM = {transmittitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
+const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
 
 const char cwtitle[] PROGMEM = "CW";
 const char rttytitle[] PROGMEM = "RTTY";
@@ -379,6 +411,7 @@ void set_frequency_mode(uint8_t selected)
        snd_freq.changed = 0;
     }
     update_bars();
+    update_readout();
   }
 }
 
@@ -399,18 +432,6 @@ void set_transmission_mode(void)
      set_protocol(mn.item+1);
 }
 
-uint8_t sad_buffer[80];
-const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
-                                           ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
-                                           '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
-                                           '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
-                                           'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
-                                           'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
-                                           'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
-                                           0x5C,   '^',    '`',    '~' };
-                                     
-scroll_alpha_dat sad_buf = { 0, 1, 16, sizeof(sad_buffer), sad_buffer, sad_validchars, sizeof(sad_validchars), 0, 0, 0, 0 };
-
 void transmit_mode(uint8_t selected)
 {
   sad_buf.position = (selected == 1) ? (sad_buf.numchars-1) : 0;
@@ -419,24 +440,25 @@ void transmit_mode(uint8_t selected)
   {
     idle_task();
     scroll_alpha_key(&sad_buf);
-    if (sad_buf.entered)
-    {
-       uint8_t resp = show_lr(1,righttx);
-       scroll_alpha_redraw(&sad_buf);
-       if (resp)
-       {
-        /*do txmit */
-       } else break;
-    }
-    if (sad_buf.changed)
-    {
-/*       set_frequency_snd(); */
-    }
-    update_bars();
+    update_readout();
   }
+  scroll_alpha_clear(&sad_buf);
 }
 
-uint8_t current_item = 1;
+void receive_scroll_mode(void)
+{
+  srd_buf.exited = 0;
+  while (!srd_buf.exited)
+  {
+    idle_task();
+    update_bars();
+    update_readout();
+    scroll_readout_key(&srd_buf);
+  }  
+}
+
+
+uint8_t current_item = 2;
 
 void select_command_mode()
 {
@@ -448,6 +470,7 @@ void select_command_mode()
   do
   {
     update_bars();
+    update_readout();
     selected = do_menu(&mn);
   } while (!selected);
   current_item = mn.item;
@@ -455,13 +478,15 @@ void select_command_mode()
   {
     case 0: transmit_mode(selected);
             break;
-    case 1: set_frequency_mode(selected);
+    case 1: receive_scroll_mode();
             break;
-    case 2: scan_frequency_mode(selected == 1, 100);
+    case 2: set_frequency_mode(selected);
             break;
-    case 3: scan_frequency_mode(selected == 1, 30);
+    case 3: scan_frequency_mode(selected == 1, 100);
             break;
-    case 4: set_transmission_mode();
+    case 4: scan_frequency_mode(selected == 1, 30);
+            break;
+    case 5: set_transmission_mode();
             break;
   }
 }

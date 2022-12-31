@@ -41,7 +41,7 @@ extern "C" {
 
 #include "golay.h"
 
-const uint16_t golay_matrix[12] =
+const uint16_t PROGMEM golay_matrix[12] =
 {
     0b110111000101,
     0b101110001011,
@@ -64,7 +64,7 @@ uint16_t golay_mult(uint16_t wd_enc)
    for (i=12;i>0;)
    {
       i--;
-      if (wd_enc & 1) enc ^= golay_matrix[i];
+      if (wd_enc & 1) enc ^= pgm_read_word_near(&golay_matrix[i]);
       wd_enc >>= 1;
    }
    return enc;
@@ -125,7 +125,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
   for (i=12;i>0;)
   {
       i--;
-      biterr = golay_hamming_weight_16(syndrome ^ golay_matrix[i]);
+      biterr = golay_hamming_weight_16(syndrome ^ pgm_read_word_near(&golay_matrix[i]));
       if (biterr <= 2)
       {
           *biterrs = biterr+1;
@@ -137,7 +137,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
   for (i=12;i>0;)
   {
       i--;
-      uint16_t par_bit_synd = parity_syndrome ^ golay_matrix[i];
+      uint16_t par_bit_synd = parity_syndrome ^ pgm_read_word_near(&golay_matrix[i]);
       biterr = golay_hamming_weight_16(par_bit_synd);
       if (biterr <= 2)
       {
