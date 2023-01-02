@@ -25,6 +25,7 @@
 #include <Arduino.h>
 #include <wiring_private.h>
 #include <avr/pgmspace.h>
+#include "common.h"
 #include "si5351simple.h"
 #include "LiquidCrystalButtons.h"
 #include "PS2Keyboard.h"
@@ -35,21 +36,24 @@
 #include "cwmod.h"
 #include "scamp.h"
 
-#define LCDB_RS A3
-#define LCDB_E A2
-#define LCDB_DB4 5
-#define LCDB_DB5 6
-#define LCDB_DB6 7
-#define LCDB_DB7 8
-
-#define TRANSMIT_PIN 9
-#define BACKLIGHT_PIN 11
-#define MUTEAUDIO_PIN 4
-#define BEEPOUT_PIN 3
-
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
 si5351simple si5351(8,25000000u);
 PS2Keyboard PSkey;
+radio_configuration rc;
+
+const radio_configuration PROGMEM default_rc =
+{
+  RC_MAGIC_NUMBER,
+  600,
+  20,
+};
+
+void setupConfiguration(void)
+{
+  if (rc.magic_number != RC_MAGIC_NUMBER)
+  for (size_t i=0;i<sizeof(default_rc);i++)
+    ((uint8_t*)&rc)[i] = pgm_read_byte_near(&((const uint8_t *)&default_rc)[i]);
+}
 
 void setupCompare()
 {
@@ -67,9 +71,11 @@ void setupADC() {
   ADMUX = (1 << REFS0);
 }
 
+extern "C" {
 void idle_task(void)
 {
   lcd.pollButtons();
+}
 }
 
 #define PROCESSOR_CLOCK_FREQ 16000000
@@ -78,6 +84,8 @@ void idle_task(void)
 
 volatile uint16_t adc_sample_0;
 volatile uint16_t adc_sample_1;
+
+uint8_t mute = 0;
 
 uint8_t srd_buffer[80];
 scroll_readout_dat srd_buf = { 0, 1, 16, sizeof(srd_buffer), srd_buffer, 0 };
@@ -94,15 +102,14 @@ const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
                                      
 scroll_alpha_dat sad_buf = { 0, 0, 16, sizeof(sad_buffer), sad_buffer, sad_validchars, sizeof(sad_validchars), 0, 0, 0, 0 };
 
+scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 13560000, 0, 0 };
+bargraph_dat bgs = { 4, 12, 0 };
+
+
 ISR(TIMER1_OVF_vect)
 {
   static uint8_t last_adc1 = 0;
-  uint16_t adc_sample;
-  do
-  { uint8_t low = ADCL;
-    uint8_t high = ADCH;
-    adc_sample = (((uint16_t) high) << 8) | low;
-  } while (0);
+  uint16_t adc_sample = ADC;
   sei();
   if (last_adc1)
   {
@@ -191,14 +198,44 @@ void setup_tone_pcm(void)
 
 uint8_t current_protocol;
 
+extern "C" {
+  
+void transmit_set(uint8_t seton)
+{
+  digitalWrite(TRANSMIT_PIN, seton != 0);
+}
+
+void set_clock_onoff(uint8_t onoff, uint8_t clockno)
+{
+   si5351.setOutputOnOff(clockno,onoff != 0);  
+}
+
 void set_protocol(uint8_t protocol)
 {
    dsp_initialize_protocol(protocol);
    current_protocol = protocol;  
 }
 
+}
+
+void set_frequency(uint32_t freq, uint8_t clockno)
+{
+   si5351_synth_regs s_regs;
+   si5351_multisynth_regs m_regs;
+  
+   si5351.calc_registers(freq, 0, &s_regs, &m_regs);
+   si5351.set_registers(0, &s_regs, clockno, &m_regs);
+   si5351.setOutputOnOff(clockno,1);
+}
+
+void set_frequency_snd(void)
+{
+  set_frequency(snd_freq.n, 0);
+  delay(2);
+}
 
 void setup() {
+  setupConfiguration();
   set_protocol(PROTOCOL_CW);
   setupADC();
   setupCompare();
@@ -213,9 +250,11 @@ void setup() {
   pinMode(MUTEAUDIO_PIN,OUTPUT);
   TONE_OFF();
   si5351.start();
+  set_frequency_snd();
   lcd.begin(20,4);
   digitalWrite(TRANSMIT_PIN,LOW);
   digitalWrite(MUTEAUDIO_PIN,LOW);
+  digitalWrite(BACKLIGHT_PIN,HIGH);
 }
 
 #define UPDATE_MILLIS_BARS 100
@@ -238,26 +277,6 @@ uint8_t map_16_to_bar_40(uint16_t b)
 uint8_t map_16_to_bar_20(uint16_t b)
 {
   return map_16_to_bar_40(b) >> 1;
-}
-
-
-scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
-bargraph_dat bgs = { 4, 12, 0 };
-
-void set_frequency(uint32_t freq)
-{
-   si5351_synth_regs s_regs;
-   si5351_multisynth_regs m_regs;
-  
-   si5351.calc_registers(freq, 0, &s_regs, &m_regs);
-   si5351.set_registers(0, &s_regs, 0, &m_regs);
-   si5351.setOutputOnOff(0,1);
-}
-
-void set_frequency_snd(void)
-{
-  set_frequency(snd_freq.n);
-  delay(2);
 }
 
 void scroll_redraw_snd(void)
@@ -348,8 +367,12 @@ uint8_t scan_frequency(int8_t stepval, uint16_t maxsteps)
     increment_decrement_frequency(stepval);
     scroll_redraw_snd();
     update_bars();
+#if 0
     if ( ((stepval < 0) && (abort_button_right())) ||
          ((stepval >= 0) && (abort_button_left())) )
+#else
+    if (abort_button_enter())
+#endif
     {
       aborted = 1;
       break;
@@ -429,18 +452,77 @@ void set_transmission_mode(void)
   } while (!selected);
   set_horiz_menu_keys(0);
   if (current_protocol != mn.item)
-     set_protocol(mn.item+1);
+     set_protocol(mn.item);
 }
+
+const char txtitle1[] PROGMEM = "Return";
+const char txtitle2[] PROGMEM = "Txmit";
+const char txtitle3[] PROGMEM = "Quit";
+const char txtitle4[] PROGMEM = "Clear";
+
+const char *const txmenu[] PROGMEM = {txtitle1,txtitle2,txtitle3,txtitle4,NULL };
+
+static uint8_t transmit_message_length(void)
+{
+  uint8_t len = sad_buf.numchars;
+  while (len > 0)
+  {
+    if (sad_buf.buffer[len-1] != ' ') break;
+    len--;
+  }
+  return len;
+}
+
+void transmit_mode_callback(dsp_txmit_message_state *dtms)
+{
+  
+}
+
 
 void transmit_mode(uint8_t selected)
 {
   sad_buf.position = (selected == 1) ? (sad_buf.numchars-1) : 0;
-  scroll_alpha_start(&sad_buf);
-  while (!sad_buf.entered)
+  for(;;)
   {
-    idle_task();
-    scroll_alpha_key(&sad_buf);
-    update_readout();
+    scroll_alpha_start(&sad_buf);
+    while ((!sad_buf.entered) && (!sad_buf.exited))
+    {
+      idle_task();
+      scroll_alpha_key(&sad_buf);
+      update_readout();
+    }
+    if (sad_buf.entered)
+    {
+      scroll_alpha_clear(&sad_buf);
+      menu_str mn = { txmenu, 0, 0, 8, 0 };
+      do_show_menu_item(&mn);
+      uint8_t selected;
+      do
+      {
+        update_readout();
+        selected = do_menu(&mn);
+      } while (!selected);
+      if (mn.item == 1)
+      {
+        uint8_t msg_len = transmit_message_length();
+        if (msg_len > 0)
+        {
+          digitalWrite(MUTEAUDIO_PIN,HIGH);
+          dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
+          set_frequency_snd();
+          digitalWrite(MUTEAUDIO_PIN,mute);
+          break;
+        }
+      } else if (mn.item == 2)
+      {
+        /*quit*/
+        break;
+      } else if (mn.item == 3)
+      {
+        sad_buf.buffer[0] = 0;
+        sad_buf.position = 0;
+      }
+    } else break; 
   }
   scroll_alpha_clear(&sad_buf);
 }
@@ -482,7 +564,7 @@ void select_command_mode()
             break;
     case 2: set_frequency_mode(selected);
             break;
-    case 3: scan_frequency_mode(selected == 1, 100);
+    case 3: if (selected < 3) scan_frequency_mode(selected == 1, 100);
             break;
     case 4: scan_frequency_mode(selected == 1, 30);
             break;

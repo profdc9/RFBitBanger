@@ -288,6 +288,29 @@ void dsp_initialize_protocol(uint8_t protocol)
   }
 }
 
+uint8_t dsp_scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
+{
+}
+
+uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc)
+{
+  dsp_txmit_message_state dtms;
+
+  dtms.message = message;
+  dtms.length = length;
+  dtms.frequency = frequency;
+  dtms.user_state = user_state;
+  dtms.current_symbol = 0;
+  dtms.aborted = 0;
+
+  switch (protocol)
+  {
+     case PROTOCOL_CW:          return cwmod_txmit(&dtms,ddc);
+     case PROTOCOL_RTTY:        return rtty_txmit(&dtms,ddc);
+     case PROTOCOL_SCAMP:       return dsp_scamp_txmit(&dtms,ddc);
+  }
+}
+
 uint16_t dsp_get_signal_magnitude(void)
 {
   return (ds.mag_value_8 + ds.mag_value_12 + ds.mag_value_16 + ds.mag_value_20 + ds.mag_value_24) >> 1;

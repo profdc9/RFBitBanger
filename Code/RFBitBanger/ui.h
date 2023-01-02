@@ -80,6 +80,7 @@ typedef struct _scroll_alpha_dat
   uint8_t        cursorpos;
   uint8_t        changed;
   uint8_t        entered;
+  uint8_t        exited;
 } scroll_alpha_dat;
 
 void scroll_number_stop(scroll_number_dat *snd);
@@ -108,6 +109,7 @@ typedef struct _scroll_readout_dat
 void lcdBarGraph(bargraph_dat *bgd);
 uint8_t abort_button_left(void);
 uint8_t abort_button_right(void);
+uint8_t abort_button_enter(void);
 
 void scroll_readout_initialize(scroll_readout_dat *srd);
 void scroll_readout_add_character(scroll_readout_dat *srd, uint8_t ch);

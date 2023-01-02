@@ -25,9 +25,22 @@
 #ifndef _RFBITBANGER_H
 #define _RFBITBANGER_H
 
+#include "si5351simple.h"
+
+#define LCDB_RS A3
+#define LCDB_E A2
+#define LCDB_DB4 5
+#define LCDB_DB5 6
+#define LCDB_DB6 7
+#define LCDB_DB7 8
+
+#define TRANSMIT_PIN 9
+#define BACKLIGHT_PIN 11
+#define MUTEAUDIO_PIN 4
+#define BEEPOUT_PIN 3
+
 extern PS2Keyboard PSkey;
 extern LiquidCrystalButtons lcd;
-
-void idle_task(void);
+extern si5351simple si5351;
 
 #endif /* _RFBITBANGER_H */
