@@ -24,6 +24,7 @@
 
 #include <Arduino.h>
 #include <avr/pgmspace.h>
+#include "common.h"
 #include "LiquidCrystalButtons.h"
 #include "ui.h"
 #include "mini-printf.h"
@@ -147,6 +148,22 @@ uint8_t button_down(uint8_t key)
   return horiz_keys ? button_right_actual(key) : button_down_actual(key);
 }
 
+void select_item(menu_str *menu, uint8_t item)
+{ 
+    uint8_t i = 0;
+    for (;;)
+    { 
+      if (pgm_read_word_near(&menu->items[i]) == NULL) break;
+      if (i == item)
+      {
+        menu->item = item;
+        do_show_menu_item(menu);
+        break;
+      }
+      i++;
+    }
+}
+
 uint8_t do_menu(menu_str *menu)
 {
   uint8_t key = PSkey.getkey();
@@ -159,6 +176,10 @@ uint8_t do_menu(menu_str *menu)
   {
     lcd.clearButtons();
     return 2;
+  } else if (button_enter(key))
+  {
+    lcd.clearButtons();
+    return 3;
   } else if ((button_down(key)) && (menu->item > 0))
   {
     menu->item--;
@@ -167,6 +188,15 @@ uint8_t do_menu(menu_str *menu)
   {
     menu->item++;
     do_show_menu_item(menu);
+  } else if ((key>='1') && (key<='9'))
+  {
+    select_item(menu,key-'1');
+  } else if ((key>='A') && (key<='Z'))
+  { 
+    select_item(menu,key-'A');
+  } else if ((key>='a') && (key<='z'))
+  {
+    select_item(menu,key-'a');
   }
   return 0;
 }
@@ -195,15 +225,23 @@ uint32_t pow10(uint8_t n)
   return v;
 }
 
+uint8_t abort_button_enter(void)
+{
+  uint8_t key = PSkey.getkey();
+  return ((key == 0x0D) ||(key == 27) ||  lcd.readUnBounced(4));
+}
+
 uint8_t abort_button_left(void)
 {
   uint8_t key = PSkey.getkey();
+  if ((key == 0x0D) || lcd.readUnBounced(4)) return 1;
   return ((key == PS2KEY_LEFT) || lcd.readUnBounced(2));
 }
 
 uint8_t abort_button_right(void)
 {
   uint8_t key = PSkey.getkey();
+  if ((key == 0x0D) || lcd.readUnBounced(4)) return 1;
   return ((key == PS2KEY_RIGHT) || lcd.readUnBounced(3));
 }
 
@@ -220,7 +258,7 @@ void scroll_number_key(scroll_number_dat *snd)
 
   lcd.setCursor(snd->col + snd->position + ((snd->decs != 0) && ((snd->position + snd->decs) >= snd->digits)), snd->row);
   idle_task();
-  if (key == PS2KEY_ENTER)
+  if (button_enter(key))
   {
     snd->entered = 1;
     return;
@@ -335,18 +373,30 @@ void scroll_alpha_key(scroll_alpha_dat *sad)
   { 
     sad->entered = 1;
     return;
+  } else if (key == 27)
+  {
+    sad->exited = 1;
+  } else if (key == 0x08)
+  {
+    if (sad->position > 0)
+    {
+      sad->position--;
+      for (uint8_t i=sad->position;i<sad->numchars;i++)
+        sad->buffer[i] = sad->buffer[i+1];
+      sad->buffer[sad->numchars-1] = ' ';
+    }
   } else if (button_left(key))
   {
     if (sad->position > 0)
       sad->position--;
     else
-      sad->entered = 1;
+      sad->exited = 1;
   } else if (button_right(key))
   {
     if (sad->position < (sad->numchars - 1))
       sad->position++;
     else
-      sad->entered = 1;
+      sad->exited = 1;
   } else if (button_up(key))
   {
     uint8_t curkey = sad->buffer[sad->position];
@@ -396,6 +446,7 @@ void scroll_alpha_start(scroll_alpha_dat *sad)
 {
   sad->changed = 0;
   sad->entered = 0;
+  sad->exited = 0;
   if (sad->buffer[0] == 0)
     memset(sad->buffer, ' ', sad->numchars);
   scroll_alpha_redraw(sad);
@@ -420,8 +471,7 @@ bool show_lr(uint8_t row, const char *message)
 void scroll_readout_initialize(scroll_readout_dat *srd)
 {
   for (uint8_t i = 0; i < srd->numchars; i++)
-    //srd->buffer[i] = ' ';
-    srd->buffer[i] = '!' + i;
+    srd->buffer[i] = ' ';
   srd->position = srd->numchars - srd->displen;
   srd->exited = 0;
   srd->notchanged = 0;

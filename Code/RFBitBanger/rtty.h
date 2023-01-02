@@ -33,6 +33,8 @@ typedef struct _rtty_state
   uint8_t   protocol;
 } rtty_state;
 
+uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
+
 #ifdef __cplusplus
 }
 #endif

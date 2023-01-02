@@ -36,8 +36,10 @@ freely, subject to the following restrictions:
 #include <unistd.h>
 #endif
 
+#include "common.h"
 #include "dspint.h"
 #include "cwmod.h"
+
 
 // const uint8_t cwmod_bit_mask[8] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
 
@@ -412,6 +414,46 @@ void cw_decode_process(void)
         ps.cs.histogram_spaces[g1m] = (temp+temp+temp) >> 2;
 
     }
+}
+
+uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
+{
+  uint16_t pause_len = 1200 / rc.cw_send_speed;  /* element lengthms */
+  set_frequency(dtms->frequency + rc.cw_sidetone_offset, 0);
+  set_clock_onoff(1,0);
+  for (uint8_t n=0;n<dtms->length;n++)
+  {
+    uint8_t ch = dtms->message[n], num=0, cwbits;
+    if (ch == ' ')
+    { 
+      delay(pause_len*4);
+      continue;
+    }
+    const cwmod_symbol *cws = &morse_pattern[0];
+    while (cws < (&morse_pattern[(sizeof(morse_pattern)/sizeof(cwmod_symbol))]))
+    {
+      uint8_t mch = pgm_read_byte_near(&cws->symbol);
+      if (ch == mch)
+      {
+        num = pgm_read_byte_near(&cws->num);
+        cwbits = pgm_read_byte_near(&cws->cwbits);
+        break;
+      }
+      cws++;
+    }
+    if (num == 0) continue;
+    cwbits <<= (8-num);
+    while (num > 0)
+    {
+      transmit_set(1);
+      delay(cwbits & 0x80 ? pause_len*3 : pause_len);
+      transmit_set(0);
+      delay(pause_len);
+      cwbits <<= 1;
+      num--;
+    }
+    delay(pause_len*2);  // add two more to inner loop for 3 X pause
+  }
 }
 
 #ifdef CWMOD_DEBUG

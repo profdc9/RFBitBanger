@@ -40,6 +40,10 @@ freely, subject to the following restrictions:
 #include "dspint.h"
 #include "rtty.h"
 
+uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
+{
+}
+
 #ifdef RTTY_DEBUG
 
 void test_rtty_decode()

@@ -213,15 +213,15 @@ void si5351simple::start(void)
      case 10: si5351_write(183, 0xC0); break;
   }
   
-  si5351_synth_regs s_regs;
-  si5351_multisynth_regs m_regs;
+  // si5351_synth_regs s_regs;
+  // si5351_multisynth_regs m_regs;
   
-  calc_registers(7000000, 0, &s_regs, &m_regs);
-  set_registers(0, &s_regs, 0, &m_regs);
+  //calc_registers(7000000, 0, &s_regs, &m_regs);
+  //set_registers(0, &s_regs, 0, &m_regs);
 
   //calc_registers(7000000, 64, &s_regs, &m_regs);
   //set_registers(0, &s_regs, 1, &m_regs);
 
-  setOutputOnOff(0,1);
+  //setOutputOnOff(0,1);
   //setOutputOnOff(1,0);
 }

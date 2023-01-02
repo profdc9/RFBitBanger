@@ -85,7 +85,11 @@ typedef struct _cwmod_state
 
   uint8_t   num_ditdahs;
   uint8_t   cur_ditdahs;
+
+  uint8_t   sending_rate;
 } cwmod_state;
+
+uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 
 #ifdef __cplusplus
 }

@@ -28,6 +28,18 @@ freely, subject to the following restrictions:
 extern "C" {
 #endif
 
+typedef struct _dsp_txmit_message_state
+{ 
+  void     *user_state;
+  uint32_t  frequency;
+  uint8_t  *message;
+  uint8_t   length;
+  uint8_t   current_symbol;
+  uint8_t   aborted;
+} dsp_txmit_message_state;
+
+typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
+
 #define SCAMP_PROTOCOL
 #define CW_PROTOCOL
 #define RTTY_PROTOCOL
@@ -142,6 +154,8 @@ void dsp_initialize_rtty(void);
 void dsp_initialize_fastscan(void);
 void dsp_reset_state(void);
 uint16_t dsp_get_signal_magnitude(void);
+uint8_t dsp_scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
+uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc);
 
 void dsp_initialize_protocol(uint8_t protocol);
 
