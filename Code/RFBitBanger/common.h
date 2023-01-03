@@ -41,7 +41,9 @@ extern radio_configuration rc;
 void set_frequency(uint32_t freq, uint8_t clockno);
 void set_clock_onoff(uint8_t onoff, uint8_t clockno);
 void transmit_set(uint8_t set);
+void muteaudio_set(uint8_t set);
 void idle_task(void);
+void delayidle(uint32_t ms);
 
 #ifdef __cplusplus
 }

@@ -288,14 +288,15 @@ void cw_find_two_greatest(uint8_t array[], uint8_t length, uint8_t sep,
 
 void cw_decode_process(void)
 {
-    uint8_t is_mark, bin, decode_now;
+    uint8_t is_mark, bin, decode_now, decode_el;
     uint16_t dly, tim = cw_peek_from_timing_fifo();
     is_mark = (tim & 0x8000) == 0;
     tim = tim & 0x7FFF;
-
+ 
     dly = ps.cs.total_ticks - ps.cs.last_tick;
     /* assume a really short timing is a glitch */
-    decode_now = (dly >= CWMOD_PROCESS_DELAY) || (cw_fifo_available() < CWMOD_FIFO_DECODE_THRESHOLD);
+    decode_el = (dly >= CWMOD_PROCESS_DELAY);
+    decode_now = decode_el || (cw_fifo_available() < CWMOD_FIFO_DECODE_THRESHOLD);
     if ((!decode_now) && (tim < 10)) return;
     ps.cs.last_tick = ps.cs.total_ticks;
 
@@ -359,10 +360,16 @@ void cw_decode_process(void)
 
     //  printf("x: %d %d %d\n",ps.cs.dit_dah_threshold,ps.cs.intrainterspace_threshold,ps.cs.interspaceword_threshold);
 
+    
     for (;;)
     {
         tim = cw_remove_from_timing_fifo();
-        if (tim == 0) break;
+        if (tim == 0) 
+        {
+          if (!decode_el) break;
+          decode_el = 0;
+          tim = (uint16_t) 0x8000 | (ps.cs.interspaceword_threshold);
+        }
         is_mark = (tim & 0x8000) == 0;
         tim = tim & 0x7FFF;
         if (is_mark)
@@ -374,7 +381,7 @@ void cw_decode_process(void)
       //      printf("%c",tim > ps.cs.dit_dah_threshold ? '-' : '.');
         } else
         {
-            if (tim > ps.cs.intrainterspace_threshold)
+            if (tim >= ps.cs.intrainterspace_threshold)
             {
                const cwmod_symbol *cws = &morse_pattern[0];
                while (cws < (&morse_pattern[(sizeof(morse_pattern)/sizeof(cwmod_symbol))]))
@@ -394,9 +401,8 @@ void cw_decode_process(void)
                }
                ps.cs.num_ditdahs = 0;
                ps.cs.cur_ditdahs = 0;
-             //  if (tim > ps.cs.interspaceword_threshold)
-             //      printf(" ");
-               decode_insert_into_fifo(' ');
+               if (tim > ps.cs.interspaceword_threshold)
+                 decode_insert_into_fifo(' ');
             }
         }
     }
@@ -419,14 +425,14 @@ void cw_decode_process(void)
 uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 {
   uint16_t pause_len = 1200 / rc.cw_send_speed;  /* element lengthms */
-  set_frequency(dtms->frequency + rc.cw_sidetone_offset, 0);
+  set_frequency(dtms->frequency + rc.cw_sidetone_offset, 1);
   set_clock_onoff(1,0);
-  for (uint8_t n=0;n<dtms->length;n++)
+  for (dtms->current_symbol=0;dtms->current_symbol<dtms->length;dtms->current_symbol++)
   {
-    uint8_t ch = dtms->message[n], num=0, cwbits;
+    uint8_t ch = dtms->message[dtms->current_symbol], num=0, cwbits;
     if (ch == ' ')
     { 
-      delay(pause_len*4);
+      delayidle(pause_len*4);
       continue;
     }
     const cwmod_symbol *cws = &morse_pattern[0];
@@ -445,14 +451,22 @@ uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
     cwbits <<= (8-num);
     while (num > 0)
     {
+      set_clock_onoff(0,0);
+      set_clock_onoff(1,1);
+      muteaudio_set(1);
       transmit_set(1);
-      delay(cwbits & 0x80 ? pause_len*3 : pause_len);
+      delayidle(cwbits & 0x80 ? pause_len*3 : pause_len);
       transmit_set(0);
-      delay(pause_len);
+      muteaudio_set(0);
+      set_clock_onoff(1,0);
+      set_clock_onoff(0,1);
+      delayidle(pause_len);
       cwbits <<= 1;
       num--;
     }
-    delay(pause_len*2);  // add two more to inner loop for 3 X pause
+    delayidle(pause_len*2);  // add two more to inner loop for 3 X pause
+    ddc(dtms);
+    if (dtms->aborted) break;
   }
 }
 

@@ -156,6 +156,8 @@ void dsp_reset_state(void);
 uint16_t dsp_get_signal_magnitude(void);
 uint8_t dsp_scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc);
+void dsp_dispatch_receive(uint8_t protocol);
+void dsp_dispatch_interrupt(uint8_t protocol);
 
 void dsp_initialize_protocol(uint8_t protocol);
 
@@ -174,6 +176,9 @@ typedef struct _decode_fifo
 void decode_initialize_fifo(void);
 uint8_t decode_insert_into_fifo(uint8_t c);
 uint16_t decode_remove_from_fifo(void);
+
+void scamp_new_sample(void);
+void scamp_decode_process(void);
 
 #ifdef __cplusplus
 }
