@@ -40,6 +40,7 @@ LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7
 si5351simple si5351(8,25000000u);
 PS2Keyboard PSkey;
 radio_configuration rc;
+uint8_t current_protocol;
 
 const radio_configuration PROGMEM default_rc =
 {
@@ -74,6 +75,7 @@ void setupADC() {
 extern "C" {
 void idle_task(void)
 {
+  dsp_dispatch_receive(current_protocol);
   lcd.pollButtons();
 }
 }
@@ -122,6 +124,7 @@ ISR(TIMER1_OVF_vect)
     adc_sample_0 = adc_sample;
     ADMUX = (1 << REFS0);
     dsp_interrupt_sample(adc_sample);
+    dsp_dispatch_interrupt(current_protocol);
   }
 }
 
@@ -196,10 +199,26 @@ void setup_tone_pcm(void)
    pinMode(BEEPOUT_PIN,OUTPUT);
 }
 
-uint8_t current_protocol;
-
 extern "C" {
-  
+
+void delayidle(uint32_t ms)
+{
+        uint32_t start = micros();
+
+        while (ms > 0) {
+                idle_task();
+                while ( ms > 0 && (micros() - start) >= 1000) {
+                        ms--;
+                        start += 1000;
+                }
+        }
+}
+
+void muteaudio_set(uint8_t seton)
+{
+  digitalWrite(MUTEAUDIO_PIN, seton != 0);
+}
+
 void transmit_set(uint8_t seton)
 {
   digitalWrite(TRANSMIT_PIN, seton != 0);
@@ -216,8 +235,6 @@ void set_protocol(uint8_t protocol)
    current_protocol = protocol;  
 }
 
-}
-
 void set_frequency(uint32_t freq, uint8_t clockno)
 {
    si5351_synth_regs s_regs;
@@ -227,6 +244,18 @@ void set_frequency(uint32_t freq, uint8_t clockno)
    si5351.set_registers(0, &s_regs, clockno, &m_regs);
    si5351.setOutputOnOff(clockno,1);
 }
+
+void received_character(uint8_t ch)
+{
+  if (ch == '\b')
+     scroll_readout_back_character(&srd_buf,' ');
+  else if ((ch >= ' ') && (ch <= '~'))
+     scroll_readout_add_character(&srd_buf, ch);
+}
+
+
+}
+
 
 void set_frequency_snd(void)
 {
@@ -475,7 +504,11 @@ static uint8_t transmit_message_length(void)
 
 void transmit_mode_callback(dsp_txmit_message_state *dtms)
 {
-  
+
+  sad_buf.position = dtms->current_symbol;
+  scroll_alpha_redraw(&sad_buf);
+  if (abort_button_enter())
+    dtms->aborted = 1;
 }
 
 
@@ -507,10 +540,8 @@ void transmit_mode(uint8_t selected)
         uint8_t msg_len = transmit_message_length();
         if (msg_len > 0)
         {
-          digitalWrite(MUTEAUDIO_PIN,HIGH);
           dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
           set_frequency_snd();
-          digitalWrite(MUTEAUDIO_PIN,mute);
           break;
         }
       } else if (mn.item == 2)

@@ -42,6 +42,12 @@ dsp_state       ds;
 dsp_state_fixed df;
 protocol_state  ps;
 
+uint8_t decode_insert_into_fifo(uint8_t c)
+{
+  received_character(c);
+}
+
+#if 0
 decode_fifo decfifo;
 
 /* initialize decode fifo */
@@ -70,6 +76,7 @@ uint16_t decode_remove_from_fifo(void)
     decfifo.tail = next;
     return c;
 }
+#endif
 
 
 /* initialize frame fifo */
@@ -292,6 +299,32 @@ uint8_t dsp_scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc
 {
 }
 
+void dsp_dispatch_interrupt(uint8_t protocol)
+{
+  switch (protocol)
+  {
+     case PROTOCOL_CW:          cw_new_sample();
+                                break;
+     case PROTOCOL_RTTY:        rtty_new_sample();
+                                break;
+     case PROTOCOL_SCAMP:       scamp_new_sample();
+                                break;    
+  }
+}
+
+void dsp_dispatch_receive(uint8_t protocol)
+{
+  switch (protocol)
+  {
+     case PROTOCOL_CW:          cw_decode_process();
+                                break;
+     case PROTOCOL_RTTY:        rtty_decode_process();
+                                break;
+     case PROTOCOL_SCAMP:       scamp_decode_process();
+                                break;    
+  }
+}
+
 uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc)
 {
   dsp_txmit_message_state dtms;
@@ -465,7 +498,7 @@ void dsp_interrupt_sample(uint16_t sample)
    expect the next bit.  it resets the bit counter when the sync signal has
    been received, and when 30 bits of a frame have been received, stores the
    frame in the frame FIFO */
-void scamp_decode_process(void)
+void scamp_new_sample(void)
 {
     int16_t demod_sample, temp;
     uint8_t received_bit;
@@ -651,6 +684,11 @@ void scamp_decode_process(void)
           ps.ss.bitflips_lead = 0;
        }
     }
+}
+
+void scamp_decode_process(void)
+{
+  
 }
 
 #ifdef DSPINT_DEBUG

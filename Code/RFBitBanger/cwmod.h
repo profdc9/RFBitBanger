@@ -90,6 +90,8 @@ typedef struct _cwmod_state
 } cwmod_state;
 
 uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
+void cw_new_sample(void);
+void cw_decode_process(void);
 
 #ifdef __cplusplus
 }

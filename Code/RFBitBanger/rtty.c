@@ -40,6 +40,14 @@ freely, subject to the following restrictions:
 #include "dspint.h"
 #include "rtty.h"
 
+void rtty_new_sample(void)
+{
+}
+
+void rtty_decode_process(void)
+{
+}
+
 uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 {
 }

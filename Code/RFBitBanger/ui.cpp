@@ -341,6 +341,7 @@ void scroll_alpha_redraw(scroll_alpha_dat *sad)
   lcd.setCursor(sad->col, sad->row);
   for (dp = 0; dp < sad->displen; dp++)
     lcd.write(sad->buffer[dp + startpos]);
+  lcd.setCursor(sad->col + sad->cursorpos, sad->row);
 }
 
 void scroll_alpha_clear(scroll_alpha_dat *sad)
