@@ -164,7 +164,6 @@ void cw_reset_threshold(uint16_t thresh)
 {
    if ((thresh >> 5) > ps.cs.ct_min_val)
         thresh >>= 1;
-   //printf("thresh=%d %d\n",thresh,ps.cs.ct_min_val);
    thresh = (thresh < CWMOD_THRESHOLD_MIN) ? CWMOD_THRESHOLD_MIN : thresh;
    ps.cs.keydown_threshold = thresh;
    ps.cs.keyup_threshold = ps.cs.keydown_threshold >> 1;
@@ -222,7 +221,6 @@ void cw_new_sample(void)
           if ((++ps.cs.sticky_interval) >= ps.cs.sticky_interval_length)
           {
             ps.cs.key_state = 0;
-            //printf("key up %d %d\n",ps.cs.state_ctr, mag_sample);
             cw_insert_into_timing_fifo(ps.cs.state_ctr);
             ps.cs.state_ctr = 0;
             ps.cs.sticky_interval = 0;
@@ -235,7 +233,6 @@ void cw_new_sample(void)
           if ((++ps.cs.sticky_interval) >= ps.cs.sticky_interval_length)
           {
             ps.cs.key_state = 1;
-            //printf("key down %d %d\n",ps.cs.state_ctr, mag_sample);
             cw_insert_into_timing_fifo(((uint16_t)ps.cs.state_ctr) | 0x8000);
             ps.cs.state_ctr = 0;
             ps.cs.sticky_interval = 0;
@@ -313,17 +310,6 @@ void cw_decode_process(void)
 
     if (!decode_now) return;
 
-#if 0
-    printf("\nmark bin:  ");
-    for (bin=0; bin<(CWMOD_TIMING_BINS); bin++)
-        printf("%02d,",ps.cs.histogram_marks[bin]);
-    printf("\nspace bin: ");
-    for (bin=0; bin<(CWMOD_TIMING_BINS); bin++)
-        printf("%02d,",ps.cs.histogram_spaces[bin]);
-    printf("\n");
-#endif
-
-
     uint8_t g1m, g2m, g1s, g2s;
 
     cw_find_two_greatest(ps.cs.histogram_marks, sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]),
@@ -350,16 +336,9 @@ void cw_decode_process(void)
             g2s = g2m;
         }
     }
-   // printf(" lm: %d/%d %d/%d\n",g1m,g2m,g1s,g2s);
 
     ps.cs.intrainterspace_threshold = pgm_read_word_near(&cwmod_timing_histogram_bins[(g1s+g2s)/2]);
     ps.cs.interspaceword_threshold = 3*ps.cs.intrainterspace_threshold;
-
-
-    // printf("ls: %d/%d %d/%d\n",g1,ps.cs.histogram_spaces[g1],g2,ps.cs.histogram_spaces[g2]);
-
-    //  printf("x: %d %d %d\n",ps.cs.dit_dah_threshold,ps.cs.intrainterspace_threshold,ps.cs.interspaceword_threshold);
-
     
     for (;;)
     {
@@ -378,7 +357,6 @@ void cw_decode_process(void)
             ps.cs.cur_ditdahs <<= 1;
             if (tim > ps.cs.dit_dah_threshold)
                 ps.cs.cur_ditdahs |= 1;
-      //      printf("%c",tim > ps.cs.dit_dah_threshold ? '-' : '.');
         } else
         {
             if (tim >= ps.cs.intrainterspace_threshold)
@@ -392,7 +370,6 @@ void cw_decode_process(void)
                        uint8_t test = ps.cs.cur_ditdahs >> diff;
                        if (pgm_read_byte_near(&cws->cwbits) == test)
                        {
-                            //printf("%c",cws->symbol);
                             decode_insert_into_fifo(pgm_read_byte_near(&cws->symbol));
                             break;
                        }
@@ -406,8 +383,6 @@ void cw_decode_process(void)
             }
         }
     }
-    // printf("!!!\n");
-
 
     for (g1m=0;g1m<(sizeof(ps.cs.histogram_marks)/sizeof(ps.cs.histogram_marks[0]));g1m++)
     {
@@ -425,7 +400,7 @@ void cw_decode_process(void)
 uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 {
   uint16_t pause_len = 1200 / rc.cw_send_speed;  /* element lengthms */
-  set_frequency(dtms->frequency + rc.cw_sidetone_offset, 1);
+  set_frequency(dtms->frequency + CWMOD_SIDETONE_OFFSET, 1);
   set_clock_onoff(1,0);
   for (dtms->current_symbol=0;dtms->current_symbol<dtms->length;dtms->current_symbol++)
   {

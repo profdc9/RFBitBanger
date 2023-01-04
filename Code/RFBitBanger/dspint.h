@@ -60,11 +60,6 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define DSPINT_MAX_SAMPLEBUFFER 64
 #endif
 
-#define SCAMP_SYNC_CODEWORD 0b111110110100011001110100011110ul
-                              /* 0x3ED19D1E */
-
-#define SCAMP_BLANK_CODEWORD 0xAAAAAAAA
-
 #define PROTOCOL_FASTSCAN 0 
 #define PROTOCOL_CW       1
 #define PROTOCOL_RTTY     2
@@ -93,9 +88,6 @@ typedef struct _dsp_state
 
   uint8_t   sample_no;
   uint8_t   sample_ct;
-
-  uint16_t  ct_average;
-  uint32_t  ct_sum;
 
   int8_t    current_bit_no;
   uint32_t  current_word;
@@ -154,14 +146,10 @@ void dsp_initialize_rtty(void);
 void dsp_initialize_fastscan(void);
 void dsp_reset_state(void);
 uint16_t dsp_get_signal_magnitude(void);
-uint8_t dsp_scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc);
 void dsp_dispatch_receive(uint8_t protocol);
 void dsp_dispatch_interrupt(uint8_t protocol);
-
 void dsp_initialize_protocol(uint8_t protocol);
-
-void dsp_initialize_frame_fifo(volatile scamp_frame_fifo *dff);
 
 #define DECODE_FIFO_LENGTH 16
 
@@ -176,9 +164,6 @@ typedef struct _decode_fifo
 void decode_initialize_fifo(void);
 uint8_t decode_insert_into_fifo(uint8_t c);
 uint16_t decode_remove_from_fifo(void);
-
-void scamp_new_sample(void);
-void scamp_decode_process(void);
 
 #ifdef __cplusplus
 }

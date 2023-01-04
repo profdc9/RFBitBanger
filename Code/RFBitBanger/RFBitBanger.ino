@@ -45,8 +45,9 @@ uint8_t current_protocol;
 const radio_configuration PROGMEM default_rc =
 {
   RC_MAGIC_NUMBER,
-  600,
   20,
+  3,
+  2,
 };
 
 void setupConfiguration(void)
@@ -265,7 +266,7 @@ void set_frequency_snd(void)
 
 void setup() {
   setupConfiguration();
-  set_protocol(PROTOCOL_CW);
+  set_protocol(PROTOCOL_SCAMP);
   setupADC();
   setupCompare();
   setup_timers();
@@ -481,7 +482,7 @@ void set_transmission_mode(void)
   } while (!selected);
   set_horiz_menu_keys(0);
   if (current_protocol != mn.item)
-     set_protocol(mn.item);
+     set_protocol(mn.item+1);
 }
 
 const char txtitle1[] PROGMEM = "Return";
@@ -494,18 +495,23 @@ const char *const txmenu[] PROGMEM = {txtitle1,txtitle2,txtitle3,txtitle4,NULL }
 static uint8_t transmit_message_length(void)
 {
   uint8_t len = sad_buf.numchars;
-  while (len > 0)
+  do
   {
-    if (sad_buf.buffer[len-1] != ' ') break;
     len--;
-  }
+    if (sad_buf.buffer[len] != ' ') 
+    {
+      len++;
+      break;
+    }
+  } while (len > 0);
   return len;
 }
 
 void transmit_mode_callback(dsp_txmit_message_state *dtms)
 {
 
-  sad_buf.position = dtms->current_symbol;
+  if (dtms->current_symbol < sad_buf.numchars)
+     sad_buf.position = dtms->current_symbol;
   scroll_alpha_redraw(&sad_buf);
   if (abort_button_enter())
     dtms->aborted = 1;
@@ -542,6 +548,7 @@ void transmit_mode(uint8_t selected)
         {
           dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
           set_frequency_snd();
+          set_clock_onoff(0,1);
           break;
         }
       } else if (mn.item == 2)
