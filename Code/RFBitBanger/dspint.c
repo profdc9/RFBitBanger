@@ -79,34 +79,6 @@ uint16_t decode_remove_from_fifo(void)
 #endif
 
 
-/* initialize frame fifo */
-void scamp_initialize_frame_fifo(volatile scamp_frame_fifo *dff)
-{
-    dff->head = dff->tail = 0;
-}
-
-/* insert a frame into the fifo.  this is intended to be interrupt safe */
-uint8_t scamp_insert_into_frame_fifo(volatile scamp_frame_fifo *dff, uint32_t frame)
-{
-    uint8_t next = dff->head >= (SCAMP_FRAME_FIFO_LENGTH - 1) ? 0 : (dff->head+1);
-    if (next == dff->tail) return 0;
-    dff->frames[next] = frame;
-    dff->head = next;
-    return 1;
-}
-
-/* remove a frame from the fifo.  this is intended to be interrupt safe */
-uint32_t scamp_remove_from_frame_fifo(volatile scamp_frame_fifo *dff)
-{
-    uint32_t frame;
-    uint8_t next;
-    if (dff->tail == dff->head) return 0xFFFF;
-    next = dff->tail >= (SCAMP_FRAME_FIFO_LENGTH - 1) ? 0 : (dff->tail+1);
-    frame = dff->frames[next];
-    dff->tail = next;
-    return frame;
-}
-
 /* calculate the hamming weight of a 16 bit integer
    GCC could use __builtin__popcount() */
 uint8_t dsp_hamming_weight_16(uint16_t n)
@@ -157,16 +129,6 @@ uint8_t dsp_hamming_weight_30(uint32_t n)
       s++;
   }
   return s;
-}
-
-void scamp_reset_codeword(void)
-{
-   ds.current_bit_no = 0;
-   ds.current_word = SCAMP_BLANK_CODEWORD;
-   ps.ss.bitflips_in_phase = 0;
-   ps.ss.bitflips_lag = 0;
-   ps.ss.bitflips_lead = 0;
-   ps.ss.bitflips_ctr = 0;
 }
 
 void dsp_reset_fixed_state(void)
@@ -295,10 +257,6 @@ void dsp_initialize_protocol(uint8_t protocol)
   }
 }
 
-uint8_t dsp_scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
-{
-}
-
 void dsp_dispatch_interrupt(uint8_t protocol)
 {
   switch (protocol)
@@ -340,7 +298,7 @@ uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *messag
   {
      case PROTOCOL_CW:          return cwmod_txmit(&dtms,ddc);
      case PROTOCOL_RTTY:        return rtty_txmit(&dtms,ddc);
-     case PROTOCOL_SCAMP:       return dsp_scamp_txmit(&dtms,ddc);
+     case PROTOCOL_SCAMP:       return scamp_txmit(&dtms,ddc);
   }
 }
 
@@ -489,206 +447,6 @@ void dsp_interrupt_sample(uint16_t sample)
       ds.sample_no = 0;
 
    if (prep_sample) ds.sample_ct++;
-}
-
-/* this is called by the interrupt handle to decode the SCAMP frames from
-   the spectral channels.  it figures out the magnitude of
-   the signal given the current modulation type (OOK/FSK).  it tries to detect
-   an edge to determine when the current bit has finished and when it should
-   expect the next bit.  it resets the bit counter when the sync signal has
-   been received, and when 30 bits of a frame have been received, stores the
-   frame in the frame FIFO */
-void scamp_new_sample(void)
-{
-    int16_t demod_sample, temp;
-    uint8_t received_bit;
-    uint8_t hamming_weight;
-
-    uint8_t ct = ds.sample_ct;
-    /* only proceed if we have new magnitude samples */
-    if (ct == ps.ss.last_sample_ct)
-        return;
-    ps.ss.last_sample_ct = ct;
-
-    /* demodulate a sample either based on the amplitude in one frequency
-       channel for OOK, or the difference in amplitude between two frequency
-       channels for FSK */
-
-    switch (ps.ss.mod_type)
-    {
-#ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_OOK_SLOW:
-#endif
-        case SCAMP_OOK_FAST:
-        case SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
-                               ds.ct_sum += ds.mag_value_16;
-                               break;
-#ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_FSK_SLOW:
-#endif
-        case SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
-                               ds.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
-                               break;
-        case SCAMP_FSK_FAST:   demod_sample = ds.mag_value_12 - ds.mag_value_8;
-                               ds.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
-                               break;
-    }
-
-    /* This is the automatic "gain" control (threshold level control).
-       find the average of a certain number of samples (power of two for calculation
-       speed) so that we can determine what to set the thresholds at for the bit on/off
-       threshold for ook and the edge threshold for ook/fsk */
-    if ((++ds.ct_average) >= (1 << SCAMP_AVG_CT_PWR2))
-    {
-       uint16_t temp;
-       temp = (ds.ct_sum) >> (SCAMP_AVG_CT_PWR2);
-       /* don't allow threshold to get too low, or we'll be having bit edges constantly */
-       ps.ss.power_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
-       if (ps.ss.fsk)
-            ps.ss.edge_thr = ps.ss.power_thr;
-       else
-            ps.ss.edge_thr = ps.ss.power_thr << 1;
-       //printf("power %d edge %d min %d ---------------------------------\n",ps.ss.power_thr,ps.ss.edge_thr,ps.ss.power_thr_min);
-       ds.ct_average = 0;
-       ds.ct_sum = 0;
-    }
-
-    /* calculate the difference between the modulated signal between now and one bit period ago to see
-       if there is a bit edge */
-    temp = ps.ss.demod_buffer[ps.ss.demod_sample_no];
-    ps.ss.bit_edge_val = demod_sample > temp ? (demod_sample - temp) : (temp - demod_sample);
-    /* store the demodulated sample into a circular buffer to calculate the edge */
-    ps.ss.demod_buffer[ps.ss.demod_sample_no] = demod_sample;
-    if ((++ps.ss.demod_sample_no) >= ps.ss.demod_samples_per_bit)
-        ps.ss.demod_sample_no = 0;
-
-    if (ps.ss.edge_ctr > 0)  /* count down the edge counter */
-        --ps.ss.edge_ctr;
-
-    received_bit = 0;
-
-    if (ps.ss.edge_ctr < ps.ss.cur_demod_edge_window)  /* if it below the edge window, start looking for the bit edge */
-    {
-        if (ps.ss.bit_edge_val > ps.ss.edge_thr)  /* the edge should come around now, does it exceed threshold */
-        {
-            if (ps.ss.bit_edge_val > ps.ss.max_bit_edge_val)  /* if so, have we reached the peak of the edge */
-            {
-                ps.ss.max_bit_edge_val = ps.ss.bit_edge_val;  /* if so, reset the edge center counter */
-                ps.ss.next_edge_ctr = 1;
-                ps.ss.cur_bit = demod_sample;              /* save the bit occurring at the edge */
-            } else
-                ps.ss.next_edge_ctr++;                     /* otherwise count that we have passed the edge peak */
-        } else
-        {
-            if (ps.ss.max_bit_edge_val != 0)   /* if we have detected an edge */
-            {
-                ps.ss.edge_ctr = ps.ss.demod_samples_per_bit > ps.ss.next_edge_ctr ? ps.ss.demod_samples_per_bit - ps.ss.next_edge_ctr : 0;
-                                /* reset edge ctr to look for next edge */
-                ps.ss.max_bit_edge_val = 0;    /* reset max_bit_edge_val for next edge peak */
-                received_bit = 1;
-                ps.ss.cur_demod_edge_window = ps.ss.demod_edge_window;
-            } else /* we haven't detected an edge */
-            {
-                if (ps.ss.edge_ctr == 0)
-                {
-                    ps.ss.cur_bit = demod_sample;              /* save the bit */
-                    ps.ss.edge_ctr = ps.ss.demod_samples_per_bit;  /* reset and wait for the next bit edge to come along */
-                    received_bit = 1;                       /* an edge hasn't been detected but a bit interval happened */
-                }
-            }
-        }
-    }
-    if (!received_bit)   /* no bit available yet, wait */
-        return;
-
-    /* add the bit to the current word */
-    ds.current_word = (ds.current_word << 1) | (ps.ss.polarity ^ (ps.ss.cur_bit > 0));
-    ps.ss.bitflips_ctr++;
-    /* this is done on the bit before it is needed to reduce worst case latency */
-    if (ps.ss.bitflips_ctr == 4)
-    {
-        /* keep track of the number of complement bits in the word. should be 6 */
-        uint8_t maskbits, lowerbyte = ((uint8_t)ds.current_word);
-        maskbits = lowerbyte & 0x0C;
-        ps.ss.bitflips_in_phase += (maskbits == 0x08) || (maskbits == 0x04);
-        maskbits = lowerbyte & 0x18;
-        ps.ss.bitflips_lag += (maskbits == 0x10) || (maskbits == 0x08);
-        maskbits = lowerbyte & 0x06;
-        ps.ss.bitflips_lead += (maskbits == 0x04) || (maskbits == 0x02);
-    } else if (ps.ss.bitflips_ctr >= 5)
-        ps.ss.bitflips_ctr = 0;
-    hamming_weight = dsp_hamming_weight_30(ds.current_word ^ SCAMP_SYNC_CODEWORD);
-    //printf("received: %08X %05d %02d %02d %02d %02d %02d %02d\n", ds.current_word, ps.ss.cur_bit, ds.current_bit_no, hamming_weight, ps.ss.polarity, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
-    if (hamming_weight < (ps.ss.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
-    {
-        //printf("resync!\n");
-        scamp_reset_codeword();
-        ps.ss.resync = 1;
-        return;
-    }
-    /* if we 15 of the last 16 bits zeros with fsk, that means we have a reversed polarity start */
-    hamming_weight = dsp_hamming_weight_16(ds.current_word);
-    if ((hamming_weight < 2) && (ps.ss.fsk))
-    {
-        ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;
-        ps.ss.polarity = !ps.ss.polarity; /* reverse the polarity of FSK frequencies and 0/1 */
-        scamp_reset_codeword();
-        ps.ss.resync = 0;
-        return;
-    }
-    /* if we have 15 of the last 16 bits ones, that is a ook key down start, or a fsk start */
-    if (hamming_weight >= 15)
-    {
-        ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;
-        scamp_reset_codeword();
-        ps.ss.resync = 0;
-        return;
-    }
-    /* if we have synced, and we have 30 bits, we have a frame */
-    ds.current_bit_no++;
-    if ((ds.current_bit_no >= 30) && (ps.ss.resync))  /* we have a complete frame */
-    {
-       if ((ps.ss.bitflips_lead > ps.ss.bitflips_in_phase) && (ps.ss.bitflips_lead >= 5))
-        /* we are at least one bit flip ahead, we probably registered a spurious bit flip */
-       {
-         /* back up and get one more bit.*/
-         ds.current_bit_no--;
-         ps.ss.bitflips_in_phase = ps.ss.bitflips_lead;  /*lead now becomes in phase */
-         ps.ss.bitflips_lag = 0;  /* lag is now two behind, so we can't use it */
-         ps.ss.bitflips_lead = 0; /* clear bit_lead so we don't try a second time */
-       } else
-       {
-          if ((ps.ss.bitflips_lag > ps.ss.bitflips_in_phase) && (ps.ss.bitflips_lag >= 5))
-          /* we are at least one bit flip short, we probably fell a bit behind */
-          {
-            scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word >> 1);
-            //printf("inserted- word into fifo: %08X %02d %02d %02d -----------------------------\n",
-                   //ds.current_word >> 1, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
-            /* start with the next word with one flip */
-            ds.current_bit_no = 1;
-            ps.ss.bitflips_ctr = 1;
-         } else
-         {
-             if (ps.ss.bitflips_in_phase >= 4)
-             {
-               /* otherwise we just place in buffer and the code word is probably aligned */
-               scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word);
-               //printf("inserted0 word into fifo: %08X %02d %02d %02d -----------------------------\n",
-                   //ds.current_word, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
-             }
-             ds.current_bit_no = 0;
-             ps.ss.bitflips_ctr = 0;
-          }
-          ps.ss.bitflips_in_phase = 0;
-          ps.ss.bitflips_lag = 0;
-          ps.ss.bitflips_lead = 0;
-       }
-    }
-}
-
-void scamp_decode_process(void)
-{
-  
 }
 
 #ifdef DSPINT_DEBUG
