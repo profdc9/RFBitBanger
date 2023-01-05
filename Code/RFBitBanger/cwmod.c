@@ -41,8 +41,6 @@ freely, subject to the following restrictions:
 #include "cwmod.h"
 
 
-// const uint8_t cwmod_bit_mask[8] = {0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
-
 /*  This is formula round(10 * 3^(n/4))  n=1 to 16 */
 const uint16_t cwmod_timing_histogram_bins[CWMOD_TIMING_BINS] PROGMEM =
 {  13, 17, 23, 30, 39, 52, 68, 90, 118, 156, 205, 270, 355, 468, 615, 810 };
@@ -444,59 +442,3 @@ uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
     if (dtms->aborted) break;
   }
 }
-
-#ifdef CWMOD_DEBUG
-
-#define CWDIR "e:\\nov-15-2021-backup\\projects\\RFBitBangerNew\\Ignore\\processed-cw\\"
-
-//const char filename[]=CWDIR"kw4ti-msg.wav";
-//const char filename[]=CWDIR"wnu-processed.wav";
-//const char filename[]=CWDIR"n1ea-processed.wav";
-//const char filename[]=CWDIR"vix-processed.wav";
-//const char filename[]=CWDIR"px-processed.wav";
-//const char filename[]=CWDIR"kfs-processed.wav";
-//const char filename[]=CWDIR"cootie-processed.wav";
-//const char filename[]=CWDIR"wxdewcc-processed.wav";
-//const char filename[]=CWDIR"ejm8-processed.wav";
-//const char filename[]=CWDIR"offair1-processed.wav";
-//const char filename[]=CWDIR"offair2-processed.wav";
-//const char filename[]=CWDIR"offair3-processed.wav";
-const char filename[]=CWDIR"offair4-processed.wav";
-
-void test_cwmod_decode()
-{
-   FILE *fp = fopen(filename,"rb");
-   cw_initialize(0, 0, 2, 6);
-   ds.slow_samp_num = 4;
-   int samplecount = 0;
-
-   if (fp == NULL)
-   {
-       printf("Could not open file %s\n",filename);
-       return;
-   }
-
-   fseek(fp,44*sizeof(uint8_t),SEEK_SET);
-   while (!feof(fp))
-   {
-      // if ((ftell(fp) % 16000) == 0) sleep(1);
-       int16_t sample;
-       fread((void *)&sample,1,sizeof(int16_t),fp);
-       sample = sample / 32 + 512;
-//       if ((sample<200) || (sample > 800)) printf("sample=%d\n",sample);
-       /* if ((samplecount/1024) & 0x1) sample = 512;
-        else
-       sample = 512 - 64 * cos(2*M_PI*samplecount/64.0); */
-       dsp_interrupt_sample(sample);
-       cw_new_sample();
-       cw_decode_process();
-       samplecount++;
-   }
-   for (samplecount=0;samplecount<360000;samplecount++)
-   {
-       dsp_interrupt_sample(512);
-       cw_new_sample();
-       cw_decode_process();
-   }
-}
-#endif /* CWMOD_DEBUG */

@@ -28,13 +28,58 @@ freely, subject to the following restrictions:
 extern "C" {
 #endif
 
+#define RTTY_PWR_THR_DEF 8
+#define RTTY_AVG_CT_PWR2 8
+#define RTTY_FRAME_FIFO_LENGTH 8
+#define RTTY_MAX_DEMODBUFFER 12
+
+typedef struct _rtty_frame_fifo
+{
+    uint8_t   head;
+    uint8_t   tail;
+    uint8_t   frames[RTTY_FRAME_FIFO_LENGTH];
+} rtty_frame_fifo;
+
 typedef struct _rtty_state
 {
   uint8_t   protocol;
+
+  uint8_t   last_sample_ct;
+
+  int8_t    current_bit_no;
+  uint8_t   current_word;
+  
+  uint16_t  ct_average;
+  uint32_t  ct_sum;
+
+  uint8_t   demod_samples_per_bit;
+  uint8_t   demod_edge_window;
+  uint16_t  power_thr_min;
+
+  uint8_t   demod_sample_no;
+  uint8_t   edge_ctr;
+  uint8_t   next_edge_ctr;
+  uint8_t   resync;
+  uint8_t   cur_demod_edge_window;
+
+  uint16_t  edge_thr;
+  uint16_t  power_thr;
+
+  uint16_t  bit_edge_val;
+  uint16_t  max_bit_edge_val;
+  int16_t   cur_bit;
+
+  int16_t   demod_buffer[RTTY_MAX_DEMODBUFFER];
+
+  volatile rtty_frame_fifo rtty_output_fifo;
+
+  uint8_t   figures;
+  
 } rtty_state;
 
 void rtty_new_sample(void);
 void rtty_decode_process(void);
+void rtty_reset_codeword(void);
 uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 
 #ifdef __cplusplus

@@ -56,6 +56,7 @@ public:
   void setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power, uint8_t inv);
   void set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, uint8_t multisynth_no, si5351_multisynth_regs *m_regs);
   void setOutputOnOff(uint8_t clock_no, uint8_t off_on);
+  void setOutputOnOffMask(uint8_t new_on_mask);
 
 private:
   uint8_t cap;

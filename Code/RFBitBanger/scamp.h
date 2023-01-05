@@ -72,6 +72,9 @@ typedef struct _scamp_state
 
   uint8_t   last_sample_ct;
 
+  int8_t    current_bit_no;
+  uint32_t  current_word;
+
   uint16_t  ct_average;
   uint32_t  ct_sum;
 
@@ -103,7 +106,6 @@ typedef struct _scamp_state
 
   int16_t   demod_buffer[SCAMP_MAX_DEMODBUFFER];
 
-  volatile scamp_frame_fifo scamp_input_fifo;
   volatile scamp_frame_fifo scamp_output_fifo;
 
   uint16_t  last_code;

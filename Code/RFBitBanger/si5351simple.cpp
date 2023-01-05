@@ -191,6 +191,12 @@ void si5351simple::setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off
   si5351_write(clock_no+16, (off_on ? 0 : 0x80) + (frac ? 0 : 0x40) + (pll_source ? 0x20 : 0x00) + (inv ? 0x10 : 0x00) + power + 0x0C);
 }
 
+void si5351simple::setOutputOnOffMask(uint8_t new_on_mask)
+{
+  on_mask = new_on_mask;
+  si5351_write(3, on_mask);
+}
+
 void si5351simple::setOutputOnOff(uint8_t clock_no, uint8_t off_on)
 {
   if (off_on) on_mask &= ~(1 << clock_no);

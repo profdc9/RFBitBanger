@@ -48,6 +48,7 @@ const radio_configuration PROGMEM default_rc =
   20,
   3,
   2,
+  2,
 };
 
 void setupConfiguration(void)
@@ -225,6 +226,11 @@ void transmit_set(uint8_t seton)
   digitalWrite(TRANSMIT_PIN, seton != 0);
 }
 
+void set_clock_onoff_mask(uint8_t on_mask)
+{
+  si5351.setOutputOnOffMask(on_mask);
+}
+
 void set_clock_onoff(uint8_t onoff, uint8_t clockno)
 {
    si5351.setOutputOnOff(clockno,onoff != 0);  
@@ -266,7 +272,7 @@ void set_frequency_snd(void)
 
 void setup() {
   setupConfiguration();
-  set_protocol(PROTOCOL_SCAMP);
+  set_protocol(PROTOCOL_RTTY);
   setupADC();
   setupCompare();
   setup_timers();
@@ -481,8 +487,9 @@ void set_transmission_mode(void)
     selected = do_menu(&mn);
   } while (!selected);
   set_horiz_menu_keys(0);
+  mn.item++;
   if (current_protocol != mn.item)
-     set_protocol(mn.item+1);
+     set_protocol(mn.item);
 }
 
 const char txtitle1[] PROGMEM = "Return";

@@ -35,12 +35,14 @@ typedef struct _radio_configuration
   uint8_t   cw_send_speed;
   uint8_t   scamp_resync_frames;
   uint8_t   scamp_resend_frames;
+  uint8_t   rtty_figs_resend;
 } radio_configuration;
 
 extern radio_configuration rc;
 
 void set_frequency(uint32_t freq, uint8_t clockno);
 void set_clock_onoff(uint8_t onoff, uint8_t clockno);
+void set_clock_onoff_mask(uint8_t on_mask);
 void transmit_set(uint8_t set);
 void muteaudio_set(uint8_t set);
 void idle_task(void);
