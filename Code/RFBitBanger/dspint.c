@@ -196,12 +196,12 @@ void dsp_initialize_scamp(uint8_t mod_type)
                                df.dly_24 = 24;
                                break;
 #ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_OOK_SLOW:  df.buffer_size = 128;
+        case SCAMP_OOK_SLOW:   df.buffer_size = 128;
                                ps.ss.demod_edge_window = 4;
                                ps.ss.fsk = 0;
                                df.dly_16 = 64;
                                break;
-        case SCAMP_FSK_SLOW:  df.buffer_size = 120;
+        case SCAMP_FSK_SLOW:   df.buffer_size = 120;
                                ps.ss.fsk = 1;
                                ps.ss.demod_edge_window = 4;
                                df.dly_12 = 60;
@@ -239,7 +239,15 @@ void dsp_initialize_rtty(void)
     df.buffer_size = 48;
     df.dly_8 = 48;
     df.dly_24 = 48;
+
+    ps.rs.demod_samples_per_bit = 11;
+    ps.rs.power_thr_min = 44 * (RTTY_PWR_THR_DEF * 2);
     dsp_reset_state();
+    rtty_reset_codeword();
+    ps.rs.demod_edge_window = 4;
+    ps.rs.cur_demod_edge_window =  ps.rs.demod_edge_window;
+    ps.rs.power_thr = ps.rs.power_thr_min << 1;
+    ps.rs.edge_thr = ps.rs.power_thr;
 }
 
 void dsp_initialize_protocol(uint8_t protocol)
@@ -448,156 +456,3 @@ void dsp_interrupt_sample(uint16_t sample)
 
    if (prep_sample) ds.sample_ct++;
 }
-
-#ifdef DSPINT_DEBUG
-
-#include "cwmod.c"
-
-typedef struct _wavefile_header
-{
-    unsigned char header[4];
-    uint32_t file_size;
-    unsigned char ftype[4];
-    unsigned char fmt[4];
-    uint32_t length;
-    uint16_t type;
-    uint16_t channels;
-    uint32_t samplerate;
-    uint32_t ratetotal;
-    uint16_t bitspersamplechannels8;
-    uint16_t bitspersample;
-    unsigned char dataheader[4];
-    uint32_t datasize;
-} wavefile_header;
-
-FILE *write_wav_file(const char *filename, uint32_t samples, uint32_t repeats)
-{
-    wavefile_header w;
-    w.header[0]='R';w.header[1]='I';w.header[2]='F';w.header[3]='F';
-    w.ftype[0]='W';w.ftype[1]='A';w.ftype[2]='V';w.ftype[3]='E';
-    w.fmt[0]='f';w.fmt[1]='m';w.fmt[2]='t';w.fmt[3]=' ';
-    w.length = 16;
-    w.type = 1;
-    w.channels = 1;
-    w.samplerate = 8000;
-    w.bitspersample = 16;
-    w.bitspersamplechannels8 = w.bitspersample * w.channels / 8;
-    w.ratetotal = w.samplerate * w.channels * w.bitspersample / 8;
-    w.dataheader[0]='d';w.dataheader[1]='a';w.dataheader[2]='t';w.dataheader[3]='a';
-    w.datasize = samples * repeats * w.bitspersamplechannels8;
-    w.file_size = w.datasize + sizeof(wavefile_header);
-    printf("headersize=%d file_size=%d datasize=%d\n",sizeof(wavefile_header),w.file_size,w.datasize);
-    FILE *fp = fopen(filename,"wb");
-    if (fp != NULL)
-        fwrite(&w,sizeof(w),1,fp);
-    return fp;
-}
-
-void write_sample(FILE *fp, uint16_t sample, uint16_t repeats)
-{
-  int i;
-  for (i=0;i<repeats;i++)
-    fwrite(&sample,sizeof(sample),1,fp);
-}
-
-float gaussian_deviate(float stddev)
-{
-    float x = (rand()+1) / 32768.0f;
-    float y = (rand()+1) / 32768.0f;
-    return stddev*sqrt(-2*log(x))*cos(2.0*M_PI*y);
-}
-
-#define MOD_TEST 2
-
-#if MOD_TEST==0
-#define MOD_TYPE SCAMP_OOK_FAST
-#define MOD_REP 32
-#define MOD_CHAN1 16.0
-#define MOD_CHAN2 99999999999.0
-#elif MOD_TEST==1
-#define MOD_TYPE SCAMP_OOK
-#define MOD_REP 64
-#define MOD_CHAN1 16.0
-#define MOD_CHAN2 99999999999.0
-#elif MOD_TEST==2
-#define MOD_TYPE SCAMP_FSK
-#define MOD_REP 60
-#define MOD_CHAN1 12.0
-#define MOD_CHAN2 20.0
-#elif MOD_TEST==3
-#define MOD_TYPE SCAMP_FSK_FAST
-#define MOD_REP 24
-#define MOD_CHAN1 8.0
-#define MOD_CHAN2 12.0
-#elif MOD_TEST==4
-#define MOD_TYPE SCAMP_OOK_SLOW
-#define MOD_REP 128
-#define MOD_CHAN1 16.0
-#define MOD_CHAN2 9999999999.0
-#elif MOD_TEST==5
-#define MOD_TYPE SCAMP_FSK_SLOW
-#define MOD_REP 120
-#define MOD_CHAN1 12.0
-#define MOD_CHAN2 20.0
-#endif
-
-#define MODULATION_OFFSET 0.25
-
-void test_dsp_sample(void)
-{
-    uint8_t cbit;
-    uint32_t c;
-    float freq, samp;
-    srand(2001);
-    dsp_initialize_scamp(MOD_TYPE);
-    uint32_t samples;
-    uint32_t repeats = 4;
-    const uint8_t bits[] = {    1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,1,1,  /* 30 bits */
-                                1,1,1,1,1, 0,1,1,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,0,0,0, 1,1,1,1,0,  /* 30 bits */
-                                1,0,0,0,0, 0,1,0,0,0, 0,1,0,0,1, 1,0,1,1,0, 1,0,0,0,0, 0,1,0,1,0,  /* 30 bits */
-                                1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
-                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 0,1,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
-//                              1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0,  /* 30 bits */
-                                0,1,0,0,0, 0,1,0,0,0, 1,0,0,1,0, 0,1,1,0,0, 0,1,1,0,0, 1,0,0,1,1,  /* 30 bits */
-//                              1,1,1,1,1, 0,1,1,0,1, 0,0,0,1,1, 0,0,1,1,1, 0,1,0,0,0, 1,1,1,1,0,  /* 30 bits */
-                                1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0,  /* 30 bits */
-                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
-                                1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
-                                1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
-                                1,0,0,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,1,1,0,0, 1,0,0,0,0, 0,1,0,0,1,  /* 30 bits */
-                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
-                                0,1,1,0,0, 1,0,0,0,0, 1,0,1,0,0, 1,0,0,0,0, 1,0,0,1,0, 1,0,0,0,0,  /* 30 bits */
-                                1,0,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 1,0,1,1,0, 1,0,1,1,0,  /* 30 bits */
-                                1,0,1,1,1, 1,0,1,1,1 };
-    samples = sizeof(bits)*MOD_REP;
-    FILE *fp = write_wav_file("synth.wav",samples,repeats);
-    for (c=0;c<samples;c++)
-    {
-        uint8_t last_sample_ct = 0;
-        int8_t spacing = 0*(sin(c*2.0*M_PI/1000.0));
-        cbit = bits[(c+7+spacing)/MOD_REP];
-        freq = cbit ? MOD_CHAN1 : MOD_CHAN2;
-        samp = ((sin(2.0*M_PI*(((float)c)/freq+((float)c)*MODULATION_OFFSET)+0.0*M_PI)*64.0)+512.0) + gaussian_deviate(64.0);
-        //if ((c>4000) && (c<10000)) samp = gaussian_deviate(48.0)+512;
-        dsp_interrupt_sample(samp);
-        scamp_decode_process();
-        write_sample(fp,samp*16,repeats);
-
-        if ((ds.sample_ct != last_sample_ct) && 0)
-        {
-            last_sample_ct = ds.sample_ct;
-            printf("%d %05d %05d %05d %05d %05d %05d %05d %05d %02d %02d xx\n",cbit,c,(int)samp,
-                ds.mag_value_8,ds.mag_value_12,ds.mag_value_16,ds.mag_value_20,ds.mag_value_24,
-                ps.ss.bit_edge_val,ps.ss.edge_ctr,ps.ss.cur_demod_edge_window);
-        }
-    }
-    if (fp != NULL) fclose(fp);
-}
-
-void main(void)
-{
-  test_dsp_sample();
-  //test_cwmod_decode();
-  printf("size=%d\n",sizeof(ds)+sizeof(df)+sizeof(ps));
-}
-#endif /* DSPINT_DEBUG */

@@ -89,8 +89,8 @@ typedef struct _dsp_state
   uint8_t   sample_no;
   uint8_t   sample_ct;
 
-  int8_t    current_bit_no;
-  uint32_t  current_word;
+  uint16_t  ct_average;
+  uint32_t  ct_sum;
 
   uint8_t   count;
   uint8_t   count_8;

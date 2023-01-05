@@ -46,16 +46,17 @@ freely, subject to the following restrictions:
 #include "scamp.h"
 #include "golay.h"
 
-const uint8_t scamp_6bit_codesymbols[60] = {'\0',   '\b',   '\r',    ' ',    '!',   0x22,   0x27,    '(',
-                                             ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
-                                             '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
-                                             '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
-                                             'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
-                                             'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
-                                             'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
-                                             0x5C,   '^',    '`',    '~' };
-                                             /* Last 4 symbols can be interpreted as diacritical marks, 0x5C is diaeresis/umlaut */
-                                             /* 0x27 can be interpreted as acute diacritical mark */
+const uint8_t PROGMEM scamp_6bit_codesymbols[60] = 
+{'\0',   '\b',   '\r',    ' ',    '!',   0x22,   0x27,    '(',
+  ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
+  '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
+  '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
+  'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
+  'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
+  'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
+ 0x5C,   '^',    '`',    '~' };
+   /* Last 4 symbols can be interpreted as diacritical marks, 0x5C is diaeresis/umlaut */
+   /* 0x27 can be interpreted as acute diacritical mark */
 
 
 /* initialize frame fifo */
@@ -157,6 +158,8 @@ uint32_t scamp_remove_reversal_bits(uint32_t outword)
   return codeword;
 }
 
+#define SCAMP_IS_DATA_CODE(x) (((uint8_t)((x) >> 8)) == 0x0F)
+
 #if 0
 /* decode 12 bit code words to 8 bit bytes */
 uint8_t scamp_code_words_to_bytes(scamp_code_word_get ecwg, void *st, uint8_t *bytes, uint8_t max_bytes)
@@ -168,7 +171,7 @@ uint8_t scamp_code_words_to_bytes(scamp_code_word_get ecwg, void *st, uint8_t *b
         uint16_t code = ecwg(st);
         if (code == 0xFFFF) break;
         last_code = code;
-        if ((code & 0xF00) == 0xF00)
+        if (SCAMP_IS_DATA_CODE(code))
         {
             bytes[cur_byte++] = code & 0xFF;
             continue;
@@ -177,9 +180,9 @@ uint8_t scamp_code_words_to_bytes(scamp_code_word_get ecwg, void *st, uint8_t *b
         uint16_t code1 = (code & 0x3F);
         uint16_t code2 = ((code >> 6) & 0x3F);
         if ((code1 != 0) && (code1 < (sizeof(scamp_6bit_codesymbols)/sizeof(uint8_t))))
-            bytes[cur_byte++] = scamp_6bit_codesymbols[code1];
+            bytes[cur_byte++] = pgm_read_byte_near(&scamp_6bit_codesymbols[code1]);
         if ((code2 != 0) && (code2 < (sizeof(scamp_6bit_codesymbols)/sizeof(uint8_t))) && (cur_byte < max_bytes))
-            bytes[cur_byte++] = scamp_6bit_codesymbols[code2];
+            bytes[cur_byte++] = pgm_read_byte_near(&scamp_6bit_codesymbols[code2]);
     }
     return cur_byte;
 }
@@ -189,7 +192,7 @@ uint8_t scamp_code_words_to_bytes(scamp_code_word_get ecwg, void *st, uint8_t *b
 uint8_t scamp_code_word_to_bytes(uint16_t code, uint8_t bytes[])
 {
   uint8_t c;
-  if ((code & 0xF00) == 0xF00)
+  if (SCAMP_IS_DATA_CODE(code))
   {
     bytes[0] = code & 0xFF;
     return 1;
@@ -197,11 +200,11 @@ uint8_t scamp_code_word_to_bytes(uint16_t code, uint8_t bytes[])
   c = (code & 0x3F);
   if ((c == 0) || (c >= (sizeof(scamp_6bit_codesymbols)/sizeof(uint8_t))))
     return 0;
-  bytes[0] = scamp_6bit_codesymbols[c];
+  bytes[0] = pgm_read_byte_near(&scamp_6bit_codesymbols[c]);
   c = ((code >> 6) & 0x3F);
   if ((c == 0) || (c >= (sizeof(scamp_6bit_codesymbols)/sizeof(uint8_t))))
      return 1;
-  bytes[1] = scamp_6bit_codesymbols[c];
+  bytes[1] = pgm_read_byte_near(&scamp_6bit_codesymbols[c]);
   return 2;
 }
 
@@ -225,7 +228,7 @@ uint8_t scamp_find_code_in_table(uint8_t c)
 	if (c =='\n') c = '\r';
 	if (c == 127) c = '\b';
     for (i=1;i<(sizeof(scamp_6bit_codesymbols)/sizeof(uint8_t));i++)
-        if (scamp_6bit_codesymbols[i] == c) return i;
+        if (pgm_read_byte_near(&scamp_6bit_codesymbols[i]) == c) return i;
     return 0xFF;
 }
 
@@ -307,20 +310,9 @@ void scamp_send_frame(uint32_t bits)
   {
     uint8_t bitv = (bits & 0x80000000) != 0;
     if (ps.ss.fsk)
-    {
-      if (bitv) 
-      {
-        set_clock_onoff(1,1);
-        set_clock_onoff(0,0);
-      } else
-      {
-        set_clock_onoff(0,1);
-        set_clock_onoff(1,0);
-      } 
-    } else
-    { 
+      set_clock_onoff_mask(bitv ? 0x02 : 0x01) ;
+    else
       transmit_set(bitv);
-    }
     idle_task();
     bits <<= 1;
     do
@@ -348,12 +340,13 @@ typedef struct _scamp_code_word_transmit_data
 
 uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos)
 {
+  uint8_t data_code = SCAMP_IS_DATA_CODE(code);
   uint32_t code_30;
   scamp_code_word_transmit_data *scwtd = (scamp_code_word_transmit_data *) st;
   
   code_30 = golay_encode(code);
   code_30 = scamp_add_reversal_bits(code_30);
-  scamp_send_frame_rep(code_30, rc.scamp_resend_frames);
+  scamp_send_frame_rep(code_30, data_code ? 1 : rc.scamp_resend_frames);
   if ((rc.scamp_resync_frames != 0) && (((pos+1) % rc.scamp_resync_frames) == 0))
      scamp_send_frame(SCAMP_SYNC_CODEWORD);
   scwtd->dtms->current_symbol = pos;
@@ -384,8 +377,8 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 
 void scamp_reset_codeword(void)
 {
-   ds.current_bit_no = 0;
-   ds.current_word = SCAMP_BLANK_CODEWORD;
+   ps.ss.current_bit_no = 0;
+   ps.ss.current_word = SCAMP_BLANK_CODEWORD;
    ps.ss.bitflips_in_phase = 0;
    ps.ss.bitflips_lag = 0;
    ps.ss.bitflips_lead = 0;
@@ -451,7 +444,6 @@ void scamp_new_sample(void)
             ps.ss.power_thr >>= 1;
        } else
             ps.ss.edge_thr = ps.ss.power_thr << 1;
-       //printf("power %d edge %d min %d ---------------------------------\n",ps.ss.power_thr,ps.ss.edge_thr,ps.ss.power_thr_min);
        ps.ss.ct_average = 0;
        ps.ss.ct_sum = 0;
     }
@@ -505,13 +497,13 @@ void scamp_new_sample(void)
         return;
 
     /* add the bit to the current word */
-    ds.current_word = (ds.current_word << 1) | (ps.ss.polarity ^ (ps.ss.cur_bit > 0));
+    ps.ss.current_word = (ps.ss.current_word << 1) | (ps.ss.polarity ^ (ps.ss.cur_bit > 0));
     ps.ss.bitflips_ctr++;
     /* this is done on the bit before it is needed to reduce worst case latency */
     if (ps.ss.bitflips_ctr == 4)
     {
         /* keep track of the number of complement bits in the word. should be 6 */
-        uint8_t maskbits, lowerbyte = ((uint8_t)ds.current_word);
+        uint8_t maskbits, lowerbyte = ((uint8_t)ps.ss.current_word);
         maskbits = lowerbyte & 0x0C;
         ps.ss.bitflips_in_phase += (maskbits == 0x08) || (maskbits == 0x04);
         maskbits = lowerbyte & 0x18;
@@ -520,11 +512,10 @@ void scamp_new_sample(void)
         ps.ss.bitflips_lead += (maskbits == 0x04) || (maskbits == 0x02);
     } else if (ps.ss.bitflips_ctr >= 5)
         ps.ss.bitflips_ctr = 0;
-    //printf("received: %08X %05d %02d %02d %02d %02d %02d %02d\n", ds.current_word, ps.ss.cur_bit, ds.current_bit_no, hamming_weight, ps.ss.polarity, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
 
     if ((!ps.ss.fsk) || (ds.mag_value_12 >= ps.ss.power_thr) || (ds.mag_value_20 >= ps.ss.power_thr))  /* if there is a bit to sync to */
     {
-      hamming_weight = dsp_hamming_weight_30(ds.current_word ^ SCAMP_SYNC_CODEWORD);
+      hamming_weight = dsp_hamming_weight_30(ps.ss.current_word ^ SCAMP_SYNC_CODEWORD);
       if (hamming_weight < (ps.ss.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
       {
         scamp_reset_codeword();
@@ -532,7 +523,7 @@ void scamp_new_sample(void)
         return;
       }
       /* if we 15 of the last 16 bits zeros with fsk, that means we have a reversed polarity start */
-      hamming_weight = dsp_hamming_weight_16(ds.current_word);
+      hamming_weight = dsp_hamming_weight_16(ps.ss.current_word);
       if ((hamming_weight < 2) && (ps.ss.fsk))
       {
         ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;
@@ -553,14 +544,14 @@ void scamp_new_sample(void)
       }
     } else return;
     /* if we have synced, and we have 30 bits, we have a frame */
-    ds.current_bit_no++;
-    if ((ds.current_bit_no >= 30) && (ps.ss.resync))  /* we have a complete frame */
+    ps.ss.current_bit_no++;
+    if ((ps.ss.current_bit_no >= 30) && (ps.ss.resync))  /* we have a complete frame */
     {
        if ((ps.ss.bitflips_lead > ps.ss.bitflips_in_phase) && (ps.ss.bitflips_lead >= 5))
         /* we are at least one bit flip ahead, we probably registered a spurious bit flip */
        {
          /* back up and get one more bit.*/
-         ds.current_bit_no--;
+         ps.ss.current_bit_no--;
          ps.ss.bitflips_in_phase = ps.ss.bitflips_lead;  /*lead now becomes in phase */
          ps.ss.bitflips_lag = 0;  /* lag is now two behind, so we can't use it */
          ps.ss.bitflips_lead = 0; /* clear bit_lead so we don't try a second time */
@@ -569,22 +560,18 @@ void scamp_new_sample(void)
           if ((ps.ss.bitflips_lag > ps.ss.bitflips_in_phase) && (ps.ss.bitflips_lag >= 5))
           /* we are at least one bit flip short, we probably fell a bit behind */
           {
-            scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word >> 1);
-            //printf("inserted- word into fifo: %08X %02d %02d %02d -----------------------------\n",
-                   //ds.current_word >> 1, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
+            scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ps.ss.current_word >> 1);
             /* start with the next word with one flip */
-            ds.current_bit_no = 1;
+            ps.ss.current_bit_no = 1;
             ps.ss.bitflips_ctr = 1;
          } else
          {
              if (ps.ss.bitflips_in_phase >= 4)
              {
                /* otherwise we just place in buffer and the code word is probably aligned */
-               scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ds.current_word);
-               //printf("inserted0 word into fifo: %08X %02d %02d %02d -----------------------------\n",
-                   //ds.current_word, ps.ss.bitflips_in_phase, ps.ss.bitflips_lag, ps.ss.bitflips_lead);
+               scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ps.ss.current_word);
              }
-             ds.current_bit_no = 0;
+             ps.ss.current_bit_no = 0;
              ps.ss.bitflips_ctr = 0;
           }
           ps.ss.bitflips_in_phase = 0;
@@ -607,174 +594,10 @@ void scamp_decode_process(void)
     decode_insert_into_fifo('#');
     return;
   }
-  if (gf == ps.ss.last_code)
+  if ((!SCAMP_IS_DATA_CODE(gf)) && (gf == ps.ss.last_code))
     return;
   ps.ss.last_code = gf;
   nb = scamp_code_word_to_bytes(gf, bytes);
   if (nb > 0) decode_insert_into_fifo(bytes[0]);
   if (nb > 1) decode_insert_into_fifo(bytes[1]);
 }
-
-
-#ifdef ECCFR_DEBUG
-uint8_t count_reversals(uint32_t n)
-{
-  uint8_t i,j,k,rev,mrev=0;
-  for (i=0;i<4;i++)
-  {
-    rev = 0;
-    for (j=i;j<29;j+=5)
-    {
-       if (((n >> j) & 0x01) != ((n >> (j+1)) & 0x01))
-            rev++;
-    }
-    if (rev>mrev) mrev=rev;
-  }
-  return mrev;
-}
-
-uint8_t autocorrelation(uint32_t n, uint8_t bits, int8_t autocor[])
-{
-  uint8_t i,j;
-  int8_t ct;
-  uint8_t maxcor = 0;
-
-  for (i=0;i<bits;i++)
-  {
-      ct = 0;
-      uint32_t cc = n ^ (n >> i);
-      for (j=0;j<(bits-i);j++)
-      {
-         ct += (cc & 0x01) ? -1 : 1;
-         cc >>= 1;
-      }
-      autocor[i] = ct;
-      ct = abs(ct);
-      if ((i>0) && (ct>maxcor))
-        maxcor = ct;
-  }
-  return maxcor;
-}
-
-void print_binary(uint32_t n, uint8_t d)
-{
-  uint8_t i;
-  for (i=d;i>0;)
-  {
-    printf( (n & (1 << (--i))) ? "1" : "0");
-    if (i>0) printf(",");
-  }
-}
-
-void test_sync_word(void)
-{
-    uint32_t i;
-    uint32_t syncword, j, bestsyncword;
-    uint32_t rev, maxcor;
-    int8_t autocor[32];
-    uint32_t minscore=1000000, score;
-    char s[100];
-
-    for(i=0;i<(1u<<29);i++)
-    {
-        syncword = i | (1u << 29);
-        rev = count_reversals(syncword);
-        maxcor = autocorrelation(syncword,30,autocor);
-        score = rev*maxcor;
-        if ((rev>0) && (score<=minscore))
-        {
-            minscore = score;
-            bestsyncword = syncword;
-            printf("syncword: ");
-            print_binary(syncword,30);
-            printf(" reversals: %d maxcor: %d score:%d\nautocor:",rev,maxcor,score);
-            for (j=0;j<30;j++)
-                printf(" %d",autocor[j]);
-            printf("\n\n");
-            fflush(stdout);
-        }
-    }
-    printf("\nend of search\n");
-    fflush(stdout);
-}
-
-void test_reversal_bits(void)
-{
-  uint32_t word1, ins, after;
-  char s[100];
-  uint8_t i;
-
-  for (i=0;i<100;i++)
-  {
-      word1 = (((uint32_t)rand()) << 8) ^ rand();
-      ins = scamp_add_reversal_bits(word1);
-      after = scamp_remove_reversal_bits(ins);
-      printf("before: ");
-      print_binary(word1,24);
-      printf("\nins: ");
-      print_binary(ins,30);
-      printf(" reversals: %d\nafter: ",count_reversals(ins));
-      print_binary(after,24);
-      printf("\n");
-      if (after != word1)
-        printf("!!!!!!!!!!!!!!!\n");
-      gets(s);
-  }
-}
-
-void print_hex_string(uint16_t *codes, uint8_t numcodes)
-{
-    uint8_t i;
-    for (i=0;i<numcodes;i++)
-    {
-        if (i != 0) printf(",");
-        printf("%03X",codes[i]);
-    }
-}
-
-void test_words_to_bytes(void)
-{
-    uint8_t s[255];
-    uint16_t codes[255];
-    uint8_t decode[255];
-
-    scamp_code_word_put_mem_buf_struct ecwpmbs;
-    scamp_code_word_get_mem_buf_struct ecwgmbs;
-
-    uint8_t i;
-    for (i=0;i<10;i++)
-    {
-       uint8_t l;
-
-       printf("enter string: ");
-       gets(s);
-       l = strlen(s);
-       printf("entered string: %s, length: %d\n",s,l);
-
-       ecwpmbs.code_word_array = codes;
-       ecwpmbs.cur_word = 0;
-       ecwpmbs.max_words = sizeof(codes)/sizeof(uint16_t);
-       scamp_bytes_to_code_words(s, l, scamp_code_word_put_mem_buf, &ecwpmbs);
-
-       printf("codes: ");
-       print_hex_string(ecwpmbs.code_word_array, ecwpmbs.cur_word);
-
-       ecwgmbs.code_word_array = codes;
-       ecwgmbs.cur_word = 0;
-       ecwgmbs.max_words = ecwpmbs.cur_word;
-
-       l = scamp_code_words_to_bytes(scamp_code_word_get_mem_buf, &ecwgmbs, decode, sizeof(decode)-1);
-       decode[l] = '\000';
-       printf("\ndecoded string: %s\n",decode);
-    }
-}
-
-
-void main(void)
-{
-    test_words_to_bytes();
-    //test_reversal_bits();
-    //test_sync_word();
-}
-
-#endif
