@@ -117,4 +117,6 @@ void scroll_readout_back_character(scroll_readout_dat *srd, uint8_t ch);
 void scroll_readout_display(scroll_readout_dat *srd);
 void scroll_readout_key(scroll_readout_dat *srd);
 
+void display_clear_row(uint8_t col, uint8_t row, uint8_t len);
+
 #endif  /* _UI_H */

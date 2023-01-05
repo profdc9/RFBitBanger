@@ -60,10 +60,22 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define DSPINT_MAX_SAMPLEBUFFER 64
 #endif
 
-#define PROTOCOL_FASTSCAN 0 
-#define PROTOCOL_CW       1
-#define PROTOCOL_RTTY     2
-#define PROTOCOL_SCAMP    3
+#define PROTOCOL_FASTSCAN       0 
+#define PROTOCOL_CW             1
+#define PROTOCOL_RTTY           2
+#define PROTOCOL_SCAMP_FSK      3
+#define PROTOCOL_SCAMP_OOK      4
+#define PROTOCOL_SCAMP_FSK_FAST 5
+#define PROTOCOL_SCAMP_OOK_FAST 6
+#ifdef SCAMP_VERY_SLOW_MODES
+#define PROTOCOL_SCAMP_FSK_SLOW 7
+#define PROTOCOL_SCAMP_OOK_SLOW 8
+#define PROTOCOL_SCAMP_LAST_MODE 8
+#else
+#define PROTOCOL_SCAMP_LAST_MODE 6
+#endif
+
+#define IS_SCAMP_PROTOCOL(x) (((x) >= PROTOCOL_SCAMP_FSK) && ((x) <= PROTOCOL_SCAMP_LAST_MODE))
 
 /* this is stuff that is initialized when the modulation mode
    is changed and doesn't change otherwise */
