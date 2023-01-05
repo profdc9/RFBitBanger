@@ -32,6 +32,7 @@ extern "C" {
 typedef struct _radio_configuration
 { 
   uint16_t  magic_number;
+  uint32_t  frequency_calibration;
   uint8_t   cw_send_speed;
   uint8_t   scamp_resync_frames;
   uint8_t   scamp_resend_frames;

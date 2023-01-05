@@ -94,6 +94,8 @@ typedef struct _cwmod_state
 uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 void cw_new_sample(void);
 void cw_decode_process(void);
+void cw_initialize(uint8_t spaces_from_mark_timing,
+                   uint8_t smooth, uint8_t sticky_interval_length);
 
 #ifdef __cplusplus
 }

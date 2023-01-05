@@ -276,24 +276,24 @@ void scamp_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code_wor
 void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
 {
   uint16_t offset1, offset2;
-  switch (ps.ss.mod_type)
+  switch (ps.ss.protocol)
   {
 #ifdef SCAMP_VERY_SLOW_MODES
-      case SCAMP_OOK_SLOW:
+      case PROTOCOL_SCAMP_OOK_SLOW:
 #endif
-      case SCAMP_OOK:        
-      case SCAMP_OOK_FAST:   offset1 = 625;
-                             offset2 = 0;
-                             break;
+      case PROTOCOL_SCAMP_OOK:        
+      case PROTOCOL_SCAMP_OOK_FAST:   offset1 = 625;
+                                      offset2 = 0;
+                                      break;
 #ifdef SCAMP_VERY_SLOW_MODES
-      case SCAMP_FSK_SLOW:  
+      case PROTOCOL_SCAMP_FSK_SLOW:  
 #endif
-      case SCAMP_FSK:        offset1 = 600;
-                             offset2 = 667;
-                             break;
-      case SCAMP_FSK_FAST:   offset1 = 583;
-                             offset2 = 750;
-                             break;
+      case PROTOCOL_SCAMP_FSK:        offset1 = 600;
+                                      offset2 = 667;
+                                      break;
+      case PROTOCOL_SCAMP_FSK_FAST:   offset1 = 583;
+                                      offset2 = 750;
+                                      break;
   }
   set_frequency(dtms->frequency + offset1, 0);
   if (offset2 != 0)
@@ -408,24 +408,24 @@ void scamp_new_sample(void)
        channel for OOK, or the difference in amplitude between two frequency
        channels for FSK */
 
-    switch (ps.ss.mod_type)
+    switch (ps.ss.protocol)
     {
 #ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_OOK_SLOW:
+        case PROTOCOL_SCAMP_OOK_SLOW:
 #endif
-        case SCAMP_OOK_FAST:
-        case SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
-                               ps.ss.ct_sum += ds.mag_value_16;
-                               break;
+        case PROTOCOL_SCAMP_OOK_FAST:
+        case PROTOCOL_SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
+                                        ps.ss.ct_sum += ds.mag_value_16;
+                                        break;
 #ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_FSK_SLOW:
+        case PROTOCOL_SCAMP_FSK_SLOW:
 #endif
-        case SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
-                               ps.ss.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
-                               break;
-        case SCAMP_FSK_FAST:   demod_sample = ds.mag_value_12 - ds.mag_value_8;
-                               ps.ss.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
-                               break;
+        case PROTOCOL_SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
+                                        ps.ss.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
+                                        break;
+        case PROTOCOL_SCAMP_FSK_FAST:   demod_sample = ds.mag_value_12 - ds.mag_value_8;
+                                        ps.ss.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
+                                        break;
     }
 
     /* This is the automatic "gain" control (threshold level control).

@@ -166,47 +166,46 @@ void dsp_initialize_fastscan(void)
 
 /* initialize the buffer including the signs to be subtracted
    from the end of the buffer */
-void dsp_initialize_scamp(uint8_t mod_type)
+void dsp_initialize_scamp(uint8_t protocol)
 {
     dsp_reset_fixed_state();
-    ps.ss.protocol = PROTOCOL_SCAMP;
-    ps.ss.mod_type = mod_type;
-    switch (ps.ss.mod_type)
+    ps.ss.protocol = protocol;
+    switch (ps.ss.protocol)
     {
-        case SCAMP_OOK_FAST:   df.buffer_size = 32;
-                               ps.ss.demod_edge_window = 3;
-                               ps.ss.fsk = 0;
-                               df.dly_16 = 32;
-                               break;
-        case SCAMP_OOK:        df.buffer_size = 64;
-                               ps.ss.fsk = 0;
-                               ps.ss.demod_edge_window = 4;
-                               df.dly_16 = 64;
-                               break;
-        case SCAMP_FSK:        df.buffer_size = 60;
-                               ps.ss.fsk = 1;
-                               ps.ss.demod_edge_window = 4;
-                               df.dly_12 = 60;
-                               df.dly_20 = 60;
-                               break;
-        case SCAMP_FSK_FAST:   df.buffer_size = 24;
-                               ps.ss.fsk = 1;
-                               ps.ss.demod_edge_window = 2;
-                               df.dly_8 = 24;
-                               df.dly_24 = 24;
-                               break;
+        case PROTOCOL_SCAMP_OOK_FAST:   df.buffer_size = 32;
+                                        ps.ss.demod_edge_window = 3;
+                                        ps.ss.fsk = 0;
+                                        df.dly_16 = 32;
+                                        break;
+        case PROTOCOL_SCAMP_OOK:        df.buffer_size = 64;
+                                        ps.ss.fsk = 0;
+                                        ps.ss.demod_edge_window = 4;
+                                        df.dly_16 = 64;
+                                        break;
+        case PROTOCOL_SCAMP_FSK:        df.buffer_size = 60;
+                                        ps.ss.fsk = 1;
+                                        ps.ss.demod_edge_window = 4;
+                                        df.dly_12 = 60;
+                                        df.dly_20 = 60;
+                                        break;
+        case PROTOCOL_SCAMP_FSK_FAST:   df.buffer_size = 24;
+                                        ps.ss.fsk = 1;
+                                        ps.ss.demod_edge_window = 2;
+                                        df.dly_8 = 24;
+                                        df.dly_24 = 24;
+                                        break;
 #ifdef SCAMP_VERY_SLOW_MODES
-        case SCAMP_OOK_SLOW:   df.buffer_size = 128;
-                               ps.ss.demod_edge_window = 4;
-                               ps.ss.fsk = 0;
-                               df.dly_16 = 64;
-                               break;
-        case SCAMP_FSK_SLOW:   df.buffer_size = 120;
-                               ps.ss.fsk = 1;
-                               ps.ss.demod_edge_window = 4;
-                               df.dly_12 = 60;
-                               df.dly_20 = 60;
-                               break;
+        case PROTOCOL_SCAMP_OOK_SLOW:   df.buffer_size = 128;
+                                        ps.ss.demod_edge_window = 4;
+                                        ps.ss.fsk = 0;
+                                        df.dly_16 = 64;
+                                        break;
+        case PROTOCOL_SCAMP_FSK_SLOW:   df.buffer_size = 120;
+                                        ps.ss.fsk = 1;
+                                        ps.ss.demod_edge_window = 4;
+                                        df.dly_12 = 60;
+                                        df.dly_20 = 60;
+                                        break;
 #endif // SCAMP_VERY_SLOW_MODES
     }
     ps.ss.demod_samples_per_bit = df.buffer_size / 4;
@@ -226,10 +225,10 @@ void dsp_initialize_scamp(uint8_t mod_type)
 void dsp_initialize_cw(uint8_t wide)
 {
     dsp_reset_fixed_state();
-    ps.cs.protocol = PROTOCOL_CW;
     df.buffer_size = 48;
     df.dly_12 = wide ? 12 : 24;
     dsp_reset_state();
+    cw_initialize(0,2,6);
 }
 
 void dsp_initialize_rtty(void)
@@ -252,43 +251,32 @@ void dsp_initialize_rtty(void)
 
 void dsp_initialize_protocol(uint8_t protocol)
 {
-  switch (protocol)
-  {
-     case PROTOCOL_FASTSCAN:    dsp_initialize_fastscan();
-                                break;
-     case PROTOCOL_CW:          dsp_initialize_cw(0);
-                                break;
-     case PROTOCOL_RTTY:        dsp_initialize_rtty();
-                                break;
-     case PROTOCOL_SCAMP:       dsp_initialize_scamp(SCAMP_FSK);
-                                break;
-  }
+  if (IS_SCAMP_PROTOCOL(protocol))
+     dsp_initialize_scamp(protocol);
+  else if (protocol == PROTOCOL_CW)
+     dsp_initialize_cw(0);
+  else if (protocol == PROTOCOL_RTTY)
+     dsp_initialize_rtty();
 }
 
 void dsp_dispatch_interrupt(uint8_t protocol)
 {
-  switch (protocol)
-  {
-     case PROTOCOL_CW:          cw_new_sample();
-                                break;
-     case PROTOCOL_RTTY:        rtty_new_sample();
-                                break;
-     case PROTOCOL_SCAMP:       scamp_new_sample();
-                                break;    
-  }
+  if (IS_SCAMP_PROTOCOL(protocol))
+     scamp_new_sample();
+  else if (protocol == PROTOCOL_CW)
+     cw_new_sample();
+  else if (protocol == PROTOCOL_RTTY)
+     rtty_new_sample();
 }
 
 void dsp_dispatch_receive(uint8_t protocol)
 {
-  switch (protocol)
-  {
-     case PROTOCOL_CW:          cw_decode_process();
-                                break;
-     case PROTOCOL_RTTY:        rtty_decode_process();
-                                break;
-     case PROTOCOL_SCAMP:       scamp_decode_process();
-                                break;    
-  }
+  if (IS_SCAMP_PROTOCOL(protocol))
+     scamp_decode_process();
+  else if (protocol == PROTOCOL_CW)
+     cw_decode_process();
+  else if (protocol == PROTOCOL_RTTY)
+     rtty_decode_process();
 }
 
 uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc)
@@ -302,12 +290,12 @@ uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *messag
   dtms.current_symbol = 0;
   dtms.aborted = 0;
 
-  switch (protocol)
-  {
-     case PROTOCOL_CW:          return cwmod_txmit(&dtms,ddc);
-     case PROTOCOL_RTTY:        return rtty_txmit(&dtms,ddc);
-     case PROTOCOL_SCAMP:       return scamp_txmit(&dtms,ddc);
-  }
+  if (IS_SCAMP_PROTOCOL(protocol)) 
+    scamp_txmit(&dtms,ddc);
+  else if (protocol == PROTOCOL_CW)
+    cwmod_txmit(&dtms,ddc);
+  else if (protocol == PROTOCOL_RTTY)
+    rtty_txmit(&dtms,ddc);  
 }
 
 uint16_t dsp_get_signal_magnitude(void)

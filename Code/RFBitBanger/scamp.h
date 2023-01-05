@@ -39,17 +39,6 @@ extern "C" {
 #define SCAMP_PWR_THR_DEF 8
 #define SCAMP_AVG_CT_PWR2 9
 
-#define SCAMP_OOK_FAST 0
-#define SCAMP_OOK 1
-#define SCAMP_FSK 2
-#define SCAMP_FSK_FAST 3
-#define DSPINT_CW 4
-
-#ifdef SCAMP_VERY_SLOW_MODES
-#define SCAMP_OOK_SLOW 5
-#define SCAMP_FSK_SLOW 6
-#endif
-
 #define SCAMP_FRAME_FIFO_LENGTH 8
 
 #ifdef SCAMP_VERY_SLOW_MODES
@@ -78,7 +67,6 @@ typedef struct _scamp_state
   uint16_t  ct_average;
   uint32_t  ct_sum;
 
-  uint8_t   mod_type;
   uint8_t   fsk;
 
   uint8_t   demod_samples_per_bit;

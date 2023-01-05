@@ -45,9 +45,10 @@ uint8_t current_protocol;
 const radio_configuration PROGMEM default_rc =
 {
   RC_MAGIC_NUMBER,
+  25000000,
   20,
-  3,
-  2,
+  0,
+  1,
   2,
 };
 
@@ -272,7 +273,7 @@ void set_frequency_snd(void)
 
 void setup() {
   setupConfiguration();
-  set_protocol(PROTOCOL_RTTY);
+  set_protocol(PROTOCOL_CW);
   setupADC();
   setupCompare();
   setup_timers();
@@ -362,16 +363,28 @@ const char freqmenutitle[] PROGMEM = "Frq";
 const char scanfasttitle[] PROGMEM = "ScF";
 const char scanslowtitle[] PROGMEM = "ScS";
 const char tranmodetitle[] PROGMEM = "TrM";
+const char confmodetitle[] PROGMEM = "Cfg";
 
-const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,NULL };
+const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,confmodetitle,NULL };
 
-const char cwtitle[] PROGMEM = "CW";
-const char rttytitle[] PROGMEM = "RTTY";
-const char scamptitle[] PROGMEM = "SCAMP";
+const char cw_title[] PROGMEM = "CW";
+const char rtty_title[] PROGMEM = "RTTY";
+const char scamp_fsk_title[] PROGMEM = "SCAMPFSK";
+const char scamp_ook_title[] PROGMEM = "SCAMPOOK";
+const char scamp_fsk_fast_title[] PROGMEM = "SCFSKFST";
+const char scamp_ook_fast_title[] PROGMEM = "SCOOKFST";
+#ifdef SCAMP_VERY_SLOW_MODES
+const char scamp_fsk_slow_title[] PROGMEM = "SCFSKSLW";
+const char scamp_ook_slow_title[] PROGMEM = "SCOOKSLW";
+#endif
 
-const char *const protocolmenu[] PROGMEM = {cwtitle,rttytitle,scamptitle,NULL };
+const char *const protocolmenu[] PROGMEM = {cw_title,rtty_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,scamp_ook_fast_title,
+#ifdef SCAMP_VERY_SLOW_MODES
+    scamp_fsk_slow_title,scamp_ook_slow_title,
+#endif
+    NULL };
 
-const char righttx[] PROGMEM = "Rt Txmit Lf Abt";
+//const char righttx[] PROGMEM = "Rt Txmit Lf Abt";
 
 void increment_decrement_frequency(int16_t val)
 {
@@ -478,7 +491,7 @@ void set_transmission_mode(void)
 {  
   uint8_t selected;
   menu_str mn = { protocolmenu, 0, 0, 8, 0 };
-  mn.item = ps.ss.protocol;
+  mn.item = ps.ss.protocol-1;
   do_show_menu_item(&mn);
   set_horiz_menu_keys(1);
   do
@@ -487,17 +500,17 @@ void set_transmission_mode(void)
     selected = do_menu(&mn);
   } while (!selected);
   set_horiz_menu_keys(0);
-  mn.item++;
-  if (current_protocol != mn.item)
-     set_protocol(mn.item);
+  selected = mn.item+1;
+  if (current_protocol != selected)
+     set_protocol(selected);
 }
 
 const char txtitle1[] PROGMEM = "Return";
 const char txtitle2[] PROGMEM = "Txmit";
-const char txtitle3[] PROGMEM = "Quit";
+const char quittitle[] PROGMEM = "Quit";
 const char txtitle4[] PROGMEM = "Clear";
 
-const char *const txmenu[] PROGMEM = {txtitle1,txtitle2,txtitle3,txtitle4,NULL };
+const char *const txmenu[] PROGMEM = {txtitle1,txtitle2,quittitle,txtitle4,NULL };
 
 static uint8_t transmit_message_length(void)
 {
@@ -587,6 +600,91 @@ void receive_scroll_mode(void)
 
 uint8_t current_item = 2;
 
+typedef struct _configuration_entry
+{
+  void     *entry;
+  uint8_t   bytes;
+  uint8_t   digits;
+  uint32_t  min_value;
+  uint32_t  max_value;
+} configuration_entry;
+
+const char fr_calib[] PROGMEM = "Freq Calib";
+const char cw_wpm[] PROGMEM = "CW WPM";
+const char scamp_re[] PROGMEM = "Scamp Repeat";
+const char scamp_rs[] PROGMEM = "Scamp Resync";
+const char rtty_re[] PROGMEM = "RTTY Repeat";
+
+const char *const confmenu[] PROGMEM = {quittitle,fr_calib,cw_wpm,scamp_rs,scamp_re,rtty_re,NULL };
+
+
+const configuration_entry PROGMEM configuration_entries[] = 
+{
+  { &rc.frequency_calibration, 4, 8, 24000000, 25999999 }, /* FREQUENCY CALIBRATION */
+  { &rc.cw_send_speed,         1, 2, 5, 40 }, /* CW WPM */
+  { &rc.scamp_resync_frames,   1, 1, 0, 9  }, /* SCAMP RESYNC */
+  { &rc.scamp_resend_frames,   1, 1, 1, 9 },  /* SCAMP RESEND */
+  { &rc.rtty_figs_resend,      1, 1, 1, 5 }   /* RTTY REPEAT */
+};
+
+void configuration(void)
+{
+  lcd.clear();
+  uint8_t selected;
+  menu_str mn = { confmenu, 0, 0, 16, 0 };
+  do_show_menu_item(&mn);
+  for (;;)
+  {
+    void *v;
+    uint32_t val;
+    configuration_entry *c;
+    scroll_number_dat snd = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    do
+    {
+      idle_task();
+      update_readout();
+      selected = do_menu(&mn);
+    } while (!selected);
+    if (mn.item == 0)  break;
+    selected = mn.item - 1;
+    c = &configuration_entries[selected];
+    v = pgm_read_word_near(&c->entry);
+    snd.digits = pgm_read_word_near(&c->digits);
+    snd.minimum_number = pgm_read_dword_near(&c->min_value);
+    snd.maximum_number = pgm_read_dword_near(&c->max_value);
+    switch (pgm_read_byte_near(&c->bytes))
+    {
+      case 1: snd.n = *((uint8_t *)v);
+              break;
+      case 2: snd.n = *((uint16_t *)v);
+              break;
+      case 4: snd.n = *((uint32_t *)v);
+              break;
+    } 
+    display_clear_row(0, 1, 16);
+    scroll_number_start(&snd);
+    while (!snd.entered)
+    {
+      idle_task();
+      scroll_number_key(&snd);
+    }
+    if (snd.changed)
+    {
+      switch (pgm_read_byte_near(&c->bytes))
+      {
+        case 1: *((uint8_t *)v) = snd.n;
+                break;
+        case 2: *((uint16_t *)v) = snd.n;
+                break;
+        case 4: *((uint32_t *)v) = snd.n;
+                break;
+      }
+    } 
+    display_clear_row(0, 1, 16);
+  }
+}
+
 void select_command_mode()
 {
   uint8_t selected;
@@ -614,6 +712,8 @@ void select_command_mode()
     case 4: scan_frequency_mode(selected == 1, 30);
             break;
     case 5: set_transmission_mode();
+            break;
+    case 6: configuration();
             break;
   }
 }

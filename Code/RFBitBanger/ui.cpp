@@ -130,22 +130,22 @@ uint8_t button_enter(uint8_t key)
 
 uint8_t button_left(uint8_t key)
 {
-  return horiz_keys ? button_up_actual(key) : button_left_actual(key);
+  return horiz_keys ? button_down_actual(key) : button_left_actual(key);
 }
 
 uint8_t button_right(uint8_t key)
 {
-  return horiz_keys ? button_down_actual(key) : button_right_actual(key);
+  return horiz_keys ? button_up_actual(key) : button_right_actual(key);
 }
 
 uint8_t button_up(uint8_t key)
 {
-  return horiz_keys ? button_left_actual(key) : button_up_actual(key);
+  return horiz_keys ? button_right_actual(key) : button_up_actual(key);
 }
 
 uint8_t button_down(uint8_t key)
 {
-  return horiz_keys ? button_right_actual(key) : button_down_actual(key);
+  return horiz_keys ? button_left_actual(key) : button_down_actual(key);
 }
 
 void select_item(menu_str *menu, uint8_t item)
@@ -243,6 +243,16 @@ uint8_t abort_button_right(void)
   uint8_t key = PSkey.getkey();
   if ((key == 0x0D) || lcd.readUnBounced(4)) return 1;
   return ((key == PS2KEY_RIGHT) || lcd.readUnBounced(3));
+}
+
+void display_clear_row(uint8_t col, uint8_t row, uint8_t len)
+{
+  lcd.setCursor(col, row);
+  while (len > 0)
+  {
+    lcd.write(' ');
+    len--;
+  }
 }
 
 void scroll_number_redraw(scroll_number_dat *snd)
@@ -346,9 +356,7 @@ void scroll_alpha_redraw(scroll_alpha_dat *sad)
 
 void scroll_alpha_clear(scroll_alpha_dat *sad)
 {
-  lcd.setCursor(sad->col, sad->row);
-  for (uint8_t dp = 0; dp < sad->displen; dp++)
-    lcd.write(' ');
+  display_clear_row(sad->col,sad->row,sad->displen);
 }
 
 uint8_t scroll_alpha_find_key(scroll_alpha_dat *sad, uint8_t key)

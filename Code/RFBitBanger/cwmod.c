@@ -141,10 +141,9 @@ uint16_t cw_peek_from_timing_fifo(void)
     return tim;
 }
 
-void cw_initialize(uint8_t wide, uint8_t spaces_from_mark_timing,
+void cw_initialize(uint8_t spaces_from_mark_timing,
                    uint8_t smooth, uint8_t sticky_interval_length)
 {
-   dsp_initialize_cw(wide);
    memset(&ps.cs,'\000',sizeof(ps.cs));
 
    ps.cs.protocol = PROTOCOL_CW;
@@ -187,17 +186,12 @@ void cw_new_sample(void)
     ps.cs.ct_sum += mag_sample;
     if (ps.cs.ct_smooth)
     {
-      ps.cs.ct_smooth_sum += mag_sample - ps.cs.ct_smooth_mag[ps.cs.ct_smooth_ind];
+      ps.cs.ct_smooth_sum += mag_sample;
+      ps.cs.ct_smooth_sum -= ps.cs.ct_smooth_mag[ps.cs.ct_smooth_ind];
       ps.cs.ct_smooth_mag[ps.cs.ct_smooth_ind] = mag_sample;
       if ((++ps.cs.ct_smooth_ind) >= ps.cs.ct_smooth_ind_max)
         ps.cs.ct_smooth_ind = 0;
-      switch (ps.cs.ct_smooth)
-      {
-          case 1: mag_sample = ps.cs.ct_smooth_sum >> 1; break;
-          case 2: mag_sample = ps.cs.ct_smooth_sum >> 2; break;
-          case 3: mag_sample = ps.cs.ct_smooth_sum >> 3; break;
-          case 4: mag_sample = ps.cs.ct_smooth_sum >> 4; break;
-      }
+      mag_sample = ps.cs.ct_smooth_sum >> ps.cs.ct_smooth;
     }
     if (ps.cs.ct_min_val > mag_sample)
         ps.cs.ct_min_val = mag_sample;
