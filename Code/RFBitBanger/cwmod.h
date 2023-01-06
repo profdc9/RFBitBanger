@@ -96,6 +96,7 @@ void cw_new_sample(void);
 void cw_decode_process(void);
 void cw_initialize(uint8_t spaces_from_mark_timing,
                    uint8_t smooth, uint8_t sticky_interval_length);
+uint8_t cw_insert_into_timing_fifo_noint(uint16_t tim);
 
 #ifdef __cplusplus
 }

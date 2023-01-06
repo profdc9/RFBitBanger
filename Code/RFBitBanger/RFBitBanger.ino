@@ -50,6 +50,7 @@ const radio_configuration PROGMEM default_rc =
   0,
   1,
   2,
+  600,
 };
 
 void setupConfiguration(void)
@@ -282,6 +283,7 @@ void setup() {
   PSkey.begin();
   // put your setup code here, to run once:
   Serial.begin(57600);
+  pinMode(PTT_PIN,INPUT);
   pinMode(TRANSMIT_PIN,OUTPUT);
   pinMode(BACKLIGHT_PIN,OUTPUT);
   pinMode(MUTEAUDIO_PIN,OUTPUT);
@@ -364,8 +366,9 @@ const char scanfasttitle[] PROGMEM = "ScF";
 const char scanslowtitle[] PROGMEM = "ScS";
 const char tranmodetitle[] PROGMEM = "TrM";
 const char confmodetitle[] PROGMEM = "Cfg";
+const char keymodetitle[] PROGMEM = "Key";
 
-const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,confmodetitle,NULL };
+const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,confmodetitle,keymodetitle,NULL };
 
 const char cw_title[] PROGMEM = "CW";
 const char rtty_title[] PROGMEM = "RTTY";
@@ -614,8 +617,9 @@ const char cw_wpm[] PROGMEM = "CW WPM";
 const char scamp_re[] PROGMEM = "Scamp Repeat";
 const char scamp_rs[] PROGMEM = "Scamp Resync";
 const char rtty_re[] PROGMEM = "RTTY Repeat";
+const char sidetone_freq[] PROGMEM = "Sidetone Freq";
 
-const char *const confmenu[] PROGMEM = {quittitle,fr_calib,cw_wpm,scamp_rs,scamp_re,rtty_re,NULL };
+const char *const confmenu[] PROGMEM = {quittitle,fr_calib,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,NULL };
 
 
 const configuration_entry PROGMEM configuration_entries[] = 
@@ -624,7 +628,8 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.cw_send_speed,         1, 2, 5, 40 }, /* CW WPM */
   { &rc.scamp_resync_frames,   1, 1, 0, 9  }, /* SCAMP RESYNC */
   { &rc.scamp_resend_frames,   1, 1, 1, 9 },  /* SCAMP RESEND */
-  { &rc.rtty_figs_resend,      1, 1, 1, 5 }   /* RTTY REPEAT */
+  { &rc.rtty_figs_resend,      1, 1, 1, 5 },   /* RTTY REPEAT */
+  { &rc.sidetone_frequency,    2, 4, 250, 2000 },   /* SIDETONE FREQ */
 };
 
 void configuration(void)
@@ -685,6 +690,64 @@ void configuration(void)
   }
 }
 
+void key_mode(void)
+{
+  uint16_t last_tick = ps.cs.total_ticks;
+  uint8_t current_state = 0, count_states = 0, last_check_time = millis();
+
+  uint8_t sidetone_freq = TONEFREQ(rc.sidetone_frequency);
+  uint8_t sidetone_freq_2 = sidetone_freq >> 2;
+  
+  set_protocol(PROTOCOL_CW);  // set the mode to CW for receiving CW
+  set_frequency(snd_freq.n + CWMOD_SIDETONE_OFFSET, 1);
+  set_clock_onoff_mask(0x01);
+  for (;;)
+  {
+    if (lcd.getButtonPressed(4)) break;          // if enter pressed, exit keying mode
+    idle_task();
+    update_bars();
+    update_readout();
+    uint8_t key_state = (lcd.readUnBounced(1)) || (!digitalRead(PTT_PIN));
+    uint8_t current_check_time = millis();
+    if (current_check_time != last_check_time)
+    {
+      last_check_time = current_check_time;
+      uint16_t current_tick = ps.cs.total_ticks;
+      if (current_state != key_state)
+      {
+        if ((++count_states) > 10)
+        {
+          uint16_t elapsed_ticks = current_tick - last_tick;
+          last_tick = current_tick;
+          current_state = key_state;
+          count_states = 0;
+          if (key_state)
+          {
+            set_clock_onoff_mask(0x02);
+            muteaudio_set(1);
+            transmit_set(1);
+            cw_insert_into_timing_fifo_noint(elapsed_ticks|0x8000);
+            tone_on(sidetone_freq, sidetone_freq_2);
+          } else
+          {
+            transmit_set(0);
+            muteaudio_set(0);
+            set_clock_onoff_mask(0x01);
+            cw_insert_into_timing_fifo_noint(elapsed_ticks);
+            tone_off();
+          }
+        } 
+      } else
+        count_states = 0;
+    }    
+  }
+  transmit_set(0);
+  muteaudio_set(0);
+  set_clock_onoff_mask(0x01);
+  tone_off();
+  lcd.clearButtons();
+}
+
 void select_command_mode()
 {
   uint8_t selected;
@@ -714,6 +777,8 @@ void select_command_mode()
     case 5: set_transmission_mode();
             break;
     case 6: configuration();
+            break;
+    case 7: key_mode();
             break;
   }
 }

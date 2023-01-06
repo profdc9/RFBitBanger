@@ -37,6 +37,8 @@ typedef struct _radio_configuration
   uint8_t   scamp_resync_frames;
   uint8_t   scamp_resend_frames;
   uint8_t   rtty_figs_resend;
+  uint16_t  sidetone_frequency;
+  uint8_t   sidetone_volume;
 } radio_configuration;
 
 extern radio_configuration rc;
