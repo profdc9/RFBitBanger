@@ -141,6 +141,14 @@ uint16_t cw_peek_from_timing_fifo(void)
     return tim;
 }
 
+/* this is a hack so that inserting can be safely done from not in the interrupt */
+uint8_t cw_insert_into_timing_fifo_noint(uint16_t tim)
+{
+  cli();
+  cw_insert_into_timing_fifo(tim);
+  sei();
+}
+
 void cw_initialize(uint8_t spaces_from_mark_timing,
                    uint8_t smooth, uint8_t sticky_interval_length)
 {
@@ -180,7 +188,9 @@ void cw_new_sample(void)
         return;
     ps.cs.last_sample_ct = ctr;
 
+    cli();                /* protect this increment from being read while updated*/
     ps.cs.total_ticks++;  /* increment the total ticks counter */
+    sei();
 
     mag_sample = ds.mag_value_12;
     ps.cs.ct_sum += mag_sample;

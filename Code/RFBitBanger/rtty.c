@@ -148,6 +148,7 @@ uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
     ddc(dtms);
     if (dtms->aborted) break;
   }
+  set_clock_onoff_mask(0) ;
   transmit_set(0);
   muteaudio_set(0);
 }
