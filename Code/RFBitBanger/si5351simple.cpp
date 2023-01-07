@@ -90,6 +90,11 @@ si5351simple::si5351simple(uint8_t p_cap, uint32_t p_xo_freq)
   xo_freq = p_xo_freq;
 }
 
+void si5351simple::set_xo_freq(uint32_t p_xo_freq)
+{
+  xo_freq = p_xo_freq;
+}
+
 void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, 
 								 uint8_t multisynth_no, si5351_multisynth_regs *m_regs)
 {
@@ -193,7 +198,7 @@ void si5351simple::setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off
 
 void si5351simple::setOutputOnOffMask(uint8_t new_on_mask)
 {
-  on_mask = new_on_mask;
+  on_mask = new_on_mask ^ 0xFF;
   si5351_write(3, on_mask);
 }
 

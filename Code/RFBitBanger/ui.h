@@ -42,6 +42,7 @@ bool show_lr(uint8_t row, const char *message);
 char *number_str(char *s, uint32_t n, uint8_t digits, uint8_t decs);
 void lcdPrint(const char *str);
 void lcdPrintFlash(const char *str);
+void lcdPrintFlashSpaces(uint8_t col, uint8_t row, const char *str, uint8_t len);
 void lcdPrintNum(uint32_t n, uint8_t digits, uint8_t decs);
 
 typedef struct _bargraph_dat

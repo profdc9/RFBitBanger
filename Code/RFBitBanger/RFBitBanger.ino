@@ -25,6 +25,7 @@
 #include <Arduino.h>
 #include <wiring_private.h>
 #include <avr/pgmspace.h>
+#include <EEPROM.h>
 #include "common.h"
 #include "si5351simple.h"
 #include "LiquidCrystalButtons.h"
@@ -50,14 +51,21 @@ const radio_configuration PROGMEM default_rc =
   0,
   1,
   2,
-  600,
+  667,
+  1,
+  0
 };
 
 void setupConfiguration(void)
 {
+  EEPROM.get(EEPROM_CONFIGURATION_ADDRESS, rc);
   if (rc.magic_number != RC_MAGIC_NUMBER)
-  for (size_t i=0;i<sizeof(default_rc);i++)
-    ((uint8_t*)&rc)[i] = pgm_read_byte_near(&((const uint8_t *)&default_rc)[i]);
+    memcpy_P((void *)&rc,(void *)&default_rc,sizeof(rc));
+}
+
+void saveConfiguration(void)
+{
+  EEPROM.put(EEPROM_CONFIGURATION_ADDRESS, rc);
 }
 
 void setupCompare()
@@ -162,6 +170,7 @@ void setup_timers(void)
 uint8_t tone_state = 0;
 uint8_t tone_last_freq = 0;
 
+extern "C" {
 void tone_off(void)
 {
   if (tone_state)
@@ -170,12 +179,6 @@ void tone_off(void)
     tone_state = 0;
   }
 }
-
-#define TONEFREQ_BASEFREQ (16000000ul / 256)
-#define TONEFREQ(x) (TONEFREQ_BASEFREQ / (x))
-#define TONEFREQVOL(x,vol) (((TONEFREQ_BASEFREQ / (x)) * (vol)) >> 8)
-#define TONE_ON(freq,vol) tone_on(TONEFREQ(freq),TONEFREQVOL(freq,vol))
-#define TONE_OFF() tone_off()
 
 void tone_on(uint8_t freq, uint8_t vol)
 {
@@ -192,6 +195,7 @@ void tone_on(uint8_t freq, uint8_t vol)
     tone_state = 1;
   } else
     OCR2B = vol;
+}
 }
 
 void setup_tone_pcm(void)
@@ -274,6 +278,7 @@ void set_frequency_snd(void)
 
 void setup() {
   setupConfiguration();
+  si5351.set_xo_freq(rc.frequency_calibration);
   set_protocol(PROTOCOL_CW);
   setupADC();
   setupCompare();
@@ -359,6 +364,13 @@ void update_readout()
   scroll_readout_display(&srd_buf);  
 }
 
+void redraw_readout()
+{
+  srd_buf.notchanged = 0;
+  update_readout();  
+}
+
+
 const char transmittitle[] PROGMEM = "Tx ";
 const char receivetitle[] PROGMEM = "Rxv";
 const char freqmenutitle[] PROGMEM = "Frq";
@@ -368,7 +380,7 @@ const char tranmodetitle[] PROGMEM = "TrM";
 const char confmodetitle[] PROGMEM = "Cfg";
 const char keymodetitle[] PROGMEM = "Key";
 
-const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,confmodetitle,keymodetitle,NULL };
+const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,keymodetitle,confmodetitle,NULL };
 
 const char cw_title[] PROGMEM = "CW";
 const char rtty_title[] PROGMEM = "RTTY";
@@ -494,7 +506,7 @@ void set_transmission_mode(void)
 {  
   uint8_t selected;
   menu_str mn = { protocolmenu, 0, 0, 8, 0 };
-  mn.item = ps.ss.protocol-1;
+  mn.item = current_protocol-1;
   do_show_menu_item(&mn);
   set_horiz_menu_keys(1);
   do
@@ -503,9 +515,7 @@ void set_transmission_mode(void)
     selected = do_menu(&mn);
   } while (!selected);
   set_horiz_menu_keys(0);
-  selected = mn.item+1;
-  if (current_protocol != selected)
-     set_protocol(selected);
+  set_protocol(mn.item+1);
 }
 
 const char txtitle1[] PROGMEM = "Return";
@@ -612,25 +622,45 @@ typedef struct _configuration_entry
   uint32_t  max_value;
 } configuration_entry;
 
-const char fr_calib[] PROGMEM = "Freq Calib";
+const char conf_changed[] PROGMEM = "Config Changed";
+const char conf_saved[] PROGMEM = "Config Saved";
+const char save_title[] PROGMEM = "Save Conf";
+const char fr_calib[] PROGMEM = "Xtal Freq";
 const char cw_wpm[] PROGMEM = "CW WPM";
 const char scamp_re[] PROGMEM = "Scamp Repeat";
 const char scamp_rs[] PROGMEM = "Scamp Resync";
 const char rtty_re[] PROGMEM = "RTTY Repeat";
 const char sidetone_freq[] PROGMEM = "Sidetone Freq";
+const char sidetone_on[] PROGMEM = "Sidetone On";
+const char cw_practice[] PROGMEM = "CW Practice";
 
-const char *const confmenu[] PROGMEM = {quittitle,fr_calib,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,NULL };
+const char *const confmenu[] PROGMEM = {quittitle,save_title,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,cw_practice,fr_calib,NULL };
 
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
-  { &rc.frequency_calibration, 4, 8, 24000000, 25999999 }, /* FREQUENCY CALIBRATION */
   { &rc.cw_send_speed,         1, 2, 5, 40 }, /* CW WPM */
   { &rc.scamp_resync_frames,   1, 1, 0, 9  }, /* SCAMP RESYNC */
   { &rc.scamp_resend_frames,   1, 1, 1, 9 },  /* SCAMP RESEND */
   { &rc.rtty_figs_resend,      1, 1, 1, 5 },   /* RTTY REPEAT */
   { &rc.sidetone_frequency,    2, 4, 250, 2000 },   /* SIDETONE FREQ */
-};
+  { &rc.sidetone_on,           1, 1, 0, 1 },   /* SIDETONE FREQ */
+  { &rc.cw_practice,           1, 1, 0, 1 },   /* CW_PRACTICE */
+  { &rc.frequency_calibration, 4, 8, 24000000, 25999999 }, /* FREQUENCY CALIBRATION */
+ };
+
+void display_clear_row_1(void)
+{
+   display_clear_row(0, 1, 16);
+  
+}
+
+void temporary_message(uint8_t *msg)
+{
+   lcdPrintFlashSpaces(0,1,msg,16);
+   delayidle(750);
+   display_clear_row_1();
+} 
 
 void configuration(void)
 {
@@ -652,43 +682,54 @@ void configuration(void)
       selected = do_menu(&mn);
     } while (!selected);
     if (mn.item == 0)  break;
-    selected = mn.item - 1;
-    c = &configuration_entries[selected];
-    v = pgm_read_word_near(&c->entry);
-    snd.digits = pgm_read_word_near(&c->digits);
-    snd.minimum_number = pgm_read_dword_near(&c->min_value);
-    snd.maximum_number = pgm_read_dword_near(&c->max_value);
-    switch (pgm_read_byte_near(&c->bytes))
+    if (mn.item == 1)
     {
-      case 1: snd.n = *((uint8_t *)v);
-              break;
-      case 2: snd.n = *((uint16_t *)v);
-              break;
-      case 4: snd.n = *((uint32_t *)v);
-              break;
-    } 
-    display_clear_row(0, 1, 16);
-    scroll_number_start(&snd);
-    while (!snd.entered)
+      saveConfiguration();
+      temporary_message(conf_saved);
+    } else
     {
-      idle_task();
-      scroll_number_key(&snd);
-    }
-    if (snd.changed)
-    {
+      selected = mn.item - 2;    
+      c = &configuration_entries[selected];
+      v = pgm_read_word_near(&c->entry);
+      snd.digits = pgm_read_word_near(&c->digits);
+      snd.minimum_number = pgm_read_dword_near(&c->min_value);
+      snd.maximum_number = pgm_read_dword_near(&c->max_value);
       switch (pgm_read_byte_near(&c->bytes))
       {
-        case 1: *((uint8_t *)v) = snd.n;
+        case 1: snd.n = *((uint8_t *)v);
                 break;
-        case 2: *((uint16_t *)v) = snd.n;
+        case 2: snd.n = *((uint16_t *)v);
                 break;
-        case 4: *((uint32_t *)v) = snd.n;
+        case 4: snd.n = *((uint32_t *)v);
                 break;
-      }
-    } 
-    display_clear_row(0, 1, 16);
+      } 
+      display_clear_row_1();
+      scroll_number_start(&snd);
+      while (!snd.entered)
+      {
+        idle_task();
+        scroll_number_key(&snd);
+        }
+      if (snd.changed)
+      {
+        switch (pgm_read_byte_near(&c->bytes))
+        {
+          case 1: *((uint8_t *)v) = snd.n;
+                  break;
+          case 2: *((uint16_t *)v) = snd.n;
+                  break;
+          case 4: *((uint32_t *)v) = snd.n;
+                  break;
+        }
+        temporary_message(conf_changed);
+      } 
+    }
+    display_clear_row_1();
   }
 }
+
+const char keying_mode[] PROGMEM = "Keying Mode";
+const char keying_exit[] PROGMEM = "Keying Exit";
 
 void key_mode(void)
 {
@@ -697,13 +738,19 @@ void key_mode(void)
 
   uint8_t sidetone_freq = TONEFREQ(rc.sidetone_frequency);
   uint8_t sidetone_freq_2 = sidetone_freq >> 2;
-  
+
+  temporary_message(keying_mode);
+  redraw_readout();
+  lcd.clearButtons();
   set_protocol(PROTOCOL_CW);  // set the mode to CW for receiving CW
-  set_frequency(snd_freq.n + CWMOD_SIDETONE_OFFSET, 1);
-  set_clock_onoff_mask(0x01);
+  if (!rc.cw_practice)
+  {
+    set_frequency(snd_freq.n + CWMOD_SIDETONE_OFFSET, 1);
+    set_clock_onoff_mask(0x01);
+  }
   for (;;)
   {
-    if (lcd.getButtonPressed(4)) break;          // if enter pressed, exit keying mode
+    if (abort_button_enter()) break;          // if enter pressed, exit keying mode
     idle_task();
     update_bars();
     update_readout();
@@ -723,16 +770,22 @@ void key_mode(void)
           count_states = 0;
           if (key_state)
           {
-            set_clock_onoff_mask(0x02);
-            muteaudio_set(1);
-            transmit_set(1);
+            if (!rc.cw_practice)
+            {
+              set_clock_onoff_mask(0x02);
+              muteaudio_set(1);
+              transmit_set(1);
+            }
             cw_insert_into_timing_fifo_noint(elapsed_ticks|0x8000);
-            tone_on(sidetone_freq, sidetone_freq_2);
+            if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
           } else
           {
-            transmit_set(0);
-            muteaudio_set(0);
-            set_clock_onoff_mask(0x01);
+            if (!rc.cw_practice)
+            {
+              transmit_set(0);
+              muteaudio_set(0);
+              set_clock_onoff_mask(0x01);
+            }
             cw_insert_into_timing_fifo_noint(elapsed_ticks);
             tone_off();
           }
@@ -745,6 +798,8 @@ void key_mode(void)
   muteaudio_set(0);
   set_clock_onoff_mask(0x01);
   tone_off();
+  temporary_message(keying_exit);
+  redraw_readout();
   lcd.clearButtons();
 }
 
@@ -772,13 +827,13 @@ void select_command_mode()
             break;
     case 3: if (selected < 3) scan_frequency_mode(selected == 1, 100);
             break;
-    case 4: scan_frequency_mode(selected == 1, 30);
+    case 4: if (selected < 3) scan_frequency_mode(selected == 1, 30);
             break;
     case 5: set_transmission_mode();
             break;
-    case 6: configuration();
+    case 6: key_mode();
             break;
-    case 7: key_mode();
+    case 7: configuration();
             break;
   }
 }

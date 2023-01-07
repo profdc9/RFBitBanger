@@ -188,9 +188,7 @@ void cw_new_sample(void)
         return;
     ps.cs.last_sample_ct = ctr;
 
-    cli();                /* protect this increment from being read while updated*/
     ps.cs.total_ticks++;  /* increment the total ticks counter */
-    sei();
 
     mag_sample = ds.mag_value_12;
     ps.cs.ct_sum += mag_sample;
@@ -402,46 +400,55 @@ void cw_decode_process(void)
 uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 {
   uint16_t pause_len = 1200 / rc.cw_send_speed;  /* element lengthms */
+  uint8_t sidetone_freq = TONEFREQ(rc.sidetone_frequency);
+  uint8_t sidetone_freq_2 = sidetone_freq >> 2;
   set_frequency(dtms->frequency + CWMOD_SIDETONE_OFFSET, 1);
-  set_clock_onoff(1,0);
+  set_clock_onoff_mask(0x01);
   for (dtms->current_symbol=0;dtms->current_symbol<dtms->length;dtms->current_symbol++)
   {
     uint8_t ch = dtms->message[dtms->current_symbol], num=0, cwbits;
     if (ch == ' ')
     { 
       delayidle(pause_len*4);
-      continue;
-    }
-    const cwmod_symbol *cws = &morse_pattern[0];
-    while (cws < (&morse_pattern[(sizeof(morse_pattern)/sizeof(cwmod_symbol))]))
+    } else
     {
-      uint8_t mch = pgm_read_byte_near(&cws->symbol);
-      if (ch == mch)
+      const cwmod_symbol *cws = &morse_pattern[0];
+      while (cws < (&morse_pattern[(sizeof(morse_pattern)/sizeof(cwmod_symbol))]))
       {
-        num = pgm_read_byte_near(&cws->num);
-        cwbits = pgm_read_byte_near(&cws->cwbits);
-        break;
+        uint8_t mch = pgm_read_byte_near(&cws->symbol);
+        if (ch == mch)
+        {
+          num = pgm_read_byte_near(&cws->num);
+          cwbits = pgm_read_byte_near(&cws->cwbits);
+          break;
+        }
+        cws++;
       }
-      cws++;
+      if (num == 0) continue;
+      cwbits <<= (8-num);
+      while (num > 0)
+      {
+        if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
+        if (!rc.cw_practice)
+        {
+          set_clock_onoff_mask(0x02);
+          muteaudio_set(1);
+          transmit_set(1);
+        }
+        delayidle(cwbits & 0x80 ? pause_len*3 : pause_len);
+        if (!rc.cw_practice)
+        {
+          transmit_set(0);
+          muteaudio_set(0);
+          set_clock_onoff_mask(0x01);
+        }
+        tone_off();
+        delayidle(pause_len);
+        cwbits <<= 1;
+        num--;
+      }
+      delayidle(pause_len*2);  // add two more to inner loop for 3 X pause
     }
-    if (num == 0) continue;
-    cwbits <<= (8-num);
-    while (num > 0)
-    {
-      set_clock_onoff(0,0);
-      set_clock_onoff(1,1);
-      muteaudio_set(1);
-      transmit_set(1);
-      delayidle(cwbits & 0x80 ? pause_len*3 : pause_len);
-      transmit_set(0);
-      muteaudio_set(0);
-      set_clock_onoff(1,0);
-      set_clock_onoff(0,1);
-      delayidle(pause_len);
-      cwbits <<= 1;
-      num--;
-    }
-    delayidle(pause_len*2);  // add two more to inner loop for 3 X pause
     ddc(dtms);
     if (dtms->aborted) break;
   }

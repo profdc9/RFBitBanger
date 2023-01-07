@@ -59,6 +59,60 @@ const uint8_t PROGMEM scamp_6bit_codesymbols[60] =
    /* 0x27 can be interpreted as acute diacritical mark */
 
 
+/* calculate the hamming weight of a 16 bit integer
+   GCC could use __builtin__popcount() */
+uint8_t hamming_weight_16(uint16_t n)
+{
+  uint8_t s = 0, v;
+  v = (n >> 8) & 0xFF;
+  while (v)
+  {
+      v &= (v - 1);
+      s++;
+  }
+  v = n & 0xFF;
+  while (v)
+  {
+      v &= (v - 1);
+      s++;
+  }
+  return s;
+}
+
+/* calculate the hamming weight a 30 bit number for
+   to find hamming distance with sync word */
+uint8_t hamming_weight_30(uint32_t n)
+{
+  uint8_t s = 0, v;
+  v = (n >> 24) & 0x3F;
+
+  while (v)
+  {
+      v &= (v - 1);
+      s++;
+  }
+  v = (n >> 16) & 0xFF;
+  while (v)
+  {
+      v &= (v - 1);
+      s++;
+  }
+  v = (n >> 8) & 0xFF;
+  while (v)
+  {
+      v &= (v - 1);
+      s++;
+  }
+  v = n & 0xFF;
+  while (v)
+  {
+      v &= (v - 1);
+      s++;
+  }
+  return s;
+}
+
+
 /* initialize frame fifo */
 void scamp_initialize_frame_fifo(volatile scamp_frame_fifo *dff)
 {
@@ -348,7 +402,10 @@ uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos)
   code_30 = scamp_add_reversal_bits(code_30);
   scamp_send_frame_rep(code_30, data_code ? 1 : rc.scamp_resend_frames);
   if ((rc.scamp_resync_frames != 0) && (((pos+1) % rc.scamp_resync_frames) == 0))
-     scamp_send_frame(SCAMP_SYNC_CODEWORD);
+  {
+    scamp_send_frame(SCAMP_INIT_CODEWORD);
+    scamp_send_frame(SCAMP_SYNC_CODEWORD);
+  }
   scwtd->dtms->current_symbol = pos;
   scwtd->ddc(scwtd->dtms);
   return scwtd->dtms->aborted;
@@ -515,7 +572,7 @@ void scamp_new_sample(void)
 
     if ((!ps.ss.fsk) || (ds.mag_value_12 >= ps.ss.power_thr) || (ds.mag_value_20 >= ps.ss.power_thr))  /* if there is a bit to sync to */
     {
-      hamming_weight = dsp_hamming_weight_30(ps.ss.current_word ^ SCAMP_SYNC_CODEWORD);
+      hamming_weight = hamming_weight_30(ps.ss.current_word ^ SCAMP_SYNC_CODEWORD);
       if (hamming_weight < (ps.ss.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
       {
         scamp_reset_codeword();
@@ -523,7 +580,7 @@ void scamp_new_sample(void)
         return;
       }
       /* if we 15 of the last 16 bits zeros with fsk, that means we have a reversed polarity start */
-      hamming_weight = dsp_hamming_weight_16(ps.ss.current_word);
+      hamming_weight = hamming_weight_16(ps.ss.current_word);
       if ((hamming_weight < 2) && (ps.ss.fsk))
       {
         ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;

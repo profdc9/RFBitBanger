@@ -70,24 +70,6 @@ uint16_t golay_mult(uint16_t wd_enc)
    return enc;
 }
 
-uint8_t golay_hamming_weight_16(uint16_t n)
-{
-  uint8_t s = 0, v;
-  v = (n >> 8) & 0xFF;
-  while (v)
-  {
-      v = v & (v - 1);
-      s++;
-  }
-  v = n & 0xFF;
-  while (v)
-  {
-      v = v & (v - 1);
-      s++;
-  }
-  return s;
-}
-
 uint32_t golay_encode(uint16_t wd_enc)
 {
   uint16_t enc = golay_mult(wd_enc);
@@ -105,7 +87,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
      we hope that there are no errors in the data bits, otherwise
      the error is uncorrected */
   syndrome = golay_mult(enc) ^ parity;
-  biterr = golay_hamming_weight_16(syndrome);
+  biterr = hamming_weight_16(syndrome);
   if (biterr <= 3)
   {
      *biterrs = biterr;
@@ -114,7 +96,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
 
   /* check to see if the parity bits have no errors */
   parity_syndrome = golay_mult(parity) ^ enc;
-  biterr = golay_hamming_weight_16(parity_syndrome);
+  biterr = hamming_weight_16(parity_syndrome);
   if (biterr <= 3)
   {
      *biterrs = biterr;
@@ -125,7 +107,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
   for (i=12;i>0;)
   {
       i--;
-      biterr = golay_hamming_weight_16(syndrome ^ pgm_read_word_near(&golay_matrix[i]));
+      biterr = hamming_weight_16(syndrome ^ pgm_read_word_near(&golay_matrix[i]));
       if (biterr <= 2)
       {
           *biterrs = biterr+1;
@@ -138,7 +120,7 @@ uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs)
   {
       i--;
       uint16_t par_bit_synd = parity_syndrome ^ pgm_read_word_near(&golay_matrix[i]);
-      biterr = golay_hamming_weight_16(par_bit_synd);
+      biterr = hamming_weight_16(par_bit_synd);
       if (biterr <= 2)
       {
           *biterrs = biterr+1;

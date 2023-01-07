@@ -74,8 +74,9 @@ void lcdPrintFlash(const char *str)
   }
 }
 
-void lcdPrintFlashSpaces(const char *str, uint8_t len)
+void lcdPrintFlashSpaces(uint8_t col, uint8_t row, const char *str, uint8_t len)
 {
+  lcd.setCursor(col,row);
   while (len > 0)
   {
     char c = pgm_read_byte_near(str++);
@@ -99,8 +100,7 @@ void set_horiz_menu_keys(uint8_t horiz)
 
 void do_show_menu_item(menu_str *menu)
 {
-  lcd.setCursor(menu->col, menu->row);
-  lcdPrintFlashSpaces(pgm_read_word_near(&menu->items[menu->item]), menu->width);
+  lcdPrintFlashSpaces(menu->col, menu->row, pgm_read_word_near(&menu->items[menu->item]), menu->width);
 }
 
 uint8_t button_left_actual(uint8_t key)
@@ -465,8 +465,7 @@ void scroll_alpha_start(scroll_alpha_dat *sad)
 bool show_lr(uint8_t row, const char *message)
 {
   lcd.clearButtons();
-  lcd.setCursor(0,row);
-  lcdPrintFlashSpaces(message,16);
+  lcdPrintFlashSpaces(0, row, message,16);
   for (;;) {
     uint8_t key = PSkey.getkey();
     idle_task();

@@ -29,6 +29,12 @@ extern "C" {
 
 #define RC_MAGIC_NUMBER 0xFABE
 
+#define TONEFREQ_BASEFREQ (16000000ul / 256)
+#define TONEFREQ(x) (((uint16_t)TONEFREQ_BASEFREQ) / (x))
+#define TONEFREQVOL(x,vol) (((TONEFREQ_BASEFREQ / (x)) * (vol)) >> 8)
+#define TONE_ON(freq,vol) tone_on(TONEFREQ(freq),TONEFREQVOL(freq,vol))
+#define TONE_OFF() tone_off()
+
 typedef struct _radio_configuration
 { 
   uint16_t  magic_number;
@@ -38,7 +44,8 @@ typedef struct _radio_configuration
   uint8_t   scamp_resend_frames;
   uint8_t   rtty_figs_resend;
   uint16_t  sidetone_frequency;
-  uint8_t   sidetone_volume;
+  uint8_t   sidetone_on;
+  uint8_t   cw_practice;
 } radio_configuration;
 
 extern radio_configuration rc;
@@ -50,6 +57,8 @@ void transmit_set(uint8_t set);
 void muteaudio_set(uint8_t set);
 void idle_task(void);
 void delayidle(uint32_t ms);
+void tone_on(uint8_t freq, uint8_t vol);
+void tone_off(void);
 
 #ifdef __cplusplus
 }
