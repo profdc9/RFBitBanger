@@ -79,58 +79,6 @@ uint16_t decode_remove_from_fifo(void)
 #endif
 
 
-/* calculate the hamming weight of a 16 bit integer
-   GCC could use __builtin__popcount() */
-uint8_t dsp_hamming_weight_16(uint16_t n)
-{
-  uint8_t s = 0, v;
-  v = (n >> 8) & 0xFF;
-  while (v)
-  {
-      v &= (v - 1);
-      s++;
-  }
-  v = n & 0xFF;
-  while (v)
-  {
-      v &= (v - 1);
-      s++;
-  }
-  return s;
-}
-
-/* calculate the hamming weight a 30 bit number for
-   to find hamming distance with sync word */
-uint8_t dsp_hamming_weight_30(uint32_t n)
-{
-  uint8_t s = 0, v;
-  v = (n >> 24) & 0x3F;
-  while (v)
-  {
-      v &= (v - 1);
-      s++;
-  }
-  v = (n >> 16) & 0xFF;
-  while (v)
-  {
-      v &= (v - 1);
-      s++;
-  }
-  v = (n >> 8) & 0xFF;
-  while (v)
-  {
-      v &= (v - 1);
-      s++;
-  }
-  v = n & 0xFF;
-  while (v)
-  {
-      v &= (v - 1);
-      s++;
-  }
-  return s;
-}
-
 void dsp_reset_fixed_state(void)
 {
   cli();

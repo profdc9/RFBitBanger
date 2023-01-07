@@ -115,6 +115,7 @@ uint32_t scamp_remove_reversal_bits(uint32_t outword);
 uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 void scamp_new_sample(void);
 void scamp_decode_process(void);
+uint8_t hamming_weight_16(uint16_t n);
 
 #ifdef __cplusplus
 }

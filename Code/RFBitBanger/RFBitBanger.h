@@ -25,6 +25,8 @@
 #ifndef _RFBITBANGER_H
 #define _RFBITBANGER_H
 
+#define EEPROM_CONFIGURATION_ADDRESS 0
+
 #include "si5351simple.h"
 
 #define LCDB_RS A3
