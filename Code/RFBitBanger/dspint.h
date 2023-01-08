@@ -63,16 +63,17 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define PROTOCOL_FASTSCAN       0 
 #define PROTOCOL_CW             1
 #define PROTOCOL_RTTY           2
-#define PROTOCOL_SCAMP_FSK      3
-#define PROTOCOL_SCAMP_OOK      4
-#define PROTOCOL_SCAMP_FSK_FAST 5
-#define PROTOCOL_SCAMP_OOK_FAST 6
+#define PROTOCOL_RTTY_REV       3
+#define PROTOCOL_SCAMP_FSK      4
+#define PROTOCOL_SCAMP_OOK      5
+#define PROTOCOL_SCAMP_FSK_FAST 6
+#define PROTOCOL_SCAMP_OOK_FAST 7
 #ifdef SCAMP_VERY_SLOW_MODES
-#define PROTOCOL_SCAMP_FSK_SLOW 7
-#define PROTOCOL_SCAMP_OOK_SLOW 8
-#define PROTOCOL_SCAMP_LAST_MODE 8
+#define PROTOCOL_SCAMP_FSK_SLOW 8
+#define PROTOCOL_SCAMP_OOK_SLOW 9
+#define PROTOCOL_SCAMP_LAST_MODE 10
 #else
-#define PROTOCOL_SCAMP_LAST_MODE 6
+#define PROTOCOL_SCAMP_LAST_MODE 7
 #endif
 
 #define IS_SCAMP_PROTOCOL(x) (((x) >= PROTOCOL_SCAMP_FSK) && ((x) <= PROTOCOL_SCAMP_LAST_MODE))
@@ -154,7 +155,7 @@ void dsp_interrupt_sample(uint16_t sample);
 void dsp_new_sample(void);
 void dsp_initialize_scamp(uint8_t mod_type);
 void dsp_initialize_cw(uint8_t wide);
-void dsp_initialize_rtty(void);
+void dsp_initialize_rtty(uint8_t protocol);
 void dsp_initialize_fastscan(void);
 void dsp_reset_state(void);
 uint16_t dsp_get_signal_magnitude(void);

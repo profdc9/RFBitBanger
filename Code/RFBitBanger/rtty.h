@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 #define RTTY_PWR_THR_DEF 8
-#define RTTY_AVG_CT_PWR2 8
+#define RTTY_AVG_CT_PWR2 10
 #define RTTY_FRAME_FIFO_LENGTH 8
 #define RTTY_MAX_DEMODBUFFER 12
 
