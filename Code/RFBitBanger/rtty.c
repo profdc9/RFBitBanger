@@ -122,9 +122,16 @@ void rtty_send_code(uint8_t code)
 uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 {
   uint8_t figs = 0;
-  
-  set_frequency(dtms->frequency + RTTY_OFFSET_1, 0);
-  set_frequency(dtms->frequency + RTTY_OFFSET_2, 1);
+
+  if (ps.rs.protocol == PROTOCOL_RTTY)
+  {
+    set_frequency(dtms->frequency + RTTY_OFFSET_1, 0);
+    set_frequency(dtms->frequency + RTTY_OFFSET_2, 1);
+  } else
+  {
+    set_frequency(dtms->frequency - RTTY_OFFSET_2, 0);
+    set_frequency(dtms->frequency - RTTY_OFFSET_1, 1);
+  }
   muteaudio_set(1);
   transmit_set(1);
   rtty_send_code(0x1F);  /* send letters diddle three times to allow receiver to wake up and sync */
@@ -170,7 +177,7 @@ void rtty_new_sample(void)
         return;
     ps.rs.last_sample_ct = ct;
 
-    demod_sample = ds.mag_value_8 - ds.mag_value_24;
+    demod_sample = (ps.rs.protocol == PROTOCOL_RTTY) ? ds.mag_value_8 - ds.mag_value_24 : ds.mag_value_24 - ds.mag_value_8;
     ps.rs.ct_sum += (ds.mag_value_8 + ds.mag_value_24);
     
     /* This is the automatic "gain" control (threshold level control).

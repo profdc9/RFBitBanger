@@ -384,6 +384,7 @@ const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle
 
 const char cw_title[] PROGMEM = "CW";
 const char rtty_title[] PROGMEM = "RTTY";
+const char rtty_rev_title[] PROGMEM = "RTTYREV";
 const char scamp_fsk_title[] PROGMEM = "SCAMPFSK";
 const char scamp_ook_title[] PROGMEM = "SCAMPOOK";
 const char scamp_fsk_fast_title[] PROGMEM = "SCFSKFST";
@@ -393,7 +394,7 @@ const char scamp_fsk_slow_title[] PROGMEM = "SCFSKSLW";
 const char scamp_ook_slow_title[] PROGMEM = "SCOOKSLW";
 #endif
 
-const char *const protocolmenu[] PROGMEM = {cw_title,rtty_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,scamp_ook_fast_title,
+const char *const protocolmenu[] PROGMEM = {cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,scamp_ook_fast_title,
 #ifdef SCAMP_VERY_SLOW_MODES
     scamp_fsk_slow_title,scamp_ook_slow_title,
 #endif
@@ -502,6 +503,8 @@ void set_frequency_mode(uint8_t selected)
   }
 }
 
+const char mode_set[] PROGMEM = "Mode Set";
+
 void set_transmission_mode(void)
 {  
   uint8_t selected;
@@ -515,7 +518,12 @@ void set_transmission_mode(void)
     selected = do_menu(&mn);
   } while (!selected);
   set_horiz_menu_keys(0);
-  set_protocol(mn.item+1);
+  selected = mn.item+1;
+  if (selected != current_protocol)
+  {
+    set_protocol(mn.item+1);
+    temporary_message(mode_set);
+  }
 }
 
 const char txtitle1[] PROGMEM = "Return";
@@ -622,6 +630,7 @@ typedef struct _configuration_entry
   uint32_t  max_value;
 } configuration_entry;
 
+const char calibfreq_title[] PROGMEM ="Calib Xtal Src";
 const char conf_changed[] PROGMEM = "Config Changed";
 const char conf_saved[] PROGMEM = "Config Saved";
 const char save_title[] PROGMEM = "Save Conf";
@@ -634,8 +643,7 @@ const char sidetone_freq[] PROGMEM = "Sidetone Freq";
 const char sidetone_on[] PROGMEM = "Sidetone On";
 const char cw_practice[] PROGMEM = "CW Practice";
 
-const char *const confmenu[] PROGMEM = {quittitle,save_title,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,cw_practice,fr_calib,NULL };
-
+const char *const confmenu[] PROGMEM = {quittitle,save_title,calibfreq_title,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,cw_practice,fr_calib,NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
@@ -646,7 +654,7 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.sidetone_frequency,    2, 4, 250, 2000 },   /* SIDETONE FREQ */
   { &rc.sidetone_on,           1, 1, 0, 1 },   /* SIDETONE FREQ */
   { &rc.cw_practice,           1, 1, 0, 1 },   /* CW_PRACTICE */
-  { &rc.frequency_calibration, 4, 8, 24000000, 25999999 }, /* FREQUENCY CALIBRATION */
+  { &rc.frequency_calibration, 4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
  };
 
 void display_clear_row_1(void)
@@ -655,12 +663,29 @@ void display_clear_row_1(void)
   
 }
 
+const char crystal_cal[] PROGMEM = "Xtal Calib";
+
 void temporary_message(uint8_t *msg)
 {
    lcdPrintFlashSpaces(0,1,msg,16);
    delayidle(750);
    display_clear_row_1();
 } 
+
+void calibFrequencyStandard(void)
+{
+  scroll_number_dat cal_freq = { 0, 1, 8, 0, 2500000, 29999999, 0, 500000, 0, 0 };
+  cal_freq.n = snd_freq.n+CWMOD_SIDETONE_OFFSET;
+  scroll_number_start(&cal_freq);
+  while (!cal_freq.entered)
+  {
+     idle_task();
+     scroll_number_key(&cal_freq);
+  }
+  uint32_t new_xo_freq = ((uint64_t)si5351.get_xo_freq())*((uint64_t)(cal_freq.n-CWMOD_SIDETONE_OFFSET)) / snd_freq.n;
+  si5351.set_xo_freq(new_xo_freq);
+  temporary_message(crystal_cal);
+}
 
 void configuration(void)
 {
@@ -687,8 +712,12 @@ void configuration(void)
       saveConfiguration();
       temporary_message(conf_saved);
     } else
+    if (mn.item == 2)
     {
-      selected = mn.item - 2;    
+      calibFrequencyStandard();
+    } else
+    {
+      selected = mn.item - 3;    
       c = &configuration_entries[selected];
       v = pgm_read_word_near(&c->entry);
       snd.digits = pgm_read_word_near(&c->digits);

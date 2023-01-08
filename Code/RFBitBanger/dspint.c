@@ -179,13 +179,13 @@ void dsp_initialize_cw(uint8_t wide)
     cw_initialize(0,2,6);
 }
 
-void dsp_initialize_rtty(void)
+void dsp_initialize_rtty(uint8_t protocol)
 {
     dsp_reset_fixed_state();
-    ps.rs.protocol = PROTOCOL_RTTY;
-    df.buffer_size = 48;
-    df.dly_8 = 48;
-    df.dly_24 = 48;
+    ps.rs.protocol = protocol;
+    df.buffer_size = 24;
+    df.dly_8 = 24;
+    df.dly_24 = 24;
 
     ps.rs.demod_samples_per_bit = 11;
     ps.rs.power_thr_min = 44 * (RTTY_PWR_THR_DEF * 2);
@@ -203,8 +203,8 @@ void dsp_initialize_protocol(uint8_t protocol)
      dsp_initialize_scamp(protocol);
   else if (protocol == PROTOCOL_CW)
      dsp_initialize_cw(0);
-  else if (protocol == PROTOCOL_RTTY)
-     dsp_initialize_rtty();
+  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
+     dsp_initialize_rtty(protocol);
 }
 
 void dsp_dispatch_interrupt(uint8_t protocol)
@@ -213,7 +213,7 @@ void dsp_dispatch_interrupt(uint8_t protocol)
      scamp_new_sample();
   else if (protocol == PROTOCOL_CW)
      cw_new_sample();
-  else if (protocol == PROTOCOL_RTTY)
+  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
      rtty_new_sample();
 }
 
@@ -223,7 +223,7 @@ void dsp_dispatch_receive(uint8_t protocol)
      scamp_decode_process();
   else if (protocol == PROTOCOL_CW)
      cw_decode_process();
-  else if (protocol == PROTOCOL_RTTY)
+  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
      rtty_decode_process();
 }
 
@@ -242,7 +242,7 @@ uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *messag
     scamp_txmit(&dtms,ddc);
   else if (protocol == PROTOCOL_CW)
     cwmod_txmit(&dtms,ddc);
-  else if (protocol == PROTOCOL_RTTY)
+  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
     rtty_txmit(&dtms,ddc);  
 }
 

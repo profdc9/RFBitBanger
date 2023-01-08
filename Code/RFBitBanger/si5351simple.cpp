@@ -95,6 +95,11 @@ void si5351simple::set_xo_freq(uint32_t p_xo_freq)
   xo_freq = p_xo_freq;
 }
 
+uint32_t si5351simple::get_xo_freq(void)
+{
+  return xo_freq;
+}
+
 void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, 
 								 uint8_t multisynth_no, si5351_multisynth_regs *m_regs)
 {

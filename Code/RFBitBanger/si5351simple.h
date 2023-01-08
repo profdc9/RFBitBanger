@@ -52,6 +52,7 @@ class si5351simple  {
 public:
   si5351simple(uint8_t cap, uint32_t xo_freq); 
   void set_xo_freq(uint32_t p_xo_freq);
+  uint32_t get_xo_freq();
   void start(void);
   void calc_registers(uint32_t frequency, uint8_t phase, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs);
   void setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power, uint8_t inv);
