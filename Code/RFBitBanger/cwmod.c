@@ -142,15 +142,15 @@ uint16_t cw_peek_from_timing_fifo(void)
 }
 
 /* this is a hack so that inserting can be safely done from not in the interrupt */
-uint8_t cw_insert_into_timing_fifo_noint(uint16_t tim)
+uint8_t cwmod_insert_into_timing_fifo_noint(uint16_t tim)
 {
   cli();
   cw_insert_into_timing_fifo(tim);
   sei();
 }
 
-void cw_initialize(uint8_t spaces_from_mark_timing,
-                   uint8_t smooth, uint8_t sticky_interval_length)
+void cwmod_initialize(uint8_t spaces_from_mark_timing,
+                      uint8_t smooth, uint8_t sticky_interval_length)
 {
    memset(&ps.cs,'\000',sizeof(ps.cs));
 
@@ -177,7 +177,7 @@ void cw_reset_threshold(uint16_t thresh)
    ps.cs.ct_min_val = 0xFFFF;
 }
 
-void cw_new_sample(void)
+void cwmod_new_sample(void)
 {
     uint16_t mag_sample, c1, ctr;
     int16_t edge_val;
@@ -283,7 +283,7 @@ void cw_find_two_greatest(uint8_t array[], uint8_t length, uint8_t sep,
     }
 }
 
-void cw_decode_process(void)
+void cwmod_decode_process(void)
 {
     uint8_t is_mark, bin, decode_now, decode_el;
     uint16_t dly, tim = cw_peek_from_timing_fifo();
