@@ -71,12 +71,16 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #ifdef SCAMP_VERY_SLOW_MODES
 #define PROTOCOL_SCAMP_FSK_SLOW 8
 #define PROTOCOL_SCAMP_OOK_SLOW 9
-#define PROTOCOL_SCAMP_LAST_MODE 10
+#define PROTOCOL_SCAMP_LAST_MODE 9
 #else
 #define PROTOCOL_SCAMP_LAST_MODE 7
 #endif
 
 #define IS_SCAMP_PROTOCOL(x) (((x) >= PROTOCOL_SCAMP_FSK) && ((x) <= PROTOCOL_SCAMP_LAST_MODE))
+
+typedef void (*dsp_interrupt_routine)(void);
+typedef void (*dsp_decode_process)(void);
+typedef void (*dsp_xmit_routine)(dsp_txmit_message_state *, dsp_dispatch_callback);
 
 /* this is stuff that is initialized when the modulation mode
    is changed and doesn't change otherwise */
@@ -88,6 +92,10 @@ typedef struct _dsp_state_fixed
   uint8_t   dly_16;
   uint8_t   dly_20;
   uint8_t   dly_24;
+
+  dsp_interrupt_routine dir;
+  dsp_decode_process ddp;
+  dsp_xmit_routine dxr;
 } dsp_state_fixed;
 
 /* this is the current state of the demodulator and is designed
@@ -153,16 +161,16 @@ extern protocol_state  ps;
 
 void dsp_interrupt_sample(uint16_t sample);
 void dsp_new_sample(void);
-void dsp_initialize_scamp(uint8_t mod_type);
-void dsp_initialize_cw(uint8_t wide);
-void dsp_initialize_rtty(uint8_t protocol);
+void dsp_initialize_scamp(uint8_t protocol, uint8_t wide);
+void dsp_initialize_cw(uint8_t protocol, uint8_t wide);
+void dsp_initialize_rtty(uint8_t protocol, uint8_t wide);
 void dsp_initialize_fastscan(void);
 void dsp_reset_state(void);
 uint16_t dsp_get_signal_magnitude(void);
 uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc);
 void dsp_dispatch_receive(uint8_t protocol);
 void dsp_dispatch_interrupt(uint8_t protocol);
-void dsp_initialize_protocol(uint8_t protocol);
+void dsp_initialize_protocol(uint8_t protocol, uint8_t wide);
 
 #define DECODE_FIFO_LENGTH 16
 

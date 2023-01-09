@@ -79,10 +79,11 @@ uint16_t decode_remove_from_fifo(void)
 #endif
 
 
-void dsp_reset_fixed_state(void)
+void dsp_reset_fixed_state(dsp_interrupt_routine dir)
 {
   cli();
   memset(&df,'\000',sizeof(dsp_state_fixed));
+  df.dir = dir;
   memset(&ps,'\000',sizeof(protocol_state));
   sei();  
 }
@@ -101,7 +102,7 @@ void dsp_reset_state(void)
    from the end of the buffer */
 void dsp_initialize_fastscan(void)
 {
-    dsp_reset_fixed_state();
+    dsp_reset_fixed_state(NULL);
     ps.ss.protocol = PROTOCOL_FASTSCAN;
     df.buffer_size = 24;
     df.dly_8 = 8;
@@ -114,9 +115,9 @@ void dsp_initialize_fastscan(void)
 
 /* initialize the buffer including the signs to be subtracted
    from the end of the buffer */
-void dsp_initialize_scamp(uint8_t protocol)
+void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
 {
-    dsp_reset_fixed_state();
+    dsp_reset_fixed_state(scamp_new_sample);
     ps.ss.protocol = protocol;
     switch (ps.ss.protocol)
     {
@@ -160,6 +161,9 @@ void dsp_initialize_scamp(uint8_t protocol)
     ps.ss.power_thr_min = ((uint16_t)df.buffer_size) * SCAMP_PWR_THR_DEF * (ps.ss.fsk ? 2 : 1);
     dsp_reset_state();
 
+    df.dir = scamp_new_sample;
+    df.dxr = scamp_txmit;
+    
     scamp_reset_codeword();
     ps.ss.cur_demod_edge_window =  ps.ss.demod_edge_window;
     ps.ss.power_thr = ps.ss.power_thr_min << 1;
@@ -170,22 +174,24 @@ void dsp_initialize_scamp(uint8_t protocol)
 }
 
 /* initialize DSP for CW mode */
-void dsp_initialize_cw(uint8_t wide)
+void dsp_initialize_cw(uint8_t protocol, uint8_t wide)
 {
-    dsp_reset_fixed_state();
+    dsp_reset_fixed_state(cwmod_new_sample);
+    ps.cs.protocol = protocol;
     df.buffer_size = 48;
     df.dly_12 = wide ? 12 : 24;
     dsp_reset_state();
-    cw_initialize(0,2,6);
+    df.ddp = cwmod_decode_process;
+    df.dxr = cwmod_txmit;
+    cwmod_initialize(0,2,6);
 }
 
-void dsp_initialize_rtty(uint8_t protocol)
+void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
 {
-    dsp_reset_fixed_state();
+    dsp_reset_fixed_state(rtty_new_sample);
     ps.rs.protocol = protocol;
-    df.buffer_size = 24;
-    df.dly_8 = 24;
-    df.dly_24 = 24;
+    df.buffer_size = 48;
+    df.dly_8 = df.dly_24 = wide ? 24 : 48;
 
     ps.rs.demod_samples_per_bit = 11;
     ps.rs.power_thr_min = 44 * (RTTY_PWR_THR_DEF * 2);
@@ -195,36 +201,30 @@ void dsp_initialize_rtty(uint8_t protocol)
     ps.rs.cur_demod_edge_window =  ps.rs.demod_edge_window;
     ps.rs.power_thr = ps.rs.power_thr_min << 1;
     ps.rs.edge_thr = ps.rs.power_thr;
+    df.ddp = rtty_decode_process;
+    df.dxr = rtty_txmit;
 }
 
-void dsp_initialize_protocol(uint8_t protocol)
+void dsp_initialize_protocol(uint8_t protocol, uint8_t wide)
 {
   if (IS_SCAMP_PROTOCOL(protocol))
-     dsp_initialize_scamp(protocol);
+     dsp_initialize_scamp(protocol, wide);
   else if (protocol == PROTOCOL_CW)
-     dsp_initialize_cw(0);
+     dsp_initialize_cw(protocol, wide);
   else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
-     dsp_initialize_rtty(protocol);
+     dsp_initialize_rtty(protocol, wide);
 }
 
 void dsp_dispatch_interrupt(uint8_t protocol)
 {
-  if (IS_SCAMP_PROTOCOL(protocol))
-     scamp_new_sample();
-  else if (protocol == PROTOCOL_CW)
-     cw_new_sample();
-  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
-     rtty_new_sample();
+  if (df.dir != NULL)
+    df.dir();
 }
 
 void dsp_dispatch_receive(uint8_t protocol)
 {
-  if (IS_SCAMP_PROTOCOL(protocol))
-     scamp_decode_process();
-  else if (protocol == PROTOCOL_CW)
-     cw_decode_process();
-  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
-     rtty_decode_process();
+  if (df.ddp != NULL)
+    df.ddp();
 }
 
 uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc)
@@ -238,12 +238,8 @@ uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *messag
   dtms.current_symbol = 0;
   dtms.aborted = 0;
 
-  if (IS_SCAMP_PROTOCOL(protocol)) 
-    scamp_txmit(&dtms,ddc);
-  else if (protocol == PROTOCOL_CW)
-    cwmod_txmit(&dtms,ddc);
-  else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
-    rtty_txmit(&dtms,ddc);  
+  if (df.dxr != NULL)
+    df.dxr(&dtms,ddc);
 }
 
 uint16_t dsp_get_signal_magnitude(void)

@@ -46,6 +46,7 @@ typedef struct _radio_configuration
   uint16_t  sidetone_frequency;
   uint8_t   sidetone_on;
   uint8_t   cw_practice;
+  uint8_t   wide;
 } radio_configuration;
 
 extern radio_configuration rc;

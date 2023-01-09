@@ -244,7 +244,7 @@ void set_clock_onoff(uint8_t onoff, uint8_t clockno)
 
 void set_protocol(uint8_t protocol)
 {
-   dsp_initialize_protocol(protocol);
+   dsp_initialize_protocol(protocol, rc.wide);
    current_protocol = protocol;  
 }
 
@@ -457,7 +457,7 @@ uint8_t scan_frequency(int8_t stepval, uint16_t maxsteps)
 uint8_t scan_refine(uint8_t dir, uint8_t iter)
 {
   uint8_t code;
-  dsp_initialize_protocol(current_protocol);
+  dsp_initialize_protocol(current_protocol, rc.wide);
   for (uint8_t i=0;i<iter;i++)
   {
      code = scan_frequency(dir ? -10 : 10, 50);
@@ -482,7 +482,7 @@ uint8_t scan_frequency_mode(uint8_t dir, uint8_t stepval)
       if (code < 2) return code;
     } else return code;
   }
-  dsp_initialize_protocol(current_protocol);
+  dsp_initialize_protocol(current_protocol, rc.wide);
 }
 
 void set_frequency_mode(uint8_t selected)
@@ -642,17 +642,19 @@ const char rtty_re[] PROGMEM = "RTTY Repeat";
 const char sidetone_freq[] PROGMEM = "Sidetone Freq";
 const char sidetone_on[] PROGMEM = "Sidetone On";
 const char cw_practice[] PROGMEM = "CW Practice";
+const char wide_mode[] PROGMEM = "Wide Filters";
 
-const char *const confmenu[] PROGMEM = {quittitle,save_title,calibfreq_title,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,cw_practice,fr_calib,NULL };
+const char *const confmenu[] PROGMEM = {quittitle,save_title,calibfreq_title,wide_mode,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,cw_practice,fr_calib,NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
+  { &rc.wide,                  1, 1, 0, 1 }, /* WIDE PROTOCOL */
   { &rc.cw_send_speed,         1, 2, 5, 40 }, /* CW WPM */
   { &rc.scamp_resync_frames,   1, 1, 0, 9  }, /* SCAMP RESYNC */
   { &rc.scamp_resend_frames,   1, 1, 1, 9 },  /* SCAMP RESEND */
   { &rc.rtty_figs_resend,      1, 1, 1, 5 },   /* RTTY REPEAT */
   { &rc.sidetone_frequency,    2, 4, 250, 2000 },   /* SIDETONE FREQ */
-  { &rc.sidetone_on,           1, 1, 0, 1 },   /* SIDETONE FREQ */
+  { &rc.sidetone_on,           1, 1, 0, 1 },   /* SIDETONE ON */
   { &rc.cw_practice,           1, 1, 0, 1 },   /* CW_PRACTICE */
   { &rc.frequency_calibration, 4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
  };
@@ -805,7 +807,7 @@ void key_mode(void)
               muteaudio_set(1);
               transmit_set(1);
             }
-            cw_insert_into_timing_fifo_noint(elapsed_ticks|0x8000);
+            cwmod_insert_into_timing_fifo_noint(elapsed_ticks|0x8000);
             if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
           } else
           {
@@ -815,7 +817,7 @@ void key_mode(void)
               muteaudio_set(0);
               set_clock_onoff_mask(0x01);
             }
-            cw_insert_into_timing_fifo_noint(elapsed_ticks);
+            cwmod_insert_into_timing_fifo_noint(elapsed_ticks);
             tone_off();
           }
         } 

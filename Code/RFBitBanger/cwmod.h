@@ -92,11 +92,11 @@ typedef struct _cwmod_state
 } cwmod_state;
 
 uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
-void cw_new_sample(void);
-void cw_decode_process(void);
-void cw_initialize(uint8_t spaces_from_mark_timing,
+void cwmod_new_sample(void);
+void cwmod_decode_process(void);
+void cwmod_initialize(uint8_t spaces_from_mark_timing,
                    uint8_t smooth, uint8_t sticky_interval_length);
-uint8_t cw_insert_into_timing_fifo_noint(uint16_t tim);
+uint8_t cwmod_insert_into_timing_fifo_noint(uint16_t tim);
 
 #ifdef __cplusplus
 }
