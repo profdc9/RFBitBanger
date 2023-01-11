@@ -161,7 +161,7 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
     ps.ss.power_thr_min = ((uint16_t)df.buffer_size) * SCAMP_PWR_THR_DEF * (ps.ss.fsk ? 2 : 1);
     dsp_reset_state();
 
-    df.dir = scamp_new_sample;
+    df.ddp = scamp_decode_process;
     df.dxr = scamp_txmit;
     
     scamp_reset_codeword();

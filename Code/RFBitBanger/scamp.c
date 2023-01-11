@@ -329,40 +329,38 @@ void scamp_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code_wor
 
 void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
 {
-  uint16_t offset1, offset2;
+  int16_t offset1, offset2;
   switch (ps.ss.protocol)
   {
 #ifdef SCAMP_VERY_SLOW_MODES
       case PROTOCOL_SCAMP_OOK_SLOW:
 #endif
       case PROTOCOL_SCAMP_OOK:        
-      case PROTOCOL_SCAMP_OOK_FAST:   offset1 = 625;
+      case PROTOCOL_SCAMP_OOK_FAST:   offset1 = 0;
                                       offset2 = 0;
                                       break;
 #ifdef SCAMP_VERY_SLOW_MODES
       case PROTOCOL_SCAMP_FSK_SLOW:  
 #endif
-      case PROTOCOL_SCAMP_FSK:        offset1 = 600;
-                                      offset2 = 667;
+      case PROTOCOL_SCAMP_FSK:        offset1 = (600-667)/2;
+                                      offset2 = (667-600)/2;
                                       break;
-      case PROTOCOL_SCAMP_FSK_FAST:   offset1 = 583;
-                                      offset2 = 750;
+      case PROTOCOL_SCAMP_FSK_FAST:   offset1 = (583-750)/2;
+                                      offset2 = (750-583)/2;
                                       break;
   }
   set_frequency(dtms->frequency + offset1, 0);
-  if (offset2 != 0)
-    set_frequency(dtms->frequency + offset2, 1);
+  set_frequency(dtms->frequency + offset2, 1);
 }
 
 void scamp_send_frame(uint32_t bits)
 {
   uint8_t bit_ms = df.buffer_size / 2; // (divided by 2 for 2000 Hz -> ms)
-  bits <<= 2;
   uint16_t clock_bit = millis();
   uint16_t read_bit;
   for (uint8_t num=0;num<30;num++)
   {
-    uint8_t bitv = (bits & 0x80000000) != 0;
+    uint8_t bitv = (bits & 0x20000000) != 0;
     if (ps.ss.fsk)
       set_clock_onoff_mask(bitv ? 0x02 : 0x01) ;
     else

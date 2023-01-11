@@ -48,7 +48,7 @@ const radio_configuration PROGMEM default_rc =
   RC_MAGIC_NUMBER,
   25000000,
   20,
-  0,
+  3,
   1,
   2,
   667,
