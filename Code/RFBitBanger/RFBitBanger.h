@@ -41,6 +41,7 @@
 #define MUTEAUDIO_PIN 4
 #define BEEPOUT_PIN 3
 #define PTT_PIN 13
+#define MIC_PIN A1
 
 extern PS2Keyboard PSkey;
 extern LiquidCrystalButtons lcd;

@@ -225,6 +225,11 @@ uint32_t pow10(uint8_t n)
   return v;
 }
 
+uint8_t abort_button(void)
+{
+  return lcd.readUnBounced(4);
+}
+
 uint8_t abort_button_enter(void)
 {
   uint8_t key = PSkey.getkey();

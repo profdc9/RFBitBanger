@@ -34,10 +34,13 @@ extern "C" {
 #define SCAMP_SYNC_CODEWORD 0b111110110100011001110100011110ul
                               /* 0x3ED19D1E */
 
+#define SCAMP_THRESHOLD_COUNTER_MAX 2000
+
 #define SCAMP_BLANK_CODEWORD 0xAAAAAAAA
 
-#define SCAMP_PWR_THR_DEF 8
-#define SCAMP_AVG_CT_PWR2 9
+#define SCAMP_PWR_THR_DEF 2
+#define SCAMP_AVG_CT_PWR2_FSK 9
+#define SCAMP_AVG_CT_PWR2_OOK 12
 
 #define SCAMP_FRAME_FIFO_LENGTH 8
 
@@ -87,6 +90,7 @@ typedef struct _scamp_state
 
   uint16_t  edge_thr;
   uint16_t  power_thr;
+  uint16_t  squelch_thr;
 
   uint16_t  bit_edge_val;
   uint16_t  max_bit_edge_val;
@@ -97,6 +101,7 @@ typedef struct _scamp_state
   volatile scamp_frame_fifo scamp_output_fifo;
 
   uint16_t  last_code;
+  uint16_t  threshold_counter;
 } scamp_state;
 
 uint8_t scamp_insert_into_frame_fifo(volatile scamp_frame_fifo *dff, uint32_t frame);

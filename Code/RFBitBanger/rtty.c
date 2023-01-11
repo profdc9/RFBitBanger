@@ -178,7 +178,7 @@ void rtty_new_sample(void)
     ps.rs.last_sample_ct = ct;
 
     demod_sample = (ps.rs.protocol == PROTOCOL_RTTY) ? ds.mag_value_8 - ds.mag_value_24 : ds.mag_value_24 - ds.mag_value_8;
-    ps.rs.ct_sum += (ds.mag_value_8 + ds.mag_value_24);
+    ps.rs.ct_sum += ds.mag_value_8 > ds.mag_value_24 ? ds.mag_value_8 : ds.mag_value_24;
     
     /* This is the automatic "gain" control (threshold level control).
        find the average of a certain number of samples (power of two for calculation
@@ -190,9 +190,8 @@ void rtty_new_sample(void)
        uint16_t temp;
        temp = (ps.rs.ct_sum) >> (RTTY_AVG_CT_PWR2);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
-       ps.rs.power_thr = temp > ps.rs.power_thr_min ? temp : ps.rs.power_thr_min;
-       ps.rs.edge_thr = ps.rs.power_thr;
-       ps.rs.power_thr >>= 1;
+       ps.rs.edge_thr = temp > ps.rs.power_thr_min ? temp : ps.rs.power_thr_min;
+       ps.rs.power_thr = ps.rs.edge_thr >> 2;
        ps.rs.ct_average = 0;
        ps.rs.ct_sum = 0;
     }
@@ -248,9 +247,9 @@ void rtty_new_sample(void)
     b = ps.rs.cur_bit > 0;
     v = (ds.mag_value_8 >= ps.rs.power_thr) || (ds.mag_value_24 >= ps.rs.power_thr);
 
-    if ((ps.rs.current_bit_no == 0) && v)
+    if (ps.rs.current_bit_no == 0)
     {
-      if (b) return;   /* can't have first bit as mark */
+      if (b || (!v)) return;   /* can't have first bit as mark */
       ps.rs.current_bit_no = 1;
       return;
     } else if (ps.rs.current_bit_no < 6)  /* if it's one of the five payload bits */

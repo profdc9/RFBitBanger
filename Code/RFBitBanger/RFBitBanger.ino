@@ -68,20 +68,26 @@ void saveConfiguration(void)
   EEPROM.put(EEPROM_CONFIGURATION_ADDRESS, rc);
 }
 
-void setupCompare()
-{
-  ADCSRB = ACME | ADTS0;  // select ADC1 as the source for negative comparator input
-  ACSR = ACBG | ACIS1; // select ACBG for positive comparator input, falling edge interrupt
-                       // enable ACIC later...
-  DIDR1 = 0;
-}
-
 void setupADC() {
   ADCSRA = 0;
   PRR &= ~PRADC;
   ADCSRB = (1 << ADTS2) | (1 << ADTS1);
   ADCSRA = (1 << ADEN) | (1 << ADATE) | (1 << ADPS1) | (1 << ADPS0);
   ADMUX = (1 << REFS0);
+}
+
+void setupCompare()
+{
+  ADCSRA = 0;
+  ADCSRB = (1<<ACME) | (1<<ADTS0);  // select ADC1 as the source for negative comparator input
+  ACSR = (1<<ACBG) | (1<<ACIC);     // select ACBG for positive comparator input, falling edge interrupt
+  DIDR1 = 0;
+}
+
+void stopCompare()
+{
+  ACSR = (1<<ACD);
+  setupADC();
 }
 
 extern "C" {
@@ -157,12 +163,24 @@ void setup_timers(void)
   cli();
   // WGM13 = 1, WGM12 = 1, WGM11 = 1, WGM10 = 0
   TCCR1A = (1<<COM1B1) | (1<<WGM11);  
+  TCCR1B = (1<<CS10);
   TCCR1B = (1<<WGM13) | (1<<WGM12) | (1<<CS10);
-  ICR1H = (TIMER1_COUNT_MAX >> 8);
-  ICR1L = (TIMER1_COUNT_MAX & 0xFF);
+  ICR1 = TIMER1_COUNT_MAX;
   write_transmit_pwm(1);
   write_tuning_pwm(0);
   TIMSK1 = (1<<TOIE1);
+  TIMSK2 = 0;
+  sei();
+}
+
+void setup_timers_external_control(void)
+{
+  cli();
+  TCCR1A = 0;  
+  TCCR1B = (1<<CS10);
+  TCCR1B = (1<<ICNC1) | (1<<CS10);  
+  ICR1 = 0;
+  TIMSK1 = 0;
   TIMSK2 = 0;
   sei();
 }
@@ -281,7 +299,7 @@ void setup() {
   si5351.set_xo_freq(rc.frequency_calibration);
   set_protocol(PROTOCOL_CW);
   setupADC();
-  setupCompare();
+  stopCompare();
   setup_timers();
   scroll_readout_initialize(&srd_buf);
 //  setup_tone_pcm();
@@ -289,6 +307,7 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(57600);
   pinMode(PTT_PIN,INPUT);
+  pinMode(MIC_PIN,INPUT);
   pinMode(TRANSMIT_PIN,OUTPUT);
   pinMode(BACKLIGHT_PIN,OUTPUT);
   pinMode(MUTEAUDIO_PIN,OUTPUT);
@@ -377,10 +396,11 @@ const char freqmenutitle[] PROGMEM = "Frq";
 const char scanfasttitle[] PROGMEM = "ScF";
 const char scanslowtitle[] PROGMEM = "ScS";
 const char tranmodetitle[] PROGMEM = "TrM";
+const char extctrlmode[] PROGMEM = "Ext";
 const char confmodetitle[] PROGMEM = "Cfg";
 const char keymodetitle[] PROGMEM = "Key";
 
-const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,keymodetitle,confmodetitle,NULL };
+const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,keymodetitle,extctrlmode,confmodetitle,NULL };
 
 const char cw_title[] PROGMEM = "CW";
 const char rtty_title[] PROGMEM = "RTTY";
@@ -834,6 +854,69 @@ void key_mode(void)
   lcd.clearButtons();
 }
 
+const char ext_mode[] PROGMEM = "Ext Mode";
+const char ext_exit[] PROGMEM = "Ext Exit";
+
+uint16_t external_control_time(void)
+{
+  uint16_t start_time, end_time;
+  TCNT1 = 0;
+  while ((ACSR & (1<<ACO)) != 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF; 
+  }
+  while ((ACSR & (1<<ACO)) == 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF;
+  }
+  TCNT1 = 0;
+  while ((ACSR & (1<<ACO)) != 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF; 
+  }
+  start_time = ICR1;
+  while ((ACSR & (1<<ACO)) == 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF; 
+  }
+  while ((ACSR & (1<<ACO)) != 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF;
+  }
+  end_time = ICR1;
+  return (end_time - start_time);
+}
+
+void external_control_mode(void)
+{
+  temporary_message(ext_mode);
+  redraw_readout();
+  setup_timers_external_control();
+  setupCompare();
+  lcd.clearButtons();
+  for (;;)
+  { 
+    cli();
+    uint16_t n = external_control_time();
+    sei();
+    lcd.setCursor(0,1);
+    lcdPrintNum(n,5,0);
+    if (abort_button()) break; 
+    for (uint16_t i=0;i<30000;i++)
+      digitalWrite(3, (ACSR & (1<<ACO)) != 0);
+  }
+  stopCompare();
+  setup_timers();
+  temporary_message(ext_exit);
+  redraw_readout();
+  lcd.clearButtons();
+}
+
 void select_command_mode()
 {
   uint8_t selected;
@@ -864,7 +947,9 @@ void select_command_mode()
             break;
     case 6: key_mode();
             break;
-    case 7: configuration();
+    case 7: external_control_mode();
+            break;
+    case 8: configuration();
             break;
   }
 }

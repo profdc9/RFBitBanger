@@ -452,6 +452,7 @@ void scamp_new_sample(void)
     int16_t demod_sample, temp;
     uint8_t received_bit;
     uint8_t hamming_weight;
+    uint16_t max_val;
 
     uint8_t ct = ds.sample_ct;
     /* only proceed if we have new magnitude samples */
@@ -470,37 +471,50 @@ void scamp_new_sample(void)
 #endif
         case PROTOCOL_SCAMP_OOK_FAST:
         case PROTOCOL_SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
-                                        ps.ss.ct_sum += ds.mag_value_16;
+                                        max_val = ds.mag_value_16;
                                         break;
 #ifdef SCAMP_VERY_SLOW_MODES
         case PROTOCOL_SCAMP_FSK_SLOW:
 #endif
         case PROTOCOL_SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
-                                        ps.ss.ct_sum += (ds.mag_value_20 + ds.mag_value_12);
+                                        max_val = ds.mag_value_12 > ds.mag_value_20 ? ds.mag_value_12 : ds.mag_value_20;
                                         break;
-        case PROTOCOL_SCAMP_FSK_FAST:   demod_sample = ds.mag_value_12 - ds.mag_value_8;
-                                        ps.ss.ct_sum += (ds.mag_value_12 + ds.mag_value_8);
+        case PROTOCOL_SCAMP_FSK_FAST:   demod_sample = ds.mag_value_24 - ds.mag_value_8;
+                                        max_val = ds.mag_value_8 > ds.mag_value_24 ? ds.mag_value_8 : ds.mag_value_24;
                                         break;
     }
-
+    ps.ss.ct_sum += max_val;
     /* This is the automatic "gain" control (threshold level control).
        find the average of a certain number of samples (power of two for calculation
        speed) so that we can determine what to set the thresholds at for the bit on/off
        threshold for ook and the edge threshold for ook/fsk */
-    if ((++ps.ss.ct_average) >= (((uint16_t)1) << SCAMP_AVG_CT_PWR2))
+    if (ps.ss.fsk)
     {
-       uint16_t temp;
-       temp = (ps.ss.ct_sum) >> (SCAMP_AVG_CT_PWR2);
+      if ((++ps.ss.ct_average) >= (((uint16_t)1) << SCAMP_AVG_CT_PWR2_FSK))
+      {
+       temp = (ps.ss.ct_sum) >> (SCAMP_AVG_CT_PWR2_FSK);
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
-       ps.ss.power_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
-       if (ps.ss.fsk)
-       {
-            ps.ss.edge_thr = ps.ss.power_thr;
-            ps.ss.power_thr >>= 1;
-       } else
-            ps.ss.edge_thr = ps.ss.power_thr << 1;
+       ps.ss.edge_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
+       ps.ss.power_thr = ps.ss.edge_thr >> 1;
+       ps.ss.squelch_thr = ps.ss.power_thr >> 1; 
        ps.ss.ct_average = 0;
        ps.ss.ct_sum = 0;
+      }
+    } else
+    {
+      if ((++ps.ss.ct_average) >= (((uint16_t)1) << SCAMP_AVG_CT_PWR2_OOK))
+      {
+        temp = (ps.ss.ct_sum) >> (SCAMP_AVG_CT_PWR2_OOK);
+        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
+/*        ps.ss.power_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
+        ps.ss.edge_thr = ps.ss.power_thr << 1;
+        ps.ss.squelch_thr = ps.ss.power_thr >> 1; */
+        ps.ss.edge_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
+        ps.ss.power_thr = ps.ss.edge_thr >> 1;
+        ps.ss.squelch_thr = ps.ss.power_thr >> 1; 
+        ps.ss.ct_average = 0;
+        ps.ss.ct_sum = 0;
+      }
     }
 
     /* calculate the difference between the modulated signal between now and one bit period ago to see
@@ -568,7 +582,16 @@ void scamp_new_sample(void)
     } else if (ps.ss.bitflips_ctr >= 5)
         ps.ss.bitflips_ctr = 0;
 
-    if ((!ps.ss.fsk) || (ds.mag_value_12 >= ps.ss.power_thr) || (ds.mag_value_20 >= ps.ss.power_thr))  /* if there is a bit to sync to */
+    uint8_t thr = max_val >= ps.ss.squelch_thr;
+    
+    if (thr)
+      ps.ss.threshold_counter = SCAMP_THRESHOLD_COUNTER_MAX;
+    else
+    {
+      if (ps.ss.threshold_counter > 0)
+          ps.ss.threshold_counter--;
+    }
+    if ((!ps.ss.fsk) || thr)  /* if there is a bit to sync to */
     {
       hamming_weight = hamming_weight_30(ps.ss.current_word ^ SCAMP_SYNC_CODEWORD);
       if (hamming_weight < (ps.ss.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
@@ -597,7 +620,7 @@ void scamp_new_sample(void)
         ps.ss.last_code = 0;
         return;
       }
-    } else return;
+    } 
     /* if we have synced, and we have 30 bits, we have a frame */
     ps.ss.current_bit_no++;
     if ((ps.ss.current_bit_no >= 30) && (ps.ss.resync))  /* we have a complete frame */
@@ -615,7 +638,8 @@ void scamp_new_sample(void)
           if ((ps.ss.bitflips_lag > ps.ss.bitflips_in_phase) && (ps.ss.bitflips_lag >= 5))
           /* we are at least one bit flip short, we probably fell a bit behind */
           {
-            scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ps.ss.current_word >> 1);
+            if (ps.ss.threshold_counter > 0)
+              scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ps.ss.current_word >> 1);
             /* start with the next word with one flip */
             ps.ss.current_bit_no = 1;
             ps.ss.bitflips_ctr = 1;
@@ -624,7 +648,8 @@ void scamp_new_sample(void)
              if (ps.ss.bitflips_in_phase >= 4)
              {
                /* otherwise we just place in buffer and the code word is probably aligned */
-               scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ps.ss.current_word);
+               if (ps.ss.threshold_counter > 0)
+                 scamp_insert_into_frame_fifo(&ps.ss.scamp_output_fifo, ps.ss.current_word);
              }
              ps.ss.current_bit_no = 0;
              ps.ss.bitflips_ctr = 0;

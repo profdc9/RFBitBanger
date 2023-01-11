@@ -124,12 +124,12 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
         case PROTOCOL_SCAMP_OOK_FAST:   df.buffer_size = 32;
                                         ps.ss.demod_edge_window = 3;
                                         ps.ss.fsk = 0;
-                                        df.dly_16 = 32;
+                                        df.dly_16 = wide ? 16: 32;
                                         break;
         case PROTOCOL_SCAMP_OOK:        df.buffer_size = 64;
                                         ps.ss.fsk = 0;
                                         ps.ss.demod_edge_window = 4;
-                                        df.dly_16 = 64;
+                                        df.dly_16 = wide ? 32 : 64;
                                         break;
         case PROTOCOL_SCAMP_FSK:        df.buffer_size = 60;
                                         ps.ss.fsk = 1;

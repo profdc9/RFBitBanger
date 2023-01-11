@@ -111,6 +111,7 @@ void lcdBarGraph(bargraph_dat *bgd);
 uint8_t abort_button_left(void);
 uint8_t abort_button_right(void);
 uint8_t abort_button_enter(void);
+uint8_t abort_button(void);
 
 void scroll_readout_initialize(scroll_readout_dat *srd);
 void scroll_readout_add_character(scroll_readout_dat *srd, uint8_t ch);
