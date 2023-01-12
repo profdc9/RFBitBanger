@@ -77,13 +77,12 @@ void setupADC() {
   ADMUX = (1 << REFS0);
 }
 
-#if 0
 void setupCompare()
 {
   cli();
   ADCSRA = 0;
-  ADMUX = (1 << REFS0);
-  ADCSRB = (1<<ACME) | (1<<ADTS0);  // select ADC1 as the source for negative comparator input
+  ADMUX = (1 << REFS0) | (1 << MUX0);
+  ADCSRB = (1<<ACME);               // select ADC1 as the source for negative comparator input
   ACSR = (1<<ACBG) | (1<<ACIC);     // select ACBG for positive comparator input, falling edge interrupt
   DIDR1 = 0;
   sei();
@@ -115,34 +114,33 @@ uint16_t external_control_time(void)
   while ((ACSR & (1<<ACO)) != 0)
   {
     TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF; 
+    if (TCNT1H >= 0xF0) return 0; 
   }
   while ((ACSR & (1<<ACO)) == 0)
   {
     TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF;
+    if (TCNT1H >= 0xF0) return 0;
   }
   TCNT1 = 0;
   while ((ACSR & (1<<ACO)) != 0)
   {
     TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF; 
+    if (TCNT1H >= 0xF0) return 0; 
   }
   start_time = ICR1;
   while ((ACSR & (1<<ACO)) == 0)
   {
     TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF; 
+    if (TCNT1H >= 0xF0) return 0; 
   }
   while ((ACSR & (1<<ACO)) != 0)
   {
     TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF;
+    if (TCNT1H >= 0xF0) return 0;
   }
   end_time = ICR1;
   return (end_time - start_time);
 }
-#endif
 
 extern "C" {
 void idle_task(void)
@@ -340,6 +338,7 @@ void setup() {
   si5351.set_xo_freq(rc.frequency_calibration);
   set_protocol(PROTOCOL_CW);
   setupADC();
+  stopCompare();
   setup_timers();
   scroll_readout_initialize(&srd_buf);
 //  setup_tone_pcm();
@@ -942,22 +941,27 @@ void external_control_mode(void)
   uint16_t current_frequency = 0;
   temporary_message(ext_mode);
   redraw_readout();
+  setupCompare();
+  setup_timers_external_control();
   lcd.clearButtons();
   for (;;)
   { 
     uint8_t counts = 0;
-    uint16_t count_total = 0, count;
+    uint16_t count, count_total = 0;
     do
     {
-      count = tickval_no_timer();
-      if (count > 10000) break; 
+      uint16_t new_count;
+      count = external_control_time();
       if (count == 0) break;
+      new_count = count_total + count;
+      if (new_count < count_total)
+        break;
+      count_total = new_count;
       counts++;
-      count_total += count;
-    } while (count_total < (rc.ext_fast_mode ? 2500 : 5000));
+    } while (count_total < (rc.ext_fast_mode ? 16000 : 32000));
     if (count != 0)
     {
-      uint16_t next_frequency = (2288100ul * counts) / count_total;
+      uint16_t next_frequency = (16000000ul * counts) / count_total;
       if (next_frequency > 3000)
          count = 0;
       else
@@ -972,10 +976,7 @@ void external_control_mode(void)
         {
           current_frequency = next_frequency;
           set_frequency(rc.ext_lsb ? snd_freq.n - current_frequency : snd_freq.n + current_frequency, current_oscillator == 0 ? 1 : 0);
-          if (current_oscillator == 0)
-             set_clock_onoff_mask(0x02);
-          else
-             set_clock_onoff_mask(0x01);
+          set_clock_onoff_mask(current_oscillator == 0 ? 0x02 : 0x01);
           current_oscillator == (current_oscillator == 0) ? 1 : 0;
           muteaudio_set(1);
           transmit_set(1);
@@ -990,6 +991,8 @@ void external_control_mode(void)
     }
     if (abort_button()) break; 
   }
+  setup_timers();
+  stopCompare();
   set_frequency(snd_freq.n, 0);
   set_clock_onoff_mask(0x01);
   muteaudio_set(0);

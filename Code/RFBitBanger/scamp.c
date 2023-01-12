@@ -411,14 +411,23 @@ uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos)
 
 uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 {
-
+  uint8_t solids;
   scamp_code_word_transmit_data scwtd;
   scwtd.ddc = ddc;
   scwtd.dtms = dtms;
   
   scamp_set_mod_frequencies(dtms);
   muteaudio_set(1);
-  if (ps.ss.fsk) transmit_set(1);
+  if (ps.ss.fsk) 
+  {
+    transmit_set(1);
+    scamp_send_frame(SCAMP_SOLID_CODEWORD);
+    scamp_send_frame(SCAMP_SOLID_CODEWORD);
+  } else
+  {
+    for (uint8_t i=0;i<4;i++)
+      scamp_send_frame(SCAMP_DOTTED_CODEWORD);
+  }
   scamp_send_frame_rep(SCAMP_INIT_CODEWORD, rc.scamp_resend_frames);
   scamp_send_frame_rep(SCAMP_SYNC_CODEWORD, rc.scamp_resend_frames);
   scamp_bytes_to_code_words(dtms->message, dtms->length, scamp_code_word_transmit, (void *) &scwtd);
@@ -496,7 +505,7 @@ void scamp_new_sample(void)
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ps.ss.edge_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
        ps.ss.power_thr = ps.ss.edge_thr >> 1;
-       ps.ss.squelch_thr = ps.ss.power_thr >> 1; 
+       ps.ss.squelch_thr = ps.ss.power_thr; 
        ps.ss.ct_average = 0;
        ps.ss.ct_sum = 0;
       }
@@ -506,11 +515,9 @@ void scamp_new_sample(void)
       {
         temp = (ps.ss.ct_sum) >> (SCAMP_AVG_CT_PWR2_OOK);
         /* don't allow threshold to get too low, or we'll be having bit edges constantly */
-/*        ps.ss.power_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
-        ps.ss.edge_thr = ps.ss.power_thr << 1;
-        ps.ss.squelch_thr = ps.ss.power_thr >> 1; */
         ps.ss.edge_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
-        ps.ss.power_thr = ps.ss.edge_thr >> 1;
+        ps.ss.edge_thr >>= 1;
+        ps.ss.power_thr = ps.ss.edge_thr;
         ps.ss.squelch_thr = ps.ss.power_thr >> 1; 
         ps.ss.ct_average = 0;
         ps.ss.ct_sum = 0;
