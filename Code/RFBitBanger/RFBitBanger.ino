@@ -53,6 +53,7 @@ const radio_configuration PROGMEM default_rc =
   2,
   667,
   1,
+  0,
   0
 };
 
@@ -76,12 +77,16 @@ void setupADC() {
   ADMUX = (1 << REFS0);
 }
 
+#if 0
 void setupCompare()
 {
+  cli();
   ADCSRA = 0;
+  ADMUX = (1 << REFS0);
   ADCSRB = (1<<ACME) | (1<<ADTS0);  // select ADC1 as the source for negative comparator input
   ACSR = (1<<ACBG) | (1<<ACIC);     // select ACBG for positive comparator input, falling edge interrupt
   DIDR1 = 0;
+  sei();
 }
 
 void stopCompare()
@@ -89,6 +94,55 @@ void stopCompare()
   ACSR = (1<<ACD);
   setupADC();
 }
+
+void setup_timers_external_control(void)
+{
+  cli();
+  TCCR1A = 0;  
+  TCCR1B = (1<<CS10);
+  TCCR1B = (1<<ICNC1) | (1<<CS10);  
+  ICR1 = 0;
+  TCNT1 = 0;
+  TIMSK1 = 0;
+  TIMSK2 = 0;
+  sei();
+}
+
+uint16_t external_control_time(void)
+{
+  uint16_t start_time, end_time;
+  TCNT1 = 0;
+  while ((ACSR & (1<<ACO)) != 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF; 
+  }
+  while ((ACSR & (1<<ACO)) == 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF;
+  }
+  TCNT1 = 0;
+  while ((ACSR & (1<<ACO)) != 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF; 
+  }
+  start_time = ICR1;
+  while ((ACSR & (1<<ACO)) == 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF; 
+  }
+  while ((ACSR & (1<<ACO)) != 0)
+  {
+    TCNT1L;
+    if (TCNT1H >= 0xF0) return 0xFFFF;
+  }
+  end_time = ICR1;
+  return (end_time - start_time);
+}
+#endif
 
 extern "C" {
 void idle_task(void)
@@ -169,18 +223,6 @@ void setup_timers(void)
   write_transmit_pwm(1);
   write_tuning_pwm(0);
   TIMSK1 = (1<<TOIE1);
-  TIMSK2 = 0;
-  sei();
-}
-
-void setup_timers_external_control(void)
-{
-  cli();
-  TCCR1A = 0;  
-  TCCR1B = (1<<CS10);
-  TCCR1B = (1<<ICNC1) | (1<<CS10);  
-  ICR1 = 0;
-  TIMSK1 = 0;
   TIMSK2 = 0;
   sei();
 }
@@ -284,7 +326,6 @@ void received_character(uint8_t ch)
      scroll_readout_add_character(&srd_buf, ch);
 }
 
-
 }
 
 
@@ -299,7 +340,6 @@ void setup() {
   si5351.set_xo_freq(rc.frequency_calibration);
   set_protocol(PROTOCOL_CW);
   setupADC();
-  stopCompare();
   setup_timers();
   scroll_readout_initialize(&srd_buf);
 //  setup_tone_pcm();
@@ -663,8 +703,10 @@ const char sidetone_freq[] PROGMEM = "Sidetone Freq";
 const char sidetone_on[] PROGMEM = "Sidetone On";
 const char cw_practice[] PROGMEM = "CW Practice";
 const char wide_mode[] PROGMEM = "Wide Filters";
+const char ext_fast_mode[] PROGMEM = "Ext Fast Mode";
+const char ext_lsb[] PROGMEM = "Ext LSB";
 
-const char *const confmenu[] PROGMEM = {quittitle,save_title,calibfreq_title,wide_mode,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,cw_practice,fr_calib,NULL };
+const char *const confmenu[] PROGMEM = {quittitle,save_title,calibfreq_title,wide_mode,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,ext_fast_mode,ext_lsb,cw_practice,fr_calib,NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
@@ -675,6 +717,8 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.rtty_figs_resend,      1, 1, 1, 5 },   /* RTTY REPEAT */
   { &rc.sidetone_frequency,    2, 4, 250, 2000 },   /* SIDETONE FREQ */
   { &rc.sidetone_on,           1, 1, 0, 1 },   /* SIDETONE ON */
+  { &rc.ext_fast_mode,         1, 1, 0, 1 },   /* EXT_FAST_MODE */
+  { &rc.ext_lsb,               1, 1, 0, 1 },   /* EXT_LSB */
   { &rc.cw_practice,           1, 1, 0, 1 },   /* CW_PRACTICE */
   { &rc.frequency_calibration, 4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
  };
@@ -857,61 +901,99 @@ void key_mode(void)
 const char ext_mode[] PROGMEM = "Ext Mode";
 const char ext_exit[] PROGMEM = "Ext Exit";
 
-uint16_t external_control_time(void)
+#define TESTPIN (PINC & 0x02)
+uint16_t __attribute__ ((noinline)) tickval_no_timer(void)
 {
-  uint16_t start_time, end_time;
-  TCNT1 = 0;
-  while ((ACSR & (1<<ACO)) != 0)
-  {
-    TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF; 
-  }
-  while ((ACSR & (1<<ACO)) == 0)
-  {
-    TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF;
-  }
-  TCNT1 = 0;
-  while ((ACSR & (1<<ACO)) != 0)
-  {
-    TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF; 
-  }
-  start_time = ICR1;
-  while ((ACSR & (1<<ACO)) == 0)
-  {
-    TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF; 
-  }
-  while ((ACSR & (1<<ACO)) != 0)
-  {
-    TCNT1L;
-    if (TCNT1H >= 0xF0) return 0xFFFF;
-  }
-  end_time = ICR1;
-  return (end_time - start_time);
+ register uint16_t val;
+
+ cli();
+ val = 0;
+ do
+ {
+    val++;
+    if (((uint8_t)((val >> 8) & 0xFF)) == 0xFF) goto abort_timer;
+ } while (TESTPIN);
+ do
+ {
+    val++;
+    if (((uint8_t)((val >> 8) & 0xFF)) == 0xFF) goto abort_timer;
+ } while (!TESTPIN);
+ val = 0;
+ do
+ {
+    val++;
+    if (((uint8_t)((val >> 8) & 0xFF)) == 0xFF) goto abort_timer;
+ } while (TESTPIN);
+ do
+ {
+    val++;
+    if (((uint8_t)((val >> 8) & 0xFF)) == 0xFF) goto abort_timer;
+ } while (!TESTPIN);
+ sei();
+ return val;
+abort_timer:
+ sei();
+ return 0;
 }
 
 void external_control_mode(void)
 {
+  uint8_t current_oscillator = 1;
+  uint16_t current_frequency = 0;
   temporary_message(ext_mode);
   redraw_readout();
-  setup_timers_external_control();
-  setupCompare();
   lcd.clearButtons();
   for (;;)
   { 
-    cli();
-    uint16_t n = external_control_time();
-    sei();
-    lcd.setCursor(0,1);
-    lcdPrintNum(n,5,0);
+    uint8_t counts = 0;
+    uint16_t count_total = 0, count;
+    do
+    {
+      count = tickval_no_timer();
+      if (count > 10000) break; 
+      if (count == 0) break;
+      counts++;
+      count_total += count;
+    } while (count_total < (rc.ext_fast_mode ? 2500 : 5000));
+    if (count != 0)
+    {
+      uint16_t next_frequency = (2288100ul * counts) / count_total;
+      if (next_frequency > 3000)
+         count = 0;
+      else
+      {
+        uint8_t change_frequency = (current_frequency == 0);
+        if (!change_frequency)
+        {
+          uint16_t difference_frequency = next_frequency > current_frequency ? next_frequency - current_frequency : current_frequency - next_frequency;
+          if (difference_frequency > 2) change_frequency = 1;
+        }
+        if (change_frequency)
+        {
+          current_frequency = next_frequency;
+          set_frequency(rc.ext_lsb ? snd_freq.n - current_frequency : snd_freq.n + current_frequency, current_oscillator == 0 ? 1 : 0);
+          if (current_oscillator == 0)
+             set_clock_onoff_mask(0x02);
+          else
+             set_clock_onoff_mask(0x01);
+          current_oscillator == (current_oscillator == 0) ? 1 : 0;
+          muteaudio_set(1);
+          transmit_set(1);
+        }
+      }
+    }
+    if (count == 0)
+    {
+      current_frequency = 0;
+      muteaudio_set(0);
+      transmit_set(0);
+    }
     if (abort_button()) break; 
-    for (uint16_t i=0;i<30000;i++)
-      digitalWrite(3, (ACSR & (1<<ACO)) != 0);
   }
-  stopCompare();
-  setup_timers();
+  set_frequency(snd_freq.n, 0);
+  set_clock_onoff_mask(0x01);
+  muteaudio_set(0);
+  transmit_set(0);
   temporary_message(ext_exit);
   redraw_readout();
   lcd.clearButtons();
