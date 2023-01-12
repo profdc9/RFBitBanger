@@ -49,6 +49,7 @@ typedef struct _radio_configuration
   uint8_t   wide;
   uint8_t   ext_fast_mode;
   uint8_t   ext_lsb;
+  uint8_t   band_warning_off;
 } radio_configuration;
 
 extern radio_configuration rc;

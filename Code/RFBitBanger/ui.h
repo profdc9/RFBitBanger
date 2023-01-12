@@ -38,7 +38,7 @@ typedef struct _menu_str
 void set_horiz_menu_keys(uint8_t horiz);
 uint8_t do_menu(menu_str *menu);
 void do_show_menu_item(menu_str *menu);
-bool show_lr(uint8_t row, const char *message);
+bool show_lr(uint8_t row, const char *message, const char *message2);
 char *number_str(char *s, uint32_t n, uint8_t digits, uint8_t decs);
 void lcdPrint(const char *str);
 void lcdPrintFlash(const char *str);

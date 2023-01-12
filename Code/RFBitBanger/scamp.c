@@ -335,8 +335,7 @@ void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
 #ifdef SCAMP_VERY_SLOW_MODES
       case PROTOCOL_SCAMP_OOK_SLOW:
 #endif
-      case PROTOCOL_SCAMP_OOK:        
-      case PROTOCOL_SCAMP_OOK_FAST:   offset1 = 0;
+      case PROTOCOL_SCAMP_OOK:        offset1 = 0;
                                       offset2 = 0;
                                       break;
 #ifdef SCAMP_VERY_SLOW_MODES
@@ -478,7 +477,6 @@ void scamp_new_sample(void)
 #ifdef SCAMP_VERY_SLOW_MODES
         case PROTOCOL_SCAMP_OOK_SLOW:
 #endif
-        case PROTOCOL_SCAMP_OOK_FAST:
         case PROTOCOL_SCAMP_OOK:        demod_sample = ds.mag_value_16 - ps.ss.power_thr;
                                         max_val = ds.mag_value_16;
                                         break;

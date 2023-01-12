@@ -467,17 +467,31 @@ void scroll_alpha_start(scroll_alpha_dat *sad)
   lcd.cursor();
 }
 
-bool show_lr(uint8_t row, const char *message)
+bool show_lr(uint8_t row, const char *message, const char *message_2)
 {
+  uint8_t cur_msg = 0;
+  uint16_t last_tm = millis()-0x1000;
   lcd.clearButtons();
-  lcdPrintFlashSpaces(0, row, message,16);
   for (;;) {
+    uint16_t cur_tm = millis();
+    if ((cur_tm - last_tm) > 1000)
+    {
+      last_tm = cur_tm;
+      lcdPrintFlashSpaces(0, row, cur_msg ? (message_2 != NULL ? message_2 : message) : message, 16);
+      cur_msg = !cur_msg;
+    }
     uint8_t key = PSkey.getkey();
     idle_task();
     if (button_left(key))
+    {
+      display_clear_row(0,row,16);
       return false;
+    }
     if (button_right(key))
+    {
+      display_clear_row(0,row,16);
       return true;
+    }
   }
 }
 

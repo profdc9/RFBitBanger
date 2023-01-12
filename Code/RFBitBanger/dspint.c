@@ -121,11 +121,6 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
     ps.ss.protocol = protocol;
     switch (ps.ss.protocol)
     {
-        case PROTOCOL_SCAMP_OOK_FAST:   df.buffer_size = 32;
-                                        ps.ss.demod_edge_window = 3;
-                                        ps.ss.fsk = 0;
-                                        df.dly_16 = wide ? 16: 32;
-                                        break;
         case PROTOCOL_SCAMP_OOK:        df.buffer_size = 64;
                                         ps.ss.fsk = 0;
                                         ps.ss.demod_edge_window = 4;

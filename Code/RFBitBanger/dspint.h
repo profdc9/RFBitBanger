@@ -67,13 +67,12 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define PROTOCOL_SCAMP_FSK      4
 #define PROTOCOL_SCAMP_OOK      5
 #define PROTOCOL_SCAMP_FSK_FAST 6
-#define PROTOCOL_SCAMP_OOK_FAST 7
 #ifdef SCAMP_VERY_SLOW_MODES
-#define PROTOCOL_SCAMP_FSK_SLOW 8
-#define PROTOCOL_SCAMP_OOK_SLOW 9
-#define PROTOCOL_SCAMP_LAST_MODE 9
+#define PROTOCOL_SCAMP_FSK_SLOW 7
+#define PROTOCOL_SCAMP_OOK_SLOW 8
+#define PROTOCOL_SCAMP_LAST_MODE 8
 #else
-#define PROTOCOL_SCAMP_LAST_MODE 7
+#define PROTOCOL_SCAMP_LAST_MODE 6
 #endif
 
 #define IS_SCAMP_PROTOCOL(x) (((x) >= PROTOCOL_SCAMP_FSK) && ((x) <= PROTOCOL_SCAMP_LAST_MODE))

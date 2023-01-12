@@ -45,17 +45,22 @@ uint8_t current_protocol;
 
 const radio_configuration PROGMEM default_rc =
 {
-  RC_MAGIC_NUMBER,
-  25000000,
-  20,
-  3,
-  1,
-  2,
-  667,
-  1,
-  0,
-  0
+  RC_MAGIC_NUMBER,  /* magic_number */
+  25000000,  /* frequency_calibratin */
+  20,  /* cw_send_speed */
+  3,   /* scamp_resync_frames */
+  1,   /* scamp_ressend_frames */
+  2,   /* rtty_figs_resend */
+  667, /* sidetone_frequency */
+  1,   /* sidetone_on */
+  0,   /* cw_practice */
+  0,   /* wide */
+  0,   /* ext_fast_mode */
+  0,   /* ext_lsb */
+  0,   /* band_warning_off */
 };
+
+bool check_band_warning(void);
 
 void setupConfiguration(void)
 {
@@ -447,13 +452,12 @@ const char rtty_rev_title[] PROGMEM = "RTTYREV";
 const char scamp_fsk_title[] PROGMEM = "SCAMPFSK";
 const char scamp_ook_title[] PROGMEM = "SCAMPOOK";
 const char scamp_fsk_fast_title[] PROGMEM = "SCFSKFST";
-const char scamp_ook_fast_title[] PROGMEM = "SCOOKFST";
 #ifdef SCAMP_VERY_SLOW_MODES
 const char scamp_fsk_slow_title[] PROGMEM = "SCFSKSLW";
 const char scamp_ook_slow_title[] PROGMEM = "SCOOKSLW";
 #endif
 
-const char *const protocolmenu[] PROGMEM = {cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,scamp_ook_fast_title,
+const char *const protocolmenu[] PROGMEM = {cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,
 #ifdef SCAMP_VERY_SLOW_MODES
     scamp_fsk_slow_title,scamp_ook_slow_title,
 #endif
@@ -620,6 +624,8 @@ void transmit_mode_callback(dsp_txmit_message_state *dtms)
 
 void transmit_mode(uint8_t selected)
 {
+  if (!check_band_warning()) return;
+
   sad_buf.position = (selected == 1) ? (sad_buf.numchars-1) : 0;
   for(;;)
   {
@@ -704,8 +710,14 @@ const char cw_practice[] PROGMEM = "CW Practice";
 const char wide_mode[] PROGMEM = "Wide Filters";
 const char ext_fast_mode[] PROGMEM = "Ext Fast Mode";
 const char ext_lsb[] PROGMEM = "Ext LSB";
+const char band_warning_off[] PROGMEM = "Band Warn Off";
 
-const char *const confmenu[] PROGMEM = {quittitle,save_title,calibfreq_title,wide_mode,cw_wpm,scamp_rs,scamp_re,rtty_re,sidetone_freq,sidetone_on,ext_fast_mode,ext_lsb,cw_practice,fr_calib,NULL };
+const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
+        wide_mode, cw_wpm, scamp_rs, scamp_re,
+        rtty_re, sidetone_freq, sidetone_on,
+        ext_fast_mode, ext_lsb,
+        cw_practice, band_warning_off, fr_calib,
+        NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
@@ -719,6 +731,7 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.ext_fast_mode,         1, 1, 0, 1 },   /* EXT_FAST_MODE */
   { &rc.ext_lsb,               1, 1, 0, 1 },   /* EXT_LSB */
   { &rc.cw_practice,           1, 1, 0, 1 },   /* CW_PRACTICE */
+  { &rc.band_warning_off,      1, 1, 0, 1 },   /* BAND WARNING OFF */
   { &rc.frequency_calibration, 4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
  };
 
@@ -827,16 +840,20 @@ const char keying_exit[] PROGMEM = "Keying Exit";
 
 void key_mode(void)
 {
-  uint16_t last_tick = ps.cs.total_ticks;
-  uint8_t current_state = 0, count_states = 0, last_check_time = millis();
+  uint16_t last_tick;
+  uint8_t current_state = 0, count_states = 0, last_check_time;
 
   uint8_t sidetone_freq = TONEFREQ(rc.sidetone_frequency);
   uint8_t sidetone_freq_2 = sidetone_freq >> 2;
+
+  if (!check_band_warning()) return;
 
   temporary_message(keying_mode);
   redraw_readout();
   lcd.clearButtons();
   set_protocol(PROTOCOL_CW);  // set the mode to CW for receiving CW
+  last_tick = ps.cs.total_ticks;
+  last_check_time = millis();
   if (!rc.cw_practice)
   {
     set_frequency(snd_freq.n + CWMOD_SIDETONE_OFFSET, 1);
@@ -939,6 +956,9 @@ void external_control_mode(void)
 {
   uint8_t current_oscillator = 1;
   uint16_t current_frequency = 0;
+
+  if (!check_band_warning()) return;
+
   temporary_message(ext_mode);
   redraw_readout();
   setupCompare();
@@ -1000,6 +1020,59 @@ void external_control_mode(void)
   temporary_message(ext_exit);
   redraw_readout();
   lcd.clearButtons();
+}
+
+#if BAND_NAMES
+const char band_160m[] PROGMEM = "160";
+const char band_80m[] PROGMEM = "80m";
+const char band_60m[] PROGMEM = "60m";
+const char band_40m[] PROGMEM = "40m";
+const char band_30m[] PROGMEM = "30m";
+const char band_20m[] PROGMEM = "20m";
+const char band_18m[] PROGMEM = "17m";
+const char band_15m[] PROGMEM = "15m";
+const char band_12m[] PROGMEM = "12m";
+const char band_10m[] PROGMEM = "10m";
+
+const char *const bandlist[] PROGMEM = { band_160m, band_80m, band_60m, band_40m, band_30m, band_20m, band_18m, band_15m, band_12m, band_10m };
+#endif
+
+uint8_t return_band(uint32_t freq)
+{
+  uint16_t freq_khz = freq / 1000;
+  if ((freq_khz >= 1800) && (freq_khz < 2000)) return 1;
+  if ((freq_khz >= 3500) && (freq_khz < 4000)) return 2;
+  if ((freq_khz >= 5250) && (freq_khz < 5450)) return 3;
+  if ((freq_khz >= 7000) && (freq_khz < 7400)) return 4;
+  if ((freq_khz >= 10100) && (freq_khz < 10150)) return 5;
+  if ((freq_khz >= 14000) && (freq_khz < 14350)) return 6;
+  if ((freq_khz >= 18068) && (freq_khz < 18168)) return 7;
+  if ((freq_khz >= 21000) && (freq_khz < 21450)) return 8;
+  if ((freq_khz >= 24890) && (freq_khz < 24990)) return 9;
+  if ((freq_khz >= 28000) && (freq_khz < 29700)) return 10;
+  return 0;
+}
+
+uint8_t last_band = 0;
+
+const char unknown_band[] PROGMEM = "Unknown band";
+const char new_band[] PROGMEM = "Chg band module";
+const char lr_prompt[] PROGMEM = "Lft abrt Rt cont";
+
+bool check_band_warning(void)
+{
+  uint8_t band;
+  bool res;
+  
+  if (rc.band_warning_off) return true;
+  band = return_band(snd_freq.n);
+  if (band == 0)
+    return show_lr(1,unknown_band,lr_prompt);
+  if (band == last_band) 
+    return true;
+  res = show_lr(1,new_band,lr_prompt);
+  if (res) last_band = band;
+  return res;
 }
 
 void select_command_mode()
