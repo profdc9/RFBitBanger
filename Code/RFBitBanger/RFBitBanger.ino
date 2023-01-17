@@ -318,7 +318,16 @@ void set_frequency(uint32_t freq, uint8_t clockno)
   
    si5351.calc_registers(freq, 0, &s_regs, &m_regs);
    si5351.set_registers(0, &s_regs, clockno, &m_regs);
-   si5351.setOutputOnOff(clockno,1);
+}
+
+void set_frequency_both(uint32_t freq)
+{
+   si5351_synth_regs s_regs;
+   si5351_multisynth_regs m_regs;
+  
+   si5351.calc_registers(freq, 0, &s_regs, &m_regs);
+   si5351.set_registers(0, &s_regs, 0, &m_regs);
+   si5351.set_registers(0xFF, NULL, 1, &m_regs);
 }
 
 void received_character(uint8_t ch)
@@ -331,11 +340,12 @@ void received_character(uint8_t ch)
 
 }
 
-
 void set_frequency_snd(void)
 {
-  set_frequency(snd_freq.n, 0);
-  delay(2);
+  muteaudio_set(0);
+  transmit_set(0);
+  set_frequency_both(snd_freq.n);
+  set_clock_onoff_mask(0x01);
 }
 
 void setup() {
@@ -346,10 +356,9 @@ void setup() {
   stopCompare();
   setup_timers();
   scroll_readout_initialize(&srd_buf);
-//  setup_tone_pcm();
   PSkey.begin();
   // put your setup code here, to run once:
-  Serial.begin(57600);
+  Serial.begin(9600);
   pinMode(PTT_PIN,INPUT);
   pinMode(MIC_PIN,INPUT);
   pinMode(TRANSMIT_PIN,OUTPUT);
@@ -495,12 +504,7 @@ uint8_t scan_frequency(int8_t stepval, uint16_t maxsteps)
     increment_decrement_frequency(stepval);
     scroll_redraw_snd();
     update_bars();
-#if 0
-    if ( ((stepval < 0) && (abort_button_right())) ||
-         ((stepval >= 0) && (abort_button_left())) )
-#else
     if (abort_button_enter())
-#endif
     {
       aborted = 1;
       break;
@@ -654,7 +658,6 @@ void transmit_mode(uint8_t selected)
         {
           dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
           set_frequency_snd();
-          set_clock_onoff(0,1);
           break;
         }
       } else if (mn.item == 2)
@@ -905,9 +908,7 @@ void key_mode(void)
         count_states = 0;
     }    
   }
-  transmit_set(0);
-  muteaudio_set(0);
-  set_clock_onoff_mask(0x01);
+  set_frequency_snd();
   tone_off();
   temporary_message(keying_exit);
   redraw_readout();
@@ -956,11 +957,11 @@ void external_control_mode(void)
 {
   uint8_t current_oscillator = 1;
   uint16_t current_frequency = 0;
+  uint8_t set_freq = 0;
 
   if (!check_band_warning()) return;
 
   temporary_message(ext_mode);
-  redraw_readout();
   setupCompare();
   setup_timers_external_control();
   lcd.clearButtons();
@@ -995,6 +996,7 @@ void external_control_mode(void)
         if (change_frequency)
         {
           current_frequency = next_frequency;
+          set_freq = 1;
           set_frequency(rc.ext_lsb ? snd_freq.n - current_frequency : snd_freq.n + current_frequency, current_oscillator == 0 ? 1 : 0);
           set_clock_onoff_mask(current_oscillator == 0 ? 0x02 : 0x01);
           current_oscillator == (current_oscillator == 0) ? 1 : 0;
@@ -1005,18 +1007,19 @@ void external_control_mode(void)
     }
     if (count == 0)
     {
-      current_frequency = 0;
-      muteaudio_set(0);
-      transmit_set(0);
+      if (set_freq)
+      {
+        set_freq = 0;
+        set_frequency_snd();
+        current_oscillator = 0;
+        current_frequency = 0;
+      }
     }
     if (abort_button()) break; 
   }
   setup_timers();
   stopCompare();
-  set_frequency(snd_freq.n, 0);
-  set_clock_onoff_mask(0x01);
-  muteaudio_set(0);
-  transmit_set(0);
+  set_frequency_snd();
   temporary_message(ext_exit);
   redraw_readout();
   lcd.clearButtons();

@@ -178,7 +178,7 @@ void dsp_initialize_cw(uint8_t protocol, uint8_t wide)
     dsp_reset_state();
     df.ddp = cwmod_decode_process;
     df.dxr = cwmod_txmit;
-    cwmod_initialize(0,2,6);
+    cwmod_initialize(0,0,4);
 }
 
 void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)

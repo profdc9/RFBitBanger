@@ -126,7 +126,8 @@ void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs,
    si5351_write(multisynth_no+165, m_regs->offset);
 	   
    setSourceAndPower(multisynth_no, m_regs->offset != 0, 1, synth_no, 3, m_regs->inv);
-   si5351_write(177, synth_no ? 0x80 : 0x20);
+   if (synth_base != 0xFF)
+      si5351_write(177, synth_no ? 0x80 : 0x20);
 }									 
 
 static void calc_multisynth_registers(uint8_t regs[], uint8_t R, uint32_t a, uint32_t b, uint32_t c)

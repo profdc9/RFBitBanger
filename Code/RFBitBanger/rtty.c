@@ -163,7 +163,7 @@ uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 void rtty_reset_codeword(void)
 {
    ps.rs.current_bit_no = 0;
-   ps.rs.current_word = SCAMP_BLANK_CODEWORD;
+   ps.rs.current_word = 0;
 }
 
 void rtty_new_sample(void)
@@ -260,8 +260,7 @@ void rtty_new_sample(void)
     }
     if (b && v)   /* if we have received a mark bit for the 7th bit, this is a valid code */
        rtty_insert_into_frame_fifo(&ps.rs.rtty_output_fifo, ps.rs.current_word);
-    ps.rs.current_bit_no = 0;   /* clear and wait for the next space */
-    ps.rs.current_word = 0;
+    rtty_reset_codeword(); /* clear and wait for the next space */
 }
 
 void rtty_decode_process(void)
