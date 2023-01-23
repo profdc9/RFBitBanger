@@ -485,11 +485,13 @@ bool show_lr(uint8_t row, const char *message, const char *message_2)
     if (button_left(key))
     {
       display_clear_row(0,row,16);
+      lcd.clearButtons();
       return false;
     }
     if (button_right(key))
     {
       display_clear_row(0,row,16);
+      lcd.clearButtons();
       return true;
     }
   }

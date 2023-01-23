@@ -36,6 +36,7 @@ freely, subject to the following restrictions:
 #include <math.h>
 #endif
 
+#include "common.h"
 #include "dspint.h"
 
 dsp_state       ds;
@@ -178,7 +179,7 @@ void dsp_initialize_cw(uint8_t protocol, uint8_t wide)
     dsp_reset_state();
     df.ddp = cwmod_decode_process;
     df.dxr = cwmod_txmit;
-    cwmod_initialize(0,0,4);
+    cwmod_initialize(rc.cw_spaces_from_mark_timing,rc.cw_smooth,rc.cw_sticky_interval_length);
 }
 
 void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)

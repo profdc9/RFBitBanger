@@ -50,6 +50,11 @@ typedef struct _radio_configuration
   uint8_t   ext_fast_mode;
   uint8_t   ext_lsb;
   uint8_t   band_warning_off;
+  uint8_t   cw_spaces_from_mark_timing;
+  uint8_t   cw_smooth;
+  uint8_t   cw_sticky_interval_length;
+  uint16_t  rit_shift_freq;
+  uint8_t   rit_shift_dir;
 } radio_configuration;
 
 extern radio_configuration rc;

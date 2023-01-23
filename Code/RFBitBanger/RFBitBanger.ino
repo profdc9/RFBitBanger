@@ -58,6 +58,11 @@ const radio_configuration PROGMEM default_rc =
   0,   /* ext_fast_mode */
   0,   /* ext_lsb */
   0,   /* band_warning_off */
+  0,   /* spaces from mark timing */
+  0,   /* cw smooth */
+  4,   /* cw sticky interval length */
+  0,   /* rit_shift_freq */
+  0,   /* rit_shift_dir */
 };
 
 bool check_band_warning(void);
@@ -326,8 +331,8 @@ void set_frequency_both(uint32_t freq)
    si5351_multisynth_regs m_regs;
   
    si5351.calc_registers(freq, 0, &s_regs, &m_regs);
-   si5351.set_registers(0, &s_regs, 0, &m_regs);
    si5351.set_registers(0xFF, NULL, 1, &m_regs);
+   si5351.set_registers(0, &s_regs, 0, &m_regs);
 }
 
 void received_character(uint8_t ch)
@@ -338,6 +343,14 @@ void received_character(uint8_t ch)
      scroll_readout_add_character(&srd_buf, ch);
 }
 
+}
+
+void set_frequency_receive(void)
+{
+  muteaudio_set(0);
+  transmit_set(0);
+  set_frequency_both(rc.rit_shift_dir ? snd_freq.n - rc.rit_shift_freq : snd_freq.n + rc.rit_shift_freq);
+  set_clock_onoff_mask(0x01);
 }
 
 void set_frequency_snd(void)
@@ -366,7 +379,7 @@ void setup() {
   pinMode(MUTEAUDIO_PIN,OUTPUT);
   TONE_OFF();
   si5351.start();
-  set_frequency_snd();
+  set_frequency_receive();
   lcd.begin(20,4);
   digitalWrite(TRANSMIT_PIN,LOW);
   digitalWrite(MUTEAUDIO_PIN,LOW);
@@ -480,7 +493,7 @@ void increment_decrement_frequency(int16_t val)
   if (next_freq < snd_freq.minimum_number) return;
   if (next_freq > snd_freq.maximum_number) return;
   snd_freq.n = next_freq;
-  set_frequency_snd();
+  set_frequency_receive();
 }
 
 uint8_t scan_frequency(int8_t stepval, uint16_t maxsteps)
@@ -562,7 +575,7 @@ void set_frequency_mode(uint8_t selected)
     scroll_number_key(&snd_freq);
     if (snd_freq.changed)
     {
-       set_frequency_snd();
+       set_frequency_receive();
        snd_freq.changed = 0;
     }
     update_bars();
@@ -657,7 +670,7 @@ void transmit_mode(uint8_t selected)
         if (msg_len > 0)
         {
           dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
-          set_frequency_snd();
+          set_frequency_receive();
           break;
         }
       } else if (mn.item == 2)
@@ -714,28 +727,40 @@ const char wide_mode[] PROGMEM = "Wide Filters";
 const char ext_fast_mode[] PROGMEM = "Ext Fast Mode";
 const char ext_lsb[] PROGMEM = "Ext LSB";
 const char band_warning_off[] PROGMEM = "Band Warn Off";
+const char cw_spaces_mark_timing[] PROGMEM = "CW Mark->Spaces";
+const char cw_smooth[] PROGMEM = "CW Smooth Factor";
+const char cw_sticky[] PROGMEM = "CW Sticky Length";
+const char rit_shift_freq[] PROGMEM = "RIT Shift Freq";
+const char rit_shift_dir[] PROGMEM = "RIT Dir 0Up,1Dwn";
 
 const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
         wide_mode, cw_wpm, scamp_rs, scamp_re,
-        rtty_re, sidetone_freq, sidetone_on,
+        rtty_re, rit_shift_freq, rit_shift_dir, 
+        sidetone_freq, sidetone_on,
         ext_fast_mode, ext_lsb,
-        cw_practice, band_warning_off, fr_calib,
+        cw_practice, cw_spaces_mark_timing,
+        cw_smooth, cw_sticky, band_warning_off, fr_calib,
         NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
-  { &rc.wide,                  1, 1, 0, 1 }, /* WIDE PROTOCOL */
-  { &rc.cw_send_speed,         1, 2, 5, 40 }, /* CW WPM */
-  { &rc.scamp_resync_frames,   1, 1, 0, 9  }, /* SCAMP RESYNC */
-  { &rc.scamp_resend_frames,   1, 1, 1, 9 },  /* SCAMP RESEND */
-  { &rc.rtty_figs_resend,      1, 1, 1, 5 },   /* RTTY REPEAT */
-  { &rc.sidetone_frequency,    2, 4, 250, 2000 },   /* SIDETONE FREQ */
-  { &rc.sidetone_on,           1, 1, 0, 1 },   /* SIDETONE ON */
-  { &rc.ext_fast_mode,         1, 1, 0, 1 },   /* EXT_FAST_MODE */
-  { &rc.ext_lsb,               1, 1, 0, 1 },   /* EXT_LSB */
-  { &rc.cw_practice,           1, 1, 0, 1 },   /* CW_PRACTICE */
-  { &rc.band_warning_off,      1, 1, 0, 1 },   /* BAND WARNING OFF */
-  { &rc.frequency_calibration, 4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
+  { &rc.wide,                       1, 1, 0, 1 }, /* WIDE PROTOCOL */
+  { &rc.cw_send_speed,              1, 2, 5, 40 }, /* CW WPM */
+  { &rc.scamp_resync_frames,        1, 1, 0, 9  }, /* SCAMP RESYNC */
+  { &rc.scamp_resend_frames,        1, 1, 1, 9 },  /* SCAMP RESEND */
+  { &rc.rtty_figs_resend,           1, 1, 1, 5 },   /* RTTY REPEAT */
+  { &rc.rit_shift_freq,             2, 4, 0, 9999 }, /* RIT SHIFT FREQ */
+  { &rc.rit_shift_dir,              1, 1, 0, 1 },    /* RIT SHIFT DIR */
+  { &rc.sidetone_frequency,         2, 4, 250, 2000 },   /* SIDETONE FREQ */
+  { &rc.sidetone_on,                1, 1, 0, 1 },   /* SIDETONE ON */
+  { &rc.ext_fast_mode,              1, 1, 0, 1 },   /* EXT_FAST_MODE */
+  { &rc.ext_lsb,                    1, 1, 0, 1 },   /* EXT_LSB */
+  { &rc.cw_practice,                1, 1, 0, 1 },   /* CW_PRACTICE */
+  { &rc.cw_spaces_from_mark_timing, 1, 1, 0, 1 },   /* SPACES FROM MARK TIMING */
+  { &rc.cw_smooth,                  1, 1, 0, 4 },   /* CW SMOOTHING FACTOR */
+  { &rc.cw_sticky_interval_length,  1, 1, 0, 9 },   /* CW STICKY INTERVAL LEnGTH */
+  { &rc.band_warning_off,           1, 1, 0, 1 },   /* BAND WARNING OFF */
+  { &rc.frequency_calibration,      4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
  };
 
 void display_clear_row_1(void)
@@ -763,8 +788,8 @@ void calibFrequencyStandard(void)
      idle_task();
      scroll_number_key(&cal_freq);
   }
-  uint32_t new_xo_freq = ((uint64_t)si5351.get_xo_freq())*((uint64_t)(cal_freq.n-CWMOD_SIDETONE_OFFSET)) / snd_freq.n;
-  si5351.set_xo_freq(new_xo_freq);
+  rc.frequency_calibration = ((uint64_t)si5351.get_xo_freq())*((uint64_t)(cal_freq.n-CWMOD_SIDETONE_OFFSET)) / snd_freq.n;
+  si5351.set_xo_freq(rc.frequency_calibration);
   temporary_message(crystal_cal);
 }
 
@@ -908,7 +933,7 @@ void key_mode(void)
         count_states = 0;
     }    
   }
-  set_frequency_snd();
+  set_frequency_receive();
   tone_off();
   temporary_message(keying_exit);
   redraw_readout();
@@ -965,6 +990,7 @@ void external_control_mode(void)
   setupCompare();
   setup_timers_external_control();
   lcd.clearButtons();
+  set_frequency_snd();
   for (;;)
   { 
     uint8_t counts = 0;
@@ -1019,7 +1045,7 @@ void external_control_mode(void)
   }
   setup_timers();
   stopCompare();
-  set_frequency_snd();
+  set_frequency_receive();
   temporary_message(ext_exit);
   redraw_readout();
   lcd.clearButtons();
