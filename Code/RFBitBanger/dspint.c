@@ -140,16 +140,16 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
                                         df.dly_24 = 24;
                                         break;
 #ifdef SCAMP_VERY_SLOW_MODES
-        case PROTOCOL_SCAMP_OOK_SLOW:   df.buffer_size = 128;
+        case PROTOCOL_SCAMP_OOK_SLOW:   df.buffer_size = 144;
                                         ps.ss.demod_edge_window = 4;
                                         ps.ss.fsk = 0;
-                                        df.dly_16 = 64;
+                                        df.dly_16 = 144;
                                         break;
-        case PROTOCOL_SCAMP_FSK_SLOW:   df.buffer_size = 120;
+        case PROTOCOL_SCAMP_FSK_SLOW:   df.buffer_size = 144;
                                         ps.ss.fsk = 1;
                                         ps.ss.demod_edge_window = 4;
-                                        df.dly_12 = 60;
-                                        df.dly_20 = 60;
+                                        df.dly_12 = 144;
+                                        df.dly_16 = 144;
                                         break;
 #endif // SCAMP_VERY_SLOW_MODES
     }

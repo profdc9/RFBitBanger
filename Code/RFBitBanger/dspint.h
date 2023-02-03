@@ -55,7 +55,7 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #endif /* RTTY_PROTOCOL */
 
 #ifdef SCAMP_VERY_SLOW_MODES
-#define DSPINT_MAX_SAMPLEBUFFER 128
+#define DSPINT_MAX_SAMPLEBUFFER 144
 #else
 #define DSPINT_MAX_SAMPLEBUFFER 64
 #endif

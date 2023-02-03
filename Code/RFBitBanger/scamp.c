@@ -339,7 +339,9 @@ void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
                                       offset2 = 0;
                                       break;
 #ifdef SCAMP_VERY_SLOW_MODES
-      case PROTOCOL_SCAMP_FSK_SLOW:  
+      case PROTOCOL_SCAMP_FSK_SLOW:   offset1 = (625-667)/2;
+                                      offset2 = (667-625)/2;
+                                      break;
 #endif
       case PROTOCOL_SCAMP_FSK:        offset1 = (600-667)/2;
                                       offset2 = (667-600)/2;
@@ -481,7 +483,9 @@ void scamp_new_sample(void)
                                         max_val = ds.mag_value_16;
                                         break;
 #ifdef SCAMP_VERY_SLOW_MODES
-        case PROTOCOL_SCAMP_FSK_SLOW:
+        case PROTOCOL_SCAMP_FSK_SLOW:   demod_sample = ds.mag_value_16 - ds.mag_value_12;
+                                        max_val = ds.mag_value_12 > ds.mag_value_16 ? ds.mag_value_12 : ds.mag_value_16;
+                                        break;
 #endif
         case PROTOCOL_SCAMP_FSK:        demod_sample = ds.mag_value_20 - ds.mag_value_12;
                                         max_val = ds.mag_value_12 > ds.mag_value_20 ? ds.mag_value_12 : ds.mag_value_20;

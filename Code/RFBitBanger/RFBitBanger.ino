@@ -599,7 +599,7 @@ void set_transmission_mode(void)
   } while (!selected);
   set_horiz_menu_keys(0);
   selected = mn.item+1;
-  if (selected != current_protocol)
+  //if (selected != current_protocol)
   {
     set_protocol(mn.item+1);
     temporary_message(mode_set);
