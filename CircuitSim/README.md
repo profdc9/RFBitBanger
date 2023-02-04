@@ -1,0 +1,2 @@
+# RFBitBanger Circuit Simulations
+These are simulations that were performed to verify aspects of the operation of the RFBitBanger.  They are created with [Qucs-S](https://https://ra3xdh.github.io/).  Only the schematic files are included and so the graphs and tables with the simulation results are blank when first loaded.  To perform the simulations, press F2 or click on the gear icon to compute the simulation results, and the graphs and tables of each simulation should be filled in.
