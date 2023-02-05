@@ -11,6 +11,8 @@ Ignore/
 *.bck
 *.kicad_pcb-bak
 *~
+*-backups
+*-backup
 _autosave-*
 *.tmp
 *-rescue.lib

@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "BitBangDisplay-rescue")(type "Legacy")(uri "${KIPRJMOD}/BitBangDisplay-rescue.lib")(options "")(descr ""))
+  (lib (name "lcd1602extrapins")(type "Legacy")(uri "${KIPRJMOD}/lcd1602extrapins.lib")(options "")(descr ""))
+)
