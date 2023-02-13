@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP LCD1602ExtraPins
+D LCD 16x2, 8 bit parallel bus, 3V or 5V VDD, Extra Pins
+K LCD 12x2 Extra Pins
+F http://www.vishay.com/docs/37299/37299.pdf
+$ENDCMP
+#
+#End Doc Library

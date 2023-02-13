@@ -1,0 +1,10 @@
+(sym_lib_table
+  (lib (name "RFBitBangerNano-rescue")(type "Legacy")(uri "${KIPRJMOD}/RFBitBangerNano-rescue.lib")(options "")(descr ""))
+  (lib (name "si5351a")(type "Legacy")(uri "${KIPRJMOD}/si5351a.lib")(options "")(descr ""))
+  (lib (name "triplewindingtransformer")(type "Legacy")(uri "${KIPRJMOD}/triplewindingtransformer.lib")(options "")(descr ""))
+  (lib (name "relay")(type "Legacy")(uri "${KIPRJMOD}/relay.lib")(options "")(descr ""))
+  (lib (name "SamplingTransformer")(type "Legacy")(uri "${KIPRJMOD}/SamplingTransformer.lib")(options "")(descr ""))
+  (lib (name "mini-din_6pins_ver4")(type "Legacy")(uri "${KIPRJMOD}/mini-din_6pins_ver4.lib")(options "")(descr ""))
+  (lib (name "doublewindingtransformer")(type "Legacy")(uri "${KIPRJMOD}/doublewindingtransformer.lib")(options "")(descr ""))
+  (lib (name "lcd1602extrapins")(type "Legacy")(uri "${KIPRJMOD}/lcd1602extrapins.lib")(options "")(descr ""))
+)
