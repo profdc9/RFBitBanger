@@ -55,6 +55,9 @@ typedef struct _radio_configuration
   uint8_t   cw_sticky_interval_length;
   uint16_t  rit_shift_freq;
   uint8_t   rit_shift_dir;
+  uint8_t   cw_iambic;
+  uint8_t   cw_iambic_type;
+  uint8_t   cw_iambic_switch;
 } radio_configuration;
 
 extern radio_configuration rc;

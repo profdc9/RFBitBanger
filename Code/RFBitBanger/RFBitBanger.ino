@@ -63,6 +63,9 @@ const radio_configuration PROGMEM default_rc =
   4,   /* cw sticky interval length */
   0,   /* rit_shift_freq */
   0,   /* rit_shift_dir */
+  0,   /* cw_iambic */
+  0,   /* cw_iambic_type */
+  0,   /* cw_iambic_switch */
 };
 
 bool check_band_warning(void);
@@ -732,12 +735,16 @@ const char cw_smooth[] PROGMEM = "CW Smooth Factor";
 const char cw_sticky[] PROGMEM = "CW Sticky Length";
 const char rit_shift_freq[] PROGMEM = "RIT Shift Freq";
 const char rit_shift_dir[] PROGMEM = "RIT Dir 0Up,1Dwn";
+const char iambic_mode[] PROGMEM = "0=StKey,1=Iambic";
+const char iambic_mode_type[] PROGMEM = "0=IambA,1=IambB";
+const char iambic_mode_switch[] PROGMEM = "Iambic 0=Nm,1Rev";
 
 const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
         wide_mode, cw_wpm, scamp_rs, scamp_re,
         rtty_re, rit_shift_freq, rit_shift_dir, 
         sidetone_freq, sidetone_on,
         ext_fast_mode, ext_lsb,
+        iambic_mode, iambic_mode_type, iambic_mode_switch,
         cw_practice, cw_spaces_mark_timing,
         cw_smooth, cw_sticky, band_warning_off, fr_calib,
         NULL };
@@ -755,6 +762,9 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.sidetone_on,                1, 1, 0, 1 },   /* SIDETONE ON */
   { &rc.ext_fast_mode,              1, 1, 0, 1 },   /* EXT_FAST_MODE */
   { &rc.ext_lsb,                    1, 1, 0, 1 },   /* EXT_LSB */
+  { &rc.cw_iambic,                  1, 1, 0, 1 },   /* CW_IAMBIC */
+  { &rc.cw_iambic_type,             1, 1, 0, 1 },   /* CW_IAMBIC_TYPE */
+  { &rc.cw_iambic_switch,           1, 1, 0, 1 },   /* CW_IAMBIC_SWITCH */
   { &rc.cw_practice,                1, 1, 0, 1 },   /* CW_PRACTICE */
   { &rc.cw_spaces_from_mark_timing, 1, 1, 0, 1 },   /* SPACES FROM MARK TIMING */
   { &rc.cw_smooth,                  1, 1, 0, 4 },   /* CW SMOOTHING FACTOR */
@@ -866,6 +876,19 @@ void configuration(void)
 const char keying_mode[] PROGMEM = "Keying Mode";
 const char keying_exit[] PROGMEM = "Keying Exit";
 
+#define KEYDOWN_SAMPLE_THRESHOLD 200
+#define KEY_IAMBIC_AGREEMENT 8
+
+void key_practice(uint8_t st)
+{
+   if (!rc.cw_practice)
+   {
+     set_clock_onoff_mask(0x01 + st);
+     muteaudio_set(st);
+     transmit_set(st);
+   }
+}
+
 void key_mode(void)
 {
   uint16_t last_tick;
@@ -873,6 +896,7 @@ void key_mode(void)
 
   uint8_t sidetone_freq = TONEFREQ(rc.sidetone_frequency);
   uint8_t sidetone_freq_2 = sidetone_freq >> 2;
+  uint16_t pause_len = 1200 / rc.cw_send_speed;  /* element length ms */
 
   if (!check_band_warning()) return;
 
@@ -893,48 +917,105 @@ void key_mode(void)
     idle_task();
     update_bars();
     update_readout();
-    uint8_t key_state = (lcd.readUnBounced(1)) || (!digitalRead(PTT_PIN));
-    uint8_t current_check_time = millis();
-    if (current_check_time != last_check_time)
+    if (rc.cw_iambic)
     {
-      last_check_time = current_check_time;
-      uint16_t current_tick = ps.cs.total_ticks;
-      if (current_state != key_state)
+      uint8_t symbol = 0, dit=2, dah, rep;
+      do
       {
-        if ((++count_states) > 10)
+        uint8_t read_dit = !digitalRead(PTT_PIN);
+        uint8_t read_dah = (adc_sample_1 < KEYDOWN_SAMPLE_THRESHOLD);
+        if (rc.cw_iambic_switch)
         {
-          uint16_t elapsed_ticks = current_tick - last_tick;
-          last_tick = current_tick;
-          current_state = key_state;
-          count_states = 0;
-          if (key_state)
-          {
-            if (!rc.cw_practice)
-            {
-              set_clock_onoff_mask(0x02);
-              muteaudio_set(1);
-              transmit_set(1);
-            }
-            cwmod_insert_into_timing_fifo_noint(elapsed_ticks|0x8000);
-            if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
-          } else
-          {
-            if (!rc.cw_practice)
-            {
-              transmit_set(0);
-              muteaudio_set(0);
-              set_clock_onoff_mask(0x01);
-            }
-            cwmod_insert_into_timing_fifo_noint(elapsed_ticks);
-            tone_off();
-          }
-        } 
+          uint8_t temp = read_dah; 
+          read_dah = read_dit;
+          read_dit = temp;
+        }
+        delayidle(2);
+        if ((dit != read_dit) || (dah != read_dah))
+        {
+          dit = read_dit;
+          dah = read_dah;
+          rep = 0;
+        } else rep++;
+      } while (rep < KEY_IAMBIC_AGREEMENT);        
+      if (dit && dah)
+      {
+        if (current_state == 0) 
+          symbol = 2;
+        else 
+          symbol = 3 - current_state;
+        current_state = symbol;   
+      } else if (dah)
+      {
+        current_state = symbol = 2;
+      } else if (dit)
+      {
+        current_state = symbol = 1;
       } else
-        count_states = 0;
+      {
+        if (current_state != 0)
+        {
+          symbol = (rc.cw_iambic_type) ? (3 - current_state) : 0;
+          current_state = 0;
+        } 
+      }
+      if (symbol != 0)
+      {
+        uint16_t dur = (symbol == 2) ? (pause_len*3) : pause_len, current_tick, elapsed_ticks;
+        
+        current_tick = ps.cs.total_ticks;
+        elapsed_ticks = current_tick - last_tick; 
+        last_tick = current_tick;
+        cwmod_insert_into_timing_fifo_noint(elapsed_ticks | 0x8000);
+        
+        key_practice(1);
+        if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
+        delayidle(dur);
+        
+        current_tick = ps.cs.total_ticks;
+        elapsed_ticks = current_tick - last_tick;
+        last_tick = current_tick; 
+        cwmod_insert_into_timing_fifo_noint(elapsed_ticks);
+        
+        key_practice(0);
+        tone_off();
+        delayidle(pause_len);
+      }
+    } else
+    {
+      uint8_t key_state = (lcd.readUnBounced(1)) || (!digitalRead(PTT_PIN));
+      uint8_t current_check_time = millis();
+      if (current_check_time != last_check_time)
+      {
+        last_check_time = current_check_time;
+        uint16_t current_tick = ps.cs.total_ticks;
+        if (current_state != key_state)
+        {
+          if ((++count_states) > 10)
+          {
+            uint16_t elapsed_ticks = current_tick - last_tick;
+            last_tick = current_tick;
+            current_state = key_state;
+            count_states = 0;
+            if (key_state)
+            {
+              key_practice(1);
+              cwmod_insert_into_timing_fifo_noint(elapsed_ticks|0x8000);
+              if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
+            } else
+            {
+              key_practice(0);
+              cwmod_insert_into_timing_fifo_noint(elapsed_ticks);
+              tone_off();
+            }
+          } 
+        } else
+          count_states = 0;
+      }
     }    
   }
+  key_practice(0);
   set_frequency_receive();
-  tone_off();
   temporary_message(keying_exit);
   redraw_readout();
   lcd.clearButtons();
