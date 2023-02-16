@@ -187,7 +187,8 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
     dsp_reset_fixed_state(rtty_new_sample);
     ps.rs.protocol = protocol;
     df.buffer_size = 48;
-    df.dly_8 = df.dly_24 = wide ? 24 : 48;
+  //  df.dly_8 = df.dly_24 = wide ? 24 : 48;
+    df.dly_8 = df.dly_24 = 24;
 
     ps.rs.demod_samples_per_bit = 11;
     ps.rs.power_thr_min = 44 * (RTTY_PWR_THR_DEF * 2);

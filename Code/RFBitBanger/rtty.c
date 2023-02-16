@@ -249,7 +249,11 @@ void rtty_new_sample(void)
 
     if (ps.rs.current_bit_no == 0)
     {
-      if (b || (!v)) return;   /* can't have first bit as mark */
+      if (b || (!v)) 
+      {
+        ps.rs.edge_ctr = ps.rs.demod_samples_per_bit; 
+        return;   /* can't have first bit as mark */
+      }
       ps.rs.current_bit_no = 1;
       return;
     } else if (ps.rs.current_bit_no < 6)  /* if it's one of the five payload bits */
@@ -258,8 +262,9 @@ void rtty_new_sample(void)
        ps.rs.current_word = (ps.rs.current_word << 1) | b;
        return;
     }
-    if (b && v)   /* if we have received a mark bit for the 7th bit, this is a valid code */
+    if (v)  
        rtty_insert_into_frame_fifo(&ps.rs.rtty_output_fifo, ps.rs.current_word);
+    ps.rs.edge_ctr = ps.rs.demod_samples_per_bit; 
     rtty_reset_codeword(); /* clear and wait for the next space */
 }
 
