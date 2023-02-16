@@ -164,10 +164,9 @@ void idle_task(void)
 }
 
 #define PROCESSOR_CLOCK_FREQ 16000000
-#define TIMER1_INTERRUPT_FREQ 4000
+#define TIMER1_INTERRUPT_FREQ 8000
 #define TIMER1_COUNT_MAX (PROCESSOR_CLOCK_FREQ / TIMER1_INTERRUPT_FREQ)
 
-volatile uint16_t adc_sample_0;
 volatile uint16_t adc_sample_1;
 
 uint8_t mute = 0;
@@ -191,23 +190,36 @@ scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 13560000, 0, 0 }
 bargraph_dat bgs = { 4, 12, 0 };
 
 
+#define MAX_ADC_AVG 4
+
+uint8_t adc1_read = 0;
+
+#define SET_ADC1_READ(x) adc1_read = (x)
+
 ISR(TIMER1_OVF_vect)
 {
-  static uint8_t last_adc1 = 0;
+  static uint8_t avgs = 0;
+  static uint16_t totaladc = 0;
   uint16_t adc_sample = ADC;
-  sei();
-  if (last_adc1)
+  //sei();
+  if (adc1_read != 0)
   {
-    last_adc1 = 0;
-    adc_sample_1 = adc_sample;
-    ADMUX = (1 << REFS0) | 0x01;
+    if (avgs == 0) 
+      adc_sample_1 = adc_sample;
+    else
+      totaladc += adc_sample;
+    ADMUX = (avgs == 2) ? ((1 << REFS0) | 0x01) : (1 << REFS0);
   } else
   {
-    last_adc1 = 1;
-    adc_sample_0 = adc_sample;
+    totaladc += adc_sample;
     ADMUX = (1 << REFS0);
-    dsp_interrupt_sample(adc_sample);
+  }
+  if ((++avgs) >= MAX_ADC_AVG)
+  {
+    dsp_interrupt_sample(totaladc >> 2);
     dsp_dispatch_interrupt(current_protocol);
+    totaladc = 0;
+    avgs = 0;    
   }
 }
 
@@ -408,7 +420,7 @@ uint8_t map_16_to_bar_40(uint16_t b)
 
 uint8_t map_16_to_bar_20(uint16_t b)
 {
-  return map_16_to_bar_40(b) >> 1;
+  return map_16_to_bar_40(b << 1) >> 1;
 }
 
 void scroll_redraw_snd(void)
@@ -551,6 +563,12 @@ uint8_t scan_refine(uint8_t dir, uint8_t iter)
   return code;
 }
 
+uint8_t scan_frequency_end(uint8_t code)
+{
+  dsp_initialize_protocol(current_protocol, rc.wide);
+  return code;
+}
+
 uint8_t scan_frequency_mode(uint8_t dir, uint8_t stepval)
 {
   uint8_t code;
@@ -562,10 +580,9 @@ uint8_t scan_frequency_mode(uint8_t dir, uint8_t stepval)
     {
       increment_decrement_frequency(dir ? 250 : -250);
       code = scan_refine(dir, 5);
-      if (code < 2) return code;
-    } else return code;
+      if (code < 2) return scan_frequency_end(code);
+    } else return scan_frequency_end(code);
   }
-  dsp_initialize_protocol(current_protocol, rc.wide);
 }
 
 void set_frequency_mode(uint8_t selected)
@@ -900,6 +917,7 @@ void key_mode(void)
 
   if (!check_band_warning()) return;
 
+  SET_ADC1_READ(1);
   temporary_message(keying_mode);
   redraw_readout();
   lcd.clearButtons();
@@ -1014,6 +1032,7 @@ void key_mode(void)
       }
     }    
   }
+  SET_ADC1_READ(0);
   key_practice(0);
   set_frequency_receive();
   temporary_message(keying_exit);
