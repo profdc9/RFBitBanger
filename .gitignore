@@ -29,3 +29,5 @@ _autosave-*
 *.xml
 *.csv
 
+# FreeCAD files
+*.FCStd1
