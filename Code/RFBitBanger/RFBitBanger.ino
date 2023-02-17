@@ -37,6 +37,14 @@
 #include "cwmod.h"
 #include "scamp.h"
 
+#define OVERSAMPLING_CLOCKS 4
+#define PROCESSOR_CLOCK_FREQ 16000000
+#define TIMER1_INTERRUPT_FREQ (2000*OVERSAMPLING_CLOCKS)
+#define TIMER1_COUNT_MAX (PROCESSOR_CLOCK_FREQ / TIMER1_INTERRUPT_FREQ)
+#define KEYDOWN_SAMPLE_THRESHOLD 100
+#define KEY_IAMBIC_AGREEMENT 8
+
+
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
 si5351simple si5351(8,25000000u);
 PS2Keyboard PSkey;
@@ -85,9 +93,12 @@ void saveConfiguration(void)
 void setupADC() {
   ADCSRA = 0;
   PRR &= ~PRADC;
-  ADCSRB = (1 << ADTS2) | (1 << ADTS1);
-  ADCSRA = (1 << ADEN) | (1 << ADATE) | (1 << ADPS1) | (1 << ADPS0);
+  //ADCSRB = (1 << ADTS2) | (1 << ADTS1);
+  ADCSRB = 0;
+  ADCSRA = (1 << ADEN) | (1 << ADPS1) | (1 << ADPS0);
+  ADCSRA = (1 << ADEN) | (1 << ADPS1) | (1 << ADPS0) | (1 << ADSC);  
   ADMUX = (1 << REFS0);
+  DIDR1 = 0;
 }
 
 void setupCompare()
@@ -163,10 +174,6 @@ void idle_task(void)
 }
 }
 
-#define PROCESSOR_CLOCK_FREQ 16000000
-#define TIMER1_INTERRUPT_FREQ 8000
-#define TIMER1_COUNT_MAX (PROCESSOR_CLOCK_FREQ / TIMER1_INTERRUPT_FREQ)
-
 volatile uint16_t adc_sample_1;
 
 uint8_t mute = 0;
@@ -189,9 +196,6 @@ scroll_alpha_dat sad_buf = { 0, 0, 16, sizeof(sad_buffer), sad_buffer, sad_valid
 scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 13560000, 0, 0 };
 bargraph_dat bgs = { 4, 12, 0 };
 
-
-#define MAX_ADC_AVG 4
-
 uint8_t adc1_read = 0;
 
 #define SET_ADC1_READ(x) adc1_read = (x)
@@ -204,19 +208,20 @@ ISR(TIMER1_OVF_vect)
   //sei();
   if (adc1_read != 0)
   {
+    ADMUX = (avgs == (OVERSAMPLING_CLOCKS-1)) ? ((1 << REFS0) | (1 << MUX0)) : (1 << REFS0);
     if (avgs == 0) 
       adc_sample_1 = adc_sample;
     else
       totaladc += adc_sample;
-    ADMUX = (avgs == 2) ? ((1 << REFS0) | 0x01) : (1 << REFS0);
   } else
   {
-    totaladc += adc_sample;
     ADMUX = (1 << REFS0);
+    totaladc += adc_sample;
   }
-  if ((++avgs) >= MAX_ADC_AVG)
+  ADCSRA = (1 << ADEN) | (1 << ADPS1) | (1 << ADPS0) | (1 << ADSC);  
+  if ((++avgs) >= OVERSAMPLING_CLOCKS)
   {
-    dsp_interrupt_sample(totaladc >> 2);
+    dsp_interrupt_sample(totaladc / OVERSAMPLING_CLOCKS);
     dsp_dispatch_interrupt(current_protocol);
     totaladc = 0;
     avgs = 0;    
@@ -893,9 +898,6 @@ void configuration(void)
 const char keying_mode[] PROGMEM = "Keying Mode";
 const char keying_exit[] PROGMEM = "Keying Exit";
 
-#define KEYDOWN_SAMPLE_THRESHOLD 200
-#define KEY_IAMBIC_AGREEMENT 8
-
 void key_practice(uint8_t st)
 {
    if (!rc.cw_practice)
@@ -997,7 +999,7 @@ void key_mode(void)
         
         key_practice(0);
         tone_off();
-        delayidle(pause_len);
+        delayidle(pause_len - (2*KEY_IAMBIC_AGREEMENT));
       }
     } else
     {
