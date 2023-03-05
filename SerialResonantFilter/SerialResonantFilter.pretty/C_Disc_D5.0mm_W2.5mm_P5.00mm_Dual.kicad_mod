@@ -7,7 +7,7 @@
   (property "Sheetname" "")
   (attr through_hole)
   (fp_text reference "C1" (at 2.54 0 90) (layer "F.SilkS")
-    (effects (font (size 0.5 0.5) (thickness 0.125)))
+    (effects (font (size 1 1) (thickness 0.15)))
     (tstamp e1dbfd20-16bc-46ae-a886-dab604652ab7)
   )
   (fp_text value "C1" (at 2.54 0 90) (layer "F.Fab")
