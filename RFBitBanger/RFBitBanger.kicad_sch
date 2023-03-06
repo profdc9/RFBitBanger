@@ -6973,7 +6973,7 @@
       (reference "C25") (unit 1) (value "100 nF") (footprint "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061599ded"
-      (reference "C26") (unit 1) (value "10 nF") (footprint "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm")
+      (reference "C26") (unit 1) (value "10 nF") (footprint "RFBitBanger:C_Disc_D5.0mm_W2.5mm_P5.00mm_Dual")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061ba708f"
       (reference "C27") (unit 1) (value "100 nF") (footprint "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm")
@@ -6982,7 +6982,7 @@
       (reference "C30") (unit 1) (value "10 nF") (footprint "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061bd962e"
-      (reference "C32") (unit 1) (value "33 pF") (footprint "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm")
+      (reference "C32") (unit 1) (value "33 pF") (footprint "RFBitBanger:C_Disc_D5.0mm_W2.5mm_P5.00mm_Dual")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-0000615ae388"
       (reference "C33") (unit 1) (value "10 nF") (footprint "Capacitors_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm")
