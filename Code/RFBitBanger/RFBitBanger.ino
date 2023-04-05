@@ -960,6 +960,7 @@ void key_mode(void)
       } while (rep < KEY_IAMBIC_AGREEMENT);        
       if (dit && dah)
       {
+        count_states = 1;
         if (current_state == 0) 
           symbol = 2;
         else 
@@ -967,16 +968,19 @@ void key_mode(void)
         current_state = symbol;   
       } else if (dah)
       {
+        count_states = 0;
         current_state = symbol = 2;
       } else if (dit)
       {
+        count_states = 0;
         current_state = symbol = 1;
       } else
       {
         if (current_state != 0)
         {
-          symbol = (rc.cw_iambic_type) ? (3 - current_state) : 0;
+          symbol = (rc.cw_iambic_type) && (count_states != 0) ? (3 - current_state) : 0;
           current_state = 0;
+          count_states = 0;
         } 
       }
       if (symbol != 0)
