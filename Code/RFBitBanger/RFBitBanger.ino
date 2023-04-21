@@ -369,7 +369,7 @@ void write_char_newline(const char *c)
 void write_char_serial(char ch)
 {
   uint16_t current_millis = millis();
-  if (((current_millis - last_millis_ch) > 8000) || (chno > 75))
+  if (((current_millis - last_millis_ch) > 8000) || ((chno > 65) && (ch == ' ')) || (chno > 75))
     write_char_newline(NULL);
   last_millis_ch = current_millis;
   Serial.print(ch);
@@ -412,7 +412,7 @@ void setup() {
   setup_timers();
   scroll_readout_initialize(&srd_buf);
   PSkey.begin();
-  Serial.begin(9600);
+  Serial.begin(2400);
   pinMode(PTT_PIN,INPUT);
   pinMode(MIC_PIN,INPUT);
   pinMode(TRANSMIT_PIN,OUTPUT);
