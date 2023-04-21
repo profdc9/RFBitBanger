@@ -43,7 +43,7 @@
 #define TIMER1_COUNT_MAX (PROCESSOR_CLOCK_FREQ / TIMER1_INTERRUPT_FREQ)
 #define KEYDOWN_SAMPLE_THRESHOLD 100
 #define KEY_IAMBIC_AGREEMENT 15
-
+#define WRITE_CHAR_SERIAL_RETURN_DELAY 13000
 
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
 si5351simple si5351(8,25000000u);
@@ -369,7 +369,7 @@ void write_char_newline(const char *c)
 void write_char_serial(char ch)
 {
   uint16_t current_millis = millis();
-  if (((current_millis - last_millis_ch) > 8000) || ((chno > 65) && (ch == ' ')) || (chno > 75))
+  if (((current_millis - last_millis_ch) > WRITE_CHAR_SERIAL_RETURN_DELAY) || ((chno > 65) && (ch == ' ')) || (chno > 75))
     write_char_newline(NULL);
   last_millis_ch = current_millis;
   Serial.print(ch);
