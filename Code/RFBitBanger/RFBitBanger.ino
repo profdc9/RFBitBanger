@@ -355,12 +355,35 @@ void set_frequency_both(uint32_t freq)
    si5351.set_registers(0, &s_regs, 0, &m_regs);
 }
 
+static uint8_t chno = 0;
+static uint16_t last_millis_ch = 0;
+
+void write_char_newline(const char *c)
+{
+  Serial.print("\r\n");
+  Serial.print(c);
+}
+
+void write_char_serial(char ch)
+{
+  uint16_t current_millis = millis();
+  if (((current_millis - last_millis_ch) > 8000) || (chno > 75))
+  {
+    write_char_newline(NULL);
+    chno = 0;
+  }
+  last_millis_ch = current_millis;
+  Serial.print(ch);
+  chno++;
+}
+
 void received_character(uint8_t ch)
 {
   if (ch == '\b')
      scroll_readout_back_character(&srd_buf,' ');
   else if ((ch >= ' ') && (ch <= '~'))
      scroll_readout_add_character(&srd_buf, ch);
+  write_char_serial((char)ch);
 }
 
 }
@@ -390,7 +413,6 @@ void setup() {
   setup_timers();
   scroll_readout_initialize(&srd_buf);
   PSkey.begin();
-  // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(PTT_PIN,INPUT);
   pinMode(MIC_PIN,INPUT);
@@ -661,11 +683,14 @@ void transmit_mode_callback(dsp_txmit_message_state *dtms)
   scroll_alpha_redraw(&sad_buf);
   if (abort_button_enter())
     dtms->aborted = 1;
+  write_char_serial((char)sad_buf.buffer[dtms->current_symbol]);
 }
 
 
 void transmit_mode(uint8_t selected)
 {
+  menu_str mn = { txmenu, 0, 0, 8, 0 };
+  
   if (!check_band_warning()) return;
 
   sad_buf.position = (selected == 1) ? (sad_buf.numchars-1) : 0;
@@ -680,8 +705,8 @@ void transmit_mode(uint8_t selected)
     }
     if (sad_buf.entered)
     {
+      mn.item = 1;
       scroll_alpha_clear(&sad_buf);
-      menu_str mn = { txmenu, 0, 0, 8, 0 };
       do_show_menu_item(&mn);
       uint8_t selected;
       do
@@ -694,10 +719,12 @@ void transmit_mode(uint8_t selected)
         uint8_t msg_len = transmit_message_length();
         if (msg_len > 0)
         {
+          write_char_newline("tx:");
           dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
+          write_char_newline("rx:");
           set_frequency_receive();
-          break;
         }
+        mn.item = 0;
       } else if (mn.item == 2)
       {
         /*quit*/

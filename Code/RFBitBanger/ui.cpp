@@ -93,6 +93,13 @@ void lcdPrintFlashSpaces(uint8_t col, uint8_t row, const char *str, uint8_t len)
 
 static uint8_t horiz_keys = 0;
 
+uint8_t ui_getkey()
+{
+  if (Serial.available())
+    return Serial.read();
+  return PSkey.getkey();
+}
+
 void set_horiz_menu_keys(uint8_t horiz)
 {
   horiz_keys = horiz;
@@ -166,7 +173,7 @@ void select_item(menu_str *menu, uint8_t item)
 
 uint8_t do_menu(menu_str *menu)
 {
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
   idle_task();
   if (button_left(key))
   {
@@ -232,20 +239,20 @@ uint8_t abort_button(void)
 
 uint8_t abort_button_enter(void)
 {
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
   return ((key == 0x0D) ||(key == 27) ||  lcd.readUnBounced(4));
 }
 
 uint8_t abort_button_left(void)
 {
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
   if ((key == 0x0D) || lcd.readUnBounced(4)) return 1;
   return ((key == PS2KEY_LEFT) || lcd.readUnBounced(2));
 }
 
 uint8_t abort_button_right(void)
 {
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
   if ((key == 0x0D) || lcd.readUnBounced(4)) return 1;
   return ((key == PS2KEY_RIGHT) || lcd.readUnBounced(3));
 }
@@ -269,7 +276,7 @@ void scroll_number_redraw(scroll_number_dat *snd)
 void scroll_number_key(scroll_number_dat *snd)
 {
   uint8_t redraw = 1;
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
 
   lcd.setCursor(snd->col + snd->position + ((snd->decs != 0) && ((snd->position + snd->decs) >= snd->digits)), snd->row);
   idle_task();
@@ -379,7 +386,7 @@ uint8_t scroll_alpha_find_key(scroll_alpha_dat *sad, uint8_t key)
 void scroll_alpha_key(scroll_alpha_dat *sad)
 {
   uint8_t redraw = 1;
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
 
   lcd.setCursor(sad->col + sad->cursorpos, sad->row);
   idle_task();
@@ -480,7 +487,7 @@ bool show_lr(uint8_t row, const char *message, const char *message_2)
       lcdPrintFlashSpaces(0, row, cur_msg ? (message_2 != NULL ? message_2 : message) : message, 16);
       cur_msg = !cur_msg;
     }
-    uint8_t key = PSkey.getkey();
+    uint8_t key = ui_getkey();
     idle_task();
     if (button_left(key))
     {
@@ -538,7 +545,7 @@ void scroll_readout_display(scroll_readout_dat *srd)
 
 void scroll_readout_key(scroll_readout_dat *srd)
 {
-  uint8_t key = PSkey.getkey();
+  uint8_t key = ui_getkey();
 
   lcd.setCursor(srd->col, srd->row);
   idle_task();
