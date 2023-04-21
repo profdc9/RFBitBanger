@@ -363,6 +363,7 @@ void write_char_newline(const char *c)
 {
   Serial.print("\r\n");
   Serial.print(c);
+  chno = 0;
 }
 
 void write_char_serial(char ch)
