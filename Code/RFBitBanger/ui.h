@@ -32,6 +32,7 @@ typedef struct _menu_str
   uint8_t row;
   uint8_t width;
   uint8_t item;
+  uint8_t itemesc;
 } menu_str;
 
 

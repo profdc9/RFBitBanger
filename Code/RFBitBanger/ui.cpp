@@ -135,6 +135,11 @@ uint8_t button_enter(uint8_t key)
   return (lcd.getButtonPressed(4) || (key == 0x0D));
 }
 
+uint8_t button_esc(uint8_t key)
+{
+  return ((key == ' ') || (key == PS2KEY_ESC));
+}
+
 uint8_t button_left(uint8_t key)
 {
   return horiz_keys ? button_down_actual(key) : button_left_actual(key);
@@ -186,6 +191,11 @@ uint8_t do_menu(menu_str *menu)
   } else if (button_enter(key))
   {
     lcd.clearButtons();
+    return 3;
+  } else if (button_esc(key))
+  {
+    lcd.clearButtons();
+    menu->item = menu->itemesc;
     return 3;
   } else if ((button_down(key)) && (menu->item > 0))
   {

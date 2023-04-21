@@ -58,6 +58,7 @@ typedef struct _radio_configuration
   uint8_t   cw_iambic;
   uint8_t   cw_iambic_type;
   uint8_t   cw_iambic_switch;
+  uint8_t   erase_on_send;
 } radio_configuration;
 
 extern radio_configuration rc;

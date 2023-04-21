@@ -98,7 +98,8 @@ static const struct scancodetable scancodes[] PROGMEM =
    { 0x75, PS2KEY_UP, 0, 0 },
    { 0x6B, PS2KEY_LEFT, 0, 0 },
    { 0x72, PS2KEY_DOWN, 0, 0 },
-   { 0x74, PS2KEY_RIGHT, 0, 0 } };
+   { 0x74, PS2KEY_RIGHT, 0, 0 },
+   { 0x76, PS2KEY_ESC, 0, 0 } };
 
 #define KB_LEFTSHIFT 0x12
 #define KB_RIGHTSHIFT 0x59

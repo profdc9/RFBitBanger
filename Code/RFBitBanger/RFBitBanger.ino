@@ -74,6 +74,7 @@ const radio_configuration PROGMEM default_rc =
   0,   /* cw_iambic */
   0,   /* cw_iambic_type */
   0,   /* cw_iambic_switch */
+  0,   /* erase_on_send */
 };
 
 bool check_band_warning(void);
@@ -368,10 +369,7 @@ void write_char_serial(char ch)
 {
   uint16_t current_millis = millis();
   if (((current_millis - last_millis_ch) > 8000) || (chno > 75))
-  {
     write_char_newline(NULL);
-    chno = 0;
-  }
   last_millis_ch = current_millis;
   Serial.print(ch);
   chno++;
@@ -510,6 +508,7 @@ const char keymodetitle[] PROGMEM = "Key";
 
 const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle,scanfasttitle,scanslowtitle,tranmodetitle,keymodetitle,extctrlmode,confmodetitle,NULL };
 
+const char back_title[] PROGMEM = "Back";
 const char cw_title[] PROGMEM = "CW";
 const char rtty_title[] PROGMEM = "RTTY";
 const char rtty_rev_title[] PROGMEM = "RTTYREV";
@@ -521,7 +520,7 @@ const char scamp_fsk_slow_title[] PROGMEM = "SCFSKSLW";
 const char scamp_ook_slow_title[] PROGMEM = "SCOOKSLW";
 #endif
 
-const char *const protocolmenu[] PROGMEM = {cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,
+const char *const protocolmenu[] PROGMEM = {back_title,cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,
 #ifdef SCAMP_VERY_SLOW_MODES
     scamp_fsk_slow_title,scamp_ook_slow_title,
 #endif
@@ -635,8 +634,8 @@ const char mode_set[] PROGMEM = "Mode Set";
 void set_transmission_mode(void)
 {  
   uint8_t selected;
-  menu_str mn = { protocolmenu, 0, 0, 8, 0 };
-  mn.item = current_protocol-1;
+  menu_str mn = { protocolmenu, 0, 0, 8, 0, 0 };
+  mn.item = current_protocol;
   do_show_menu_item(&mn);
   set_horiz_menu_keys(1);
   do
@@ -645,10 +644,9 @@ void set_transmission_mode(void)
     selected = do_menu(&mn);
   } while (!selected);
   set_horiz_menu_keys(0);
-  selected = mn.item+1;
-  //if (selected != current_protocol)
+  if (mn.item > 0)
   {
-    set_protocol(mn.item+1);
+    set_protocol(mn.item);
     temporary_message(mode_set);
   }
 }
@@ -689,7 +687,7 @@ void transmit_mode_callback(dsp_txmit_message_state *dtms)
 
 void transmit_mode(uint8_t selected)
 {
-  menu_str mn = { txmenu, 0, 0, 8, 0 };
+  menu_str mn = { txmenu, 0, 0, 8, 0, 2 };
   
   if (!check_band_warning()) return;
 
@@ -720,7 +718,12 @@ void transmit_mode(uint8_t selected)
         if (msg_len > 0)
         {
           write_char_newline("tx:");
-          dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
+          uint8_t aborted = dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
+          if ((rc.erase_on_send) && (!aborted))
+          {
+            sad_buf.buffer[0] = 0;
+            sad_buf.position = 0;
+          }  
           write_char_newline("rx:");
           set_frequency_receive();
         }
@@ -787,6 +790,7 @@ const char rit_shift_dir[] PROGMEM = "RIT Dir 0Up,1Dwn";
 const char iambic_mode[] PROGMEM = "0=StKey,1=Iambic";
 const char iambic_mode_type[] PROGMEM = "0=IambA,1=IambB";
 const char iambic_mode_switch[] PROGMEM = "Iambic 0=Nm,1Rev";
+const char erase_on_send[] PROGMEM = "Erase On Send";
 
 const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
         wide_mode, cw_wpm, scamp_rs, scamp_re,
@@ -795,7 +799,7 @@ const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title,
         ext_fast_mode, ext_lsb,
         iambic_mode, iambic_mode_type, iambic_mode_switch,
         cw_practice, cw_spaces_mark_timing,
-        cw_smooth, cw_sticky, band_warning_off, fr_calib,
+        cw_smooth, cw_sticky, band_warning_off, erase_on_send, fr_calib,
         NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
@@ -819,6 +823,7 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.cw_smooth,                  1, 1, 0, 4 },   /* CW SMOOTHING FACTOR */
   { &rc.cw_sticky_interval_length,  1, 1, 0, 9 },   /* CW STICKY INTERVAL LEnGTH */
   { &rc.band_warning_off,           1, 1, 0, 1 },   /* BAND WARNING OFF */
+  { &rc.erase_on_send,              1, 1, 0, 1 },   /* ERASE ON SEND */
   { &rc.frequency_calibration,      4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
  };
 
@@ -856,7 +861,7 @@ void configuration(void)
 {
   lcd.clear();
   uint8_t selected;
-  menu_str mn = { confmenu, 0, 0, 16, 0 };
+  menu_str mn = { confmenu, 0, 0, 16, 0, 0 };
   do_show_menu_item(&mn);
   for (;;)
   {
@@ -1240,7 +1245,7 @@ bool check_band_warning(void)
 void select_command_mode()
 {
   uint8_t selected;
-  menu_str mn = { mainmenu, 9, 0, 8, 0 };
+  menu_str mn = { mainmenu, 9, 0, 8, 0, 2 };
   mn.item = current_item;
   scroll_redraw_snd();
   do_show_menu_item(&mn);

@@ -237,6 +237,7 @@ uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *messag
 
   if (df.dxr != NULL)
     df.dxr(&dtms,ddc);
+  return (dtms.aborted);
 }
 
 uint16_t dsp_get_signal_magnitude(void)
