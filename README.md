@@ -28,3 +28,6 @@ The RFBitBanger folder is the schematic and PCB for the radio itself.  The Match
 This design was started after a discuss on the [Collapse OS](http://collapseos.org) mailing list about hardware is maintainable even without access to parts suppliers, for example Digikey/Mouser, etc. or even Amazon.  Projects such as [civboot](https://github.com/civboot/civboot) seek to provide a means of resurrecting technology and infrastructure after a catastrophic event.  This design is to provide a means of communication if other forms of communications become unavailable, especially in rural areas or urban environments with compromised infrastructure.
 
 Any comments to profdc9 AT gmail.com.
+
+![RFBitBanger](pics/RFBitBanger.jpg)
+![RFBitBangerNano](pics/RFBitBangerNano.jpg)
