@@ -33,9 +33,9 @@
   (fp_line (start 5 -1.25) (end 0 -1.25) (layer "F.Fab") (width 0.1) (tstamp 50f664b9-c543-4f83-986d-376855c00507))
   (fp_line (start 0 -1.25) (end 0 1.25) (layer "F.Fab") (width 0.1) (tstamp 84b2615e-e977-48a0-867e-0eb86bcf5f19))
   (pad "1" thru_hole circle (at 0 0) (size 1.6 1.6) (drill 0.8) (layers *.Cu *.Mask) (tstamp ce62dd44-b7ec-4da9-b39f-21edcfedeb09))
-  (pad "1" smd rect (at 1.4 0) (size 1.524 1.524) (layers "F.Cu" "F.Paste" "F.Mask") (tstamp d793d00e-40d9-4d54-8743-2d993d2a2a54))
+  (pad "1" smd roundrect (at 0.8 0) (size 1.524 1.524) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (tstamp d793d00e-40d9-4d54-8743-2d993d2a2a54))
   (pad "2" thru_hole circle (at 5 0) (size 1.6 1.6) (drill 0.8) (layers *.Cu *.Mask) (tstamp 1ccf91df-e653-4523-8a91-0da66601c54c))
-  (pad "2" smd rect (at 3.6 0) (size 1.524 1.524) (layers "F.Cu" "F.Paste" "F.Mask") (tstamp d7784f22-6e9e-4145-84bf-ada641bc2e7e))
+  (pad "2" smd roundrect (at 4.2 0) (size 1.524 1.524) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (tstamp d7784f22-6e9e-4145-84bf-ada641bc2e7e))
   (model "${KISYS3DMOD}/Capacitors_THT.3dshapes/C_Disc_D5.0mm_W2.5mm_P5.00mm.wrl"
     (offset (xyz 0 0 0))
     (scale (xyz 1 1 1))

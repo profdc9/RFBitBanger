@@ -1,12 +1,12 @@
 %TF.GenerationSoftware,KiCad,Pcbnew,(6.0.11)*%
-%TF.CreationDate,2023-03-05T11:31:22-06:00*%
+%TF.CreationDate,2023-05-06T11:24:47-05:00*%
 %TF.ProjectId,SerialResonantFilter,53657269-616c-4526-9573-6f6e616e7446,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Copper,L2,Bot*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW (6.0.11)) date 2023-03-05 11:31:22*
+G04 Created by KiCad (PCBNEW (6.0.11)) date 2023-05-06 11:24:47*
 %MOMM*%
 %LPD*%
 G01*
@@ -46,12 +46,12 @@ X129420000Y-94720000D03*
 %TO.N,Net-(C2-Pad2)*%
 X124420000Y-94720000D03*
 %TD*%
-%TO.P,C4,1*%
-%TO.N,GND*%
-X121670000Y-90460000D03*
 %TO.P,C4,2*%
 %TO.N,Net-(C2-Pad2)*%
 X121670000Y-95460000D03*
+%TO.P,C4,1*%
+%TO.N,GND*%
+X121670000Y-90460000D03*
 %TD*%
 %TO.P,C5,1*%
 %TO.N,Net-(C2-Pad2)*%
@@ -67,12 +67,12 @@ X147701000Y-107442000D03*
 %TO.N,Net-(C5-Pad2)*%
 X147701000Y-112442000D03*
 %TD*%
-%TO.P,C7,2*%
-%TO.N,Net-(C5-Pad2)*%
-X134806101Y-106552463D03*
 %TO.P,C7,1*%
 %TO.N,Net-(C2-Pad2)*%
 X133096000Y-101854000D03*
+%TO.P,C7,2*%
+%TO.N,Net-(C5-Pad2)*%
+X134806101Y-106552463D03*
 %TD*%
 D11*
 %TO.P,L2,1*%
