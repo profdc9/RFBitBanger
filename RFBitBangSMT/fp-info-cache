@@ -1,4 +1,4 @@
-20946833022088855
+20963606010471563
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -13,27 +13,6 @@ audio belton reverb
 0
 7
 7
-BandPassFilter
-Amphenol_RF_SMA_132289
-http://www.amphenolrf.com/132289.html
-SMA
-0
-5
-2
-BandPassFilter
-C_Disc_D5.0mm_W2.5mm_P5.00mm_Dual
-C, Disc series, Radial, pin pitch=5.00mm, , diameter*width=5*2.5mm^2, Capacitor, http://cdn-reichelt.de/documents/datenblatt/B300/DS_KERKO_TC.pdf
-C Disc series Radial pin pitch 5.00mm  diameter 5mm width 2.5mm Capacitor
-0
-4
-2
-BandPassFilter
-L_Toroid_Horizontal_D12.7mm_Compact
-L_Toroid, Horizontal series, Radial, pin pitch=20.00mm, , diameter=12.7mm,Compact
-L_Toroid Horizontal series Radial pin pitch 20.00mm  diameter 12.7mm Diameter14-5mm Amidon-T50
-0
-2
-2
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (https://www.bulgin.com/products/pub/media/bulgin/data/Battery_holders.pdf)
@@ -77468,6 +77447,97 @@ Skyworks
 0
 7
 7
+RFBitBangSMT
+C_Disc_D5.0mm_W2.5mm_P5.00mm_Dual
+C, Disc series, Radial, pin pitch=5.00mm, , diameter*width=5*2.5mm^2, Capacitor, http://cdn-reichelt.de/documents/datenblatt/B300/DS_KERKO_TC.pdf
+C Disc series Radial pin pitch 5.00mm  diameter 5mm width 2.5mm Capacitor
+0
+4
+2
+RFBitBangSMT
+Connector_Mini-DIN_Female_6Pin_2rows
+A footprint for the generic 6 pin Mini-DIN through hole connector with shell.
+mini din 6pin connector socket
+0
+9
+7
+RFBitBangSMT
+DoubleWindingTransformer
+
+
+0
+4
+4
+RFBitBangSMT
+G2VRelay
+
+
+0
+8
+8
+RFBitBangSMT
+PJ-3240-35mm-stereo
+
+
+0
+5
+5
+RFBitBangSMT
+Potentiometer_Big_Small_Combined
+Potentiometer, horizontally mounted, Omeg PC16PU, Omeg PC16PU, Omeg PC16PU, Vishay/Spectrol 248GJ/249GJ Single, Vishay/Spectrol 248GJ/249GJ Single, Vishay/Spectrol 248GJ/249GJ Single, Vishay/Spectrol 248GH/249GH Single, Vishay/Spectrol 148/149 Single, Vishay/Spectrol 148/149 Single, Vishay/Spectrol 148/149 Single, Vishay/Spectrol 148A/149A Single with mounting plates, Vishay/Spectrol 148/149 Double, Vishay/Spectrol 148A/149A Double with mounting plates, Piher PC-16 Single, Piher PC-16 Single, Piher PC-16 Single, Piher PC-16SV Single, Piher PC-16 Double, Piher PC-16 Triple, Piher T16H Single, Piher T16L Single, Piher T16H Double, Alps RK163 Single, Alps RK163 Double, Alps RK097 Single, Alps RK097 Double, Bourns PTV09A-2 Single with mounting sleve Single, Bourns PTV09A-1 with mounting sleve Single, Bourns PRS11S Single, Alps RK09K Single with mounting sleve Single, Alps RK09K with mounting sleve Single, http://www.alps.com/prod/info/E/HTML/Potentiometer/RotaryPotentiometers/RK09K/RK09D1130C1B.html
+Potentiometer horizontal  Omeg PC16PU  Omeg PC16PU  Omeg PC16PU  Vishay/Spectrol 248GJ/249GJ Single  Vishay/Spectrol 248GJ/249GJ Single  Vishay/Spectrol 248GJ/249GJ Single  Vishay/Spectrol 248GH/249GH Single  Vishay/Spectrol 148/149 Single  Vishay/Spectrol 148/149 Single  Vishay/Spectrol 148/149 Single  Vishay/Spectrol 148A/149A Single with mounting plates  Vishay/Spectrol 148/149 Double  Vishay/Spectrol 148A/149A Double with mounting plates  Piher PC-16 Single  Piher PC-16 Single  Piher PC-16 Single  Piher PC-16SV Single  Piher PC-16 Double  Piher PC-16 Triple  Piher T16H Single  Piher T16L Single  Piher T16H Double  Alps RK163 Single  Alps RK163 Double  Alps RK097 Single  Alps RK097 Double  Bourns PTV09A-2 Single with mounting sleve Single  Bourns PTV09A-1 with mounting sleve Single  Bourns PRS11S Single  Alps RK09K Single with mounting sleve Single  Alps RK09K with mounting sleve Single
+0
+6
+3
+RFBitBangSMT
+SamplingTransformer
+
+
+0
+4
+4
+RFBitBangSMT
+SimpleHole
+
+
+0
+0
+0
+RFBitBangSMT
+SmallVerticalToroid
+
+
+0
+2
+2
+RFBitBangSMT
+TripleWindingTransformer
+
+
+0
+6
+6
+RFBitBangSMT
+TripleWindingTransformerRef
+
+
+0
+6
+6
+RFBitBangSMT
+bnc_90_1-1337543-0
+BNC connector, Tyco 1-1337543-0
+
+0
+2
+2
+RFBitBangSMT
+bnc_90_1-1337543-0_pad_combo
+BNC connector, Tyco 1-1337543-0
+
+0
+4
+2
 RF_Antenna
 Abracon_APAES868R8060C16-T
 Abracon RHCP ceramic patch antenna 854-882Mhz, 5dBi
