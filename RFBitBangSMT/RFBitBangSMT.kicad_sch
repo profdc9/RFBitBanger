@@ -5098,7 +5098,7 @@
     (property "Datasheet" "" (id 3) (at 226.06 97.155 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C5157706" (id 4) (at 220.98 102.235 0)
+    (property "LCSC" "C383071" (id 4) (at 220.98 102.235 0)
       (effects (font (size 1.524 1.524)) hide)
     )
     (pin "1" (uuid be1c1617-72da-4413-ad29-75c0e8204e22))
@@ -8277,7 +8277,7 @@
       (reference "C31") (unit 1) (value "4.7 uF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061bd962e"
-      (reference "C32") (unit 1) (value "33 pF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
+      (reference "C32") (unit 1) (value "NC") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-0000615ae388"
       (reference "C33") (unit 1) (value "10 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
