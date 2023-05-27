@@ -756,7 +756,7 @@ void receive_scroll_mode(void)
 }
 
 
-uint8_t current_item = 2;
+uint8_t current_item = 6;
 
 typedef struct _configuration_entry
 {
@@ -931,16 +931,6 @@ void configuration(void)
 const char keying_mode[] PROGMEM = "Keying Mode";
 const char keying_exit[] PROGMEM = "Keying Exit";
 
-void key_practice(uint8_t st)
-{
-   if (!rc.cw_practice)
-   {
-     set_clock_onoff_mask(0x01 + st);
-     muteaudio_set(st);
-     transmit_set(st);
-   }
-}
-
 typedef struct _key_check
 {
   uint8_t last_check_time;
@@ -979,7 +969,8 @@ void key_check_update(struct _key_check *kc)
     {
       kc->dit_count = 0;
       kc->dit = read_dit;
-      if (read_dit) kc->dit_latch = 1;
+      if (read_dit) 
+        kc->dit_latch = 1;
       kc->dit_changed = 1;
     }
   }
@@ -993,18 +984,27 @@ void key_check_update(struct _key_check *kc)
     {
       kc->dah_count = 0;
       kc->dah = read_dah;
-      if (read_dah) kc->dah_latch = 1;  
+      if (read_dah) 
+        kc->dah_latch = 1;  
       kc->dah_changed = 1;
     }
   }
 }
 
-void key_insert_timing(uint16_t *last_tick, uint8_t is_space)
+void key_practice(uint8_t st, uint16_t *last_tick)
 {
-  uint16_t current_tick = ps.cs.total_ticks;
-  uint16_t elapsed_ticks = current_tick - *last_tick; 
-  *last_tick = current_tick;
-  cwmod_insert_into_timing_fifo_noint(elapsed_ticks | (((uint16_t)is_space) << 8));
+  if (rc.cw_practice)
+  {
+    uint16_t current_tick = ps.cs.total_ticks;
+    uint16_t elapsed_ticks = current_tick - *last_tick; 
+    *last_tick = current_tick;
+    cwmod_insert_into_timing_fifo_noint(elapsed_ticks | (st ? 0x8000 : 0x0000));
+  } else
+  {
+    set_clock_onoff_mask(0x01 + st);
+    muteaudio_set(st);
+    transmit_set(st);
+  }
 }
 
 void key_mode(void)
@@ -1053,44 +1053,31 @@ void key_mode(void)
           {
             iambic_state++;
             iambic_stop = current_time + pause_len;
-            key_practice(0);
-            key_insert_timing(&last_tick, 0x00);
+            key_practice(0, &last_tick);
             tone_off();            
           } else
+          {
             iambic_state = 0;
+            if (iambic_symbol == 0)
+                kc.dit = kc.dit_count = kc.dit_latch = 0;
+            else
+                kc.dah = kc.dah_count = kc.dah_latch = 0;
+          }
         }        
       } else
       {
-        uint8_t start_symbol = 0;
-        if ((kc.dit) || (kc.dah))
+        if ((kc.dit_latch) || (kc.dah_latch))
         {
-          iambic_symbol = kc.dit && kc.dah ? (1-iambic_symbol) : kc.dah;
-          start_symbol = 1;
-        } else if ((kc.dit_latch) || (kc.dah_latch))
-        {
-          start_symbol = 1;
-          if (kc.dit_latch && kc.dah_latch)
-            iambic_symbol = 1-iambic_symbol;
-          else if (kc.dit_latch && (iambic_symbol != 0))
-            iambic_symbol = 0;
-          else if (kc.dah_latch && (iambic_symbol == 0))
-            iambic_symbol = 1;
-          else start_symbol = 0;
+          if ((rc.cw_iambic_type != 0) || 
+              ((rc.cw_iambic_type == 0) && ((kc.dit_latch) || (kc.dah))))
+          {
+            iambic_symbol = kc.dah_latch ? 1 : 0;
+            iambic_state = 1;
+            iambic_stop = millis() + pause_len*(iambic_symbol*2+1);
+            key_practice(1, &last_tick);
+            if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);                    
+          }
         }
-        if (start_symbol)
-        {
-          iambic_state = 1;
-          iambic_stop = millis() + pause_len*(iambic_symbol*2+1);
-          key_practice(1);
-          key_insert_timing(&last_tick, 0x80);
-          if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);                    
-        }
-        if (rc.cw_iambic_type)
-        {
-          kc.dit_latch = kc.dit;
-          kc.dah_latch = kc.dah;
-        } else
-          kc.dit_latch = kc.dah_latch = 0;
       }
     } else
     {
@@ -1099,20 +1086,18 @@ void key_mode(void)
         kc.dit_changed = 0;
         if (kc.dit)
         {
-          key_practice(1);
-          key_insert_timing(&last_tick, 0x80);
+          key_practice(1, &last_tick);
           if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);
         } else
         {
-          key_practice(0);
-          key_insert_timing(&last_tick, 0x00);
+          key_practice(0, &last_tick);
           tone_off();
         }
       }
     }    
   }
   SET_ADC1_READ(0);
-  key_practice(0);
+  key_practice(0, &last_tick);
   set_frequency_receive();
   temporary_message(keying_exit);
   redraw_readout();
