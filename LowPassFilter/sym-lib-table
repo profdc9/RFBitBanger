@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "LowPassFilter-rescue")(type "Legacy")(uri "${KIPRJMOD}/LowPassFilter-rescue.lib")(options "")(descr ""))
+  (lib (name "doublewindingtransformer")(type "Legacy")(uri "${KIPRJMOD}/doublewindingtransformer.lib")(options "")(descr ""))
+)

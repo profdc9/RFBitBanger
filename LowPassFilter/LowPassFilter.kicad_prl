@@ -1,6 +1,6 @@
 {
   "board": {
-    "active_layer": 0,
+    "active_layer": 44,
     "active_layer_preset": "",
     "auto_track_width": true,
     "hidden_nets": [],
@@ -65,10 +65,10 @@
       36
     ],
     "visible_layers": "fffffff_ffffffff",
-    "zone_display_mode": 1
+    "zone_display_mode": 0
   },
   "meta": {
-    "filename": "RFBitBangSMT.kicad_prl",
+    "filename": "LowPassFilter.kicad_prl",
     "version": 3
   },
   "project": {
