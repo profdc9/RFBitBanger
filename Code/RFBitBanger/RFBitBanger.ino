@@ -936,11 +936,13 @@ typedef struct _key_check
   uint8_t last_check_time;
   
   uint8_t dit;
-  uint8_t dit_count;
+  uint8_t dit_pressed_count;
+  uint8_t dit_unpressed_count;
   uint8_t dit_changed;
   uint8_t dit_latch;
   uint8_t dah;
-  uint8_t dah_count;
+  uint8_t dah_pressed_count;
+  uint8_t dah_unpressed_count;
   uint8_t dah_changed;
   uint8_t dah_latch;
 } key_check;
@@ -953,42 +955,56 @@ void key_check_update(struct _key_check *kc)
 
   uint8_t read_dit = (lcd.readUnBounced(1)) || (!digitalRead(PTT_PIN));
   uint8_t read_dah = (adc_sample_1 < KEYDOWN_SAMPLE_THRESHOLD);
+
   if (rc.cw_iambic && rc.cw_iambic_switch)
   {
     uint8_t temp = read_dah;
     read_dah = read_dit;
     read_dit = temp;
   }
-  
-  if (read_dit == kc->dit)
-    kc->dit_count = 0;
-  else
+
+  if (read_dit)
   {
-    kc->dit_count++;
-    if (kc->dit_count >= KEY_IAMBIC_AGREEMENT)
+    kc->dit_unpressed_count = 0;
+    if ((++kc->dit_pressed_count) >= KEY_IAMBIC_AGREEMENT)
+    {    
+      if (!kc->dit) 
+        kc->dit_changed = 1;
+      kc->dit_latch = kc->dit = 1;
+      kc->dit_pressed_count = 0;
+    }
+  } else
+  {
+    kc->dit_pressed_count = 0;
+    if ((++kc->dit_unpressed_count) >= KEY_IAMBIC_AGREEMENT)
     {
-      kc->dit_count = 0;
-      kc->dit = read_dit;
-      if (read_dit) 
-        kc->dit_latch = 1;
-      kc->dit_changed = 1;
+      if (kc->dit)
+        kc->dit_changed = 1;
+      kc->dit_pressed_count = kc->dit = 0;
     }
   }
 
-  if (read_dah == kc->dah)
-    kc->dah_count = 0;
-  else
+  if (read_dah)
   {
-    kc->dah_count++;
-    if (kc->dah_count >= KEY_IAMBIC_AGREEMENT)
+    kc->dah_unpressed_count = 0;
+    if ((++kc->dah_pressed_count) >= KEY_IAMBIC_AGREEMENT)
     {
-      kc->dah_count = 0;
-      kc->dah = read_dah;
-      if (read_dah) 
-        kc->dah_latch = 1;  
-      kc->dah_changed = 1;
+      if (!kc->dah) 
+        kc->dah_changed = 1;
+      kc->dah_latch = kc->dah = 1;
+      kc->dah_pressed_count = 0;
+    }
+  } else
+  {
+    kc->dah_pressed_count = 0;
+    if ((++kc->dah_unpressed_count) >= KEY_IAMBIC_AGREEMENT)
+    {
+      if (kc->dah)
+        kc->dah_changed = 1;
+      kc->dah_pressed_count = kc->dah = 0;
     }
   }
+
 }
 
 void key_practice(uint8_t st, uint16_t *last_tick)
@@ -1006,6 +1022,14 @@ void key_practice(uint8_t st, uint16_t *last_tick)
     transmit_set(st);
   }
 }
+
+#define IAMBIC_STATE_WAIT 0
+#define IAMBIC_STATE_SOUND 1
+#define IAMBIC_STATE_PAUSE 2
+
+#define IAMBIC_SYMBOL_NONE 0
+#define IAMBIC_SYMBOL_DIT 1
+#define IAMBIC_SYMBOL_DAH 2
 
 void key_mode(void)
 {
@@ -1041,46 +1065,55 @@ void key_mode(void)
     idle_task();
     update_bars();
     update_readout();
-    key_check_update(&kc);
     if (rc.cw_iambic)
     {
-      if (iambic_state != 0)
+      if (iambic_state != IAMBIC_STATE_WAIT)
       {
         uint16_t current_time = millis();
-        if (((int16_t)(current_time - iambic_stop)) >= 0)
+        uint8_t end_interval = (((int16_t)(current_time - iambic_stop)) >= 0);
+        if (iambic_state == IAMBIC_STATE_SOUND)
         {
-          if (iambic_state == 1)
+          if (rc.cw_iambic_type != 0) /* is IAMBIC mode B? */
+            key_check_update(&kc);
+          if (end_interval)
           {
-            iambic_state++;
+            iambic_state = IAMBIC_STATE_PAUSE;
             iambic_stop = current_time + pause_len;
             key_practice(0, &last_tick);
-            tone_off();            
-          } else
-          {
-            iambic_state = 0;
-            if (iambic_symbol == 0)
-                kc.dit = kc.dit_count = kc.dit_latch = 0;
-            else
-                kc.dah = kc.dah_count = kc.dah_latch = 0;
+            tone_off();
           }
+        } else
+        {            
+          key_check_update(&kc);
+          if (end_interval)
+            iambic_state = IAMBIC_STATE_WAIT;
         }        
       } else
       {
+        key_check_update(&kc);
+        if (iambic_symbol != IAMBIC_SYMBOL_NONE)
+        {
+          if (iambic_symbol == IAMBIC_SYMBOL_DIT)
+            kc.dit_latch = 0;
+          else
+            kc.dah_latch = 0;
+          iambic_symbol = IAMBIC_SYMBOL_NONE;
+        }
         if ((kc.dit_latch) || (kc.dah_latch))
         {
-          if ((rc.cw_iambic_type != 0) || 
-              ((rc.cw_iambic_type == 0) && ((kc.dit_latch) || (kc.dah))))
           {
-            iambic_symbol = kc.dah_latch ? 1 : 0;
-            iambic_state = 1;
-            iambic_stop = millis() + pause_len*(iambic_symbol*2+1);
+            iambic_symbol = kc.dah_latch ? IAMBIC_SYMBOL_DAH : IAMBIC_SYMBOL_DIT;
+            iambic_state = IAMBIC_STATE_SOUND;
+            iambic_stop = millis() + pause_len*(iambic_symbol == IAMBIC_SYMBOL_DAH ? 3 : 1);
             key_practice(1, &last_tick);
             if (rc.sidetone_on) tone_on(sidetone_freq, sidetone_freq_2);                    
+            kc.dit_latch = kc.dah_latch = 0;
           }
         }
       }
     } else
     {
+      key_check_update(&kc);
       if (kc.dit_changed)
       {
         kc.dit_changed = 0;
