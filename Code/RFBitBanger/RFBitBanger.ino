@@ -415,6 +415,7 @@ void setup() {
   Serial.begin(2400);
   pinMode(PTT_PIN,INPUT);
   pinMode(MIC_PIN,INPUT);
+  pinMode(AUDIOFILT_PIN,INPUT);
   pinMode(TRANSMIT_PIN,OUTPUT);
   pinMode(BACKLIGHT_PIN,OUTPUT);
   pinMode(MUTEAUDIO_PIN,OUTPUT);
@@ -1075,7 +1076,7 @@ void key_mode(void)
         if (iambic_state == IAMBIC_STATE_SOUND)
         {
           if (rc.cw_iambic_type == 0) /* is IAMBIC mode A */
-            kc.dah_latch = 0;
+            kc.dit_latch = kc.dah_latch = 0;
           if (end_interval)
           {
             iambic_state = IAMBIC_STATE_PAUSE;
