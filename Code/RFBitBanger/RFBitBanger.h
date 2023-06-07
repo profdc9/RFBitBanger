@@ -36,6 +36,7 @@
 #define LCDB_DB6 7
 #define LCDB_DB7 8
 
+#define AUDIOFILT_PIN A0
 #define TRANSMIT_PIN 9
 #define BACKLIGHT_PIN 11
 #define MUTEAUDIO_PIN 4

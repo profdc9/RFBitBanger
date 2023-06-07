@@ -415,6 +415,7 @@ void setup() {
   Serial.begin(2400);
   pinMode(PTT_PIN,INPUT);
   pinMode(MIC_PIN,INPUT);
+  pinMode(AUDIOFILT_PIN,INPUT);
   pinMode(TRANSMIT_PIN,OUTPUT);
   pinMode(BACKLIGHT_PIN,OUTPUT);
   pinMode(MUTEAUDIO_PIN,OUTPUT);
@@ -756,7 +757,7 @@ void receive_scroll_mode(void)
 }
 
 
-uint8_t current_item = 6;
+uint8_t current_item = 2;
 
 typedef struct _configuration_entry
 {
@@ -822,7 +823,7 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.cw_practice,                1, 1, 0, 1 },   /* CW_PRACTICE */
   { &rc.cw_spaces_from_mark_timing, 1, 1, 0, 1 },   /* SPACES FROM MARK TIMING */
   { &rc.cw_smooth,                  1, 1, 0, 4 },   /* CW SMOOTHING FACTOR */
-  { &rc.cw_sticky_interval_length,  1, 1, 0, 9 },   /* CW STICKY INTERVAL LEnGTH */
+  { &rc.cw_sticky_interval_length,  1, 2, 0, 99 },   /* CW STICKY INTERVAL LEnGTH */
   { &rc.band_warning_off,           1, 1, 0, 1 },   /* BAND WARNING OFF */
   { &rc.erase_on_send,              1, 1, 0, 1 },   /* ERASE ON SEND */
   { &rc.frequency_calibration,      4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
@@ -1065,6 +1066,7 @@ void key_mode(void)
     idle_task();
     update_bars();
     update_readout();
+    key_check_update(&kc);
     if (rc.cw_iambic)
     {
       if (iambic_state != IAMBIC_STATE_WAIT)
@@ -1073,8 +1075,8 @@ void key_mode(void)
         uint8_t end_interval = (((int16_t)(current_time - iambic_stop)) >= 0);
         if (iambic_state == IAMBIC_STATE_SOUND)
         {
-          if (rc.cw_iambic_type != 0) /* is IAMBIC mode B? */
-            key_check_update(&kc);
+          if (rc.cw_iambic_type == 0) /* is IAMBIC mode A */
+            kc.dit_latch = kc.dah_latch = 0;
           if (end_interval)
           {
             iambic_state = IAMBIC_STATE_PAUSE;
@@ -1084,13 +1086,11 @@ void key_mode(void)
           }
         } else
         {            
-          key_check_update(&kc);
           if (end_interval)
             iambic_state = IAMBIC_STATE_WAIT;
         }        
       } else
       {
-        key_check_update(&kc);
         if (iambic_symbol != IAMBIC_SYMBOL_NONE)
         {
           if (iambic_symbol == IAMBIC_SYMBOL_DIT)
@@ -1113,7 +1113,6 @@ void key_mode(void)
       }
     } else
     {
-      key_check_update(&kc);
       if (kc.dit_changed)
       {
         kc.dit_changed = 0;
