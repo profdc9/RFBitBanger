@@ -145,6 +145,7 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
                                         ps.ss.fsk = 0;
                                         df.dly_16 = 144;
                                         break;
+        case PROTOCOL_SCAMP_FSK_VSLW:   df.slow_samp_num = 2;
         case PROTOCOL_SCAMP_FSK_SLOW:   df.buffer_size = 144;
                                         ps.ss.fsk = 1;
                                         ps.ss.demod_edge_window = 4;
@@ -302,10 +303,10 @@ void dsp_interrupt_sample(uint16_t sample)
    int16_t fir;
 
    /* super slow mode.  used for experimentation with very low baud rates */
-   if (ds.slow_samp_num > 1)
+   if (df.slow_samp_num > 1)
    {
        ds.total_num += sample;
-       if ((++ds.slow_samp) >= ds.slow_samp_num)
+       if ((++ds.slow_samp) >= df.slow_samp_num)
        {
            sample = ds.total_num;
            ds.slow_samp = 0;

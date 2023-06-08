@@ -342,6 +342,9 @@ void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
       case PROTOCOL_SCAMP_FSK_SLOW:   offset1 = (625-667)/2;
                                       offset2 = (667-625)/2;
                                       break;
+      case PROTOCOL_SCAMP_FSK_VSLW:   offset1 = (625-667)/4;
+                                      offset2 = (667-625)/4;
+                                      break;
 #endif
       case PROTOCOL_SCAMP_FSK:        offset1 = (600-667)/2;
                                       offset2 = (667-600)/2;
@@ -356,7 +359,7 @@ void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
 
 void scamp_send_frame(uint32_t bits)
 {
-  uint8_t bit_ms = df.buffer_size / 2; // (divided by 2 for 2000 Hz -> ms)
+  uint8_t bit_ms = df.buffer_size / (df.slow_samp_num > 1 ? 1 : 2); // (divided by 2 for 2000 Hz -> ms)
   uint16_t clock_bit = millis();
   uint16_t read_bit;
   for (uint8_t num=0;num<30;num++)

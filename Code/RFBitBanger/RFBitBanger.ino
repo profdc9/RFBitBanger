@@ -520,11 +520,12 @@ const char scamp_fsk_fast_title[] PROGMEM = "SCFSKFST";
 #ifdef SCAMP_VERY_SLOW_MODES
 const char scamp_fsk_slow_title[] PROGMEM = "SCFSKSLW";
 const char scamp_ook_slow_title[] PROGMEM = "SCOOKSLW";
+const char scamp_fsk_vslw_title[] PROGMEM = "SCFSKVSL";
 #endif
 
 const char *const protocolmenu[] PROGMEM = {back_title,cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,
 #ifdef SCAMP_VERY_SLOW_MODES
-    scamp_fsk_slow_title,scamp_ook_slow_title,
+    scamp_fsk_slow_title,scamp_ook_slow_title,scamp_fsk_vslw_title,
 #endif
     NULL };
 
