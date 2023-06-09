@@ -23,6 +23,7 @@ freely, subject to the following restrictions:
 #ifndef __COMMON_H
 #define __COMMON_H
 
+#define DEFAULT_BAUDRATE 115200
 #define OVERSAMPLING_CLOCKS 4
 #define PROCESSOR_CLOCK_FREQ 16000000
 #define TIMER1_INTERRUPT_FREQ (2000*OVERSAMPLING_CLOCKS)

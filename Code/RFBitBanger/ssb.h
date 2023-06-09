@@ -36,9 +36,10 @@ typedef struct _ssb_state
   uint8_t   sampling_clock;
   uint8_t   drive;
   int16_t   cumulative_sample;
+  int16_t   last_sample, last_sample2;
   int16_t   dc_level;
   int16_t   lpf_z1;
-  uint16_t  ssb_fir_buffer[SSB_FIR_LENGTH];
+  int16_t   ssb_fir_buffer[SSB_FIR_LENGTH];
   int16_t   previous_phase;
   uint16_t  magnitude;
   int16_t   phase_difference;

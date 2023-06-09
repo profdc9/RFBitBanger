@@ -55,9 +55,9 @@ void ssb_state_change(uint8_t state)
     {
       if ((ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB))
       {
-        transmit_set(1);
+/*        transmit_set(1);
         muteaudio_set(1);
-        set_clock_onoff_mask(0x01);
+        set_clock_onoff_mask(0x01); */
         ds.ssb_active = 1;
       }
     }
@@ -73,26 +73,32 @@ void ssb_state_change(uint8_t state)
 
 // This code is adapted from PE1NNZ ssb() function.   
 
-#define _UA   600                                          
-#define ATAN_APPROX(z) ((((_UA/8) + (_UA/22)) - (_UA/22) * (z)) * (z))  
+#define _UA (22*32)                                         
+
+#define FRACTIONAL_MULT (uint32_t)(((SAMPLING_FREQUENCY)*256ul)/_UA)
+
+#define ATAN_APPROX(z1,z2) (((((_UA/8) + (_UA/22)) - ((_UA/22) * (z1)) / (z2)) * (z1)) / (z2))  
    // approx Pi/4 + 0.285*z*(1-abs(z)) from 
    // [1] http://www-labs.iro.umontreal.ca/~mignotte/IFT2425/Documents/EfficientApproximationArctgFunction.pdf
    // (8/22)*Pi/4 approx 0.285
    // formula scaled by (1/8+1/22)/(Pi/4+0.285) or 0.159
-   
+
 #define OCTAGON_MAGNITUDE_PHASE(mag,phs,x,y) do { \
    uint16_t ux = ((x) < 0 ? -(x) : (x)); \
    uint16_t uy = ((y) < 0 ? -(y) : (y)); \
    mag = ((uy > ux) ? (uy+ux/4) : (ux+uy/4)); \
-   phs = ((uy > ux) ? ((_UA/4) - ATAN_APPROX(ux / uy)) : ((ux == 0) ? 0 : ATAN_APPROX(uy / ux))); \ 
+   phs = ((uy > ux) ? ((_UA/4) - ATAN_APPROX(ux,uy)) : ((ux == 0) ? 0 : ATAN_APPROX(uy,ux))); \ 
    phs = (((x) < 0) ? ((_UA/2) - phs) : phs); \ 
    phs = (((y) < 0) ? -phs : phs); \  
 } while(0)
 
+
 void ssb_interrupt(int16_t sample)
 {
-  uint16_t magnitude, phase, phase_difference;
+  uint16_t magnitude;
+  int16_t phase, phase_difference;
   int16_t ac, in_val, quad_val;
+  int32_t in_prod, quad_prod;
 
   if ((ps.ssbs.protocol != PROTOCOL_USB) && (ps.ssbs.protocol != PROTOCOL_LSB))
     return;
@@ -103,35 +109,38 @@ void ssb_interrupt(int16_t sample)
 
   ps.ssbs.sampling_clock = 0;
 
-
   ADMUX = (1 << REFS0) | (1 << MUX0);  // set to sample the ADC1 which is the MIC audio
   ADCSRA = (1 << ADEN) | (1 << ADPS1) | (1 << ADPS0) | (1 << ADSC);  
     
-  for (uint8_t i=1;i<SSB_FIR_LENGTH;i++)
-    ps.ssbs.ssb_fir_buffer[i-1] = ps.ssbs.ssb_fir_buffer[i];
+  for (uint8_t i=0;i<SSB_FIR_LENGTH-1;i++)
+    ps.ssbs.ssb_fir_buffer[i] = ps.ssbs.ssb_fir_buffer[i+1];
 
   ac = ps.ssbs.cumulative_sample * 2;
-  ac += ps.ssbs.lpf_z1;              // LPF
-  ps.ssbs.lpf_z1 = (ps.ssbs.cumulative_sample - (ps.ssbs.lpf_z1 * 2)) / (2 + 1);  // guess that (2+1) is to make this an affine sum
-  ps.ssbs.dc_level = (ac + (ps.ssbs.dc_level * 2)) / (2 + 1); 
-  ps.ssbs.ssb_fir_buffer[SSB_FIR_LENGTH-1] = ac - ps.ssbs.dc_level;
+  //ac += ps.ssbs.lpf_z1;              // LPF
+  ps.ssbs.lpf_z1 = (ps.ssbs.cumulative_sample - (ps.ssbs.lpf_z1 * 4) - ps.ssbs.lpf_z1) / (3 + 1);  // guess that (3+1) is to make this an affine sum
+  ps.ssbs.dc_level = (ac + (ps.ssbs.dc_level * 4) - ps.ssbs.dc_level) / (3 + 1); 
+  ps.ssbs.ssb_fir_buffer[SSB_FIR_LENGTH-1] = (ac - ps.ssbs.dc_level) / 2;
 
   in_val = ps.ssbs.ssb_fir_buffer[SSB_FIR_LENGTH/2-1];
   quad_val = ( (ps.ssbs.ssb_fir_buffer[0] - ps.ssbs.ssb_fir_buffer[14]) * 2 + 
-        (ps.ssbs.ssb_fir_buffer[2] - ps.ssbs.ssb_fir_buffer[12]) * 8 +
-        (ps.ssbs.ssb_fir_buffer[4] - ps.ssbs.ssb_fir_buffer[10]) * 21 + 
-        (ps.ssbs.ssb_fir_buffer[6] - ps.ssbs.ssb_fir_buffer[8]) * 16) / 64 
-      + (ps.ssbs.ssb_fir_buffer[6] - ps.ssbs.ssb_fir_buffer[8]); 
+               (ps.ssbs.ssb_fir_buffer[2] - ps.ssbs.ssb_fir_buffer[12]) * 8 +
+               (ps.ssbs.ssb_fir_buffer[4] - ps.ssbs.ssb_fir_buffer[10]) * 21 + 
+               (ps.ssbs.ssb_fir_buffer[6] - ps.ssbs.ssb_fir_buffer[8]) * 15) / 128
+           + (ps.ssbs.ssb_fir_buffer[6] - ps.ssbs.ssb_fir_buffer[8]) / 2; 
      // PE1NNZ Hilbert transform, 40dB side-band rejection in 400..1900Hz (@4kSPS) when used in image-rejection scenario; (Hilbert transform require 5 additional bits)
+     
+  ps.ssbs.last_sample = in_val;
+  ps.ssbs.last_sample2 = quad_val;
 
-  OCTAGON_MAGNITUDE_PHASE(magnitude, phase, in_val, quad_val); // common expression optimization better be on...
-  magnitude <<= ps.ssbs.drive;  
-  if (magnitude > 255) magnitude = 255;
+  OCTAGON_MAGNITUDE_PHASE(magnitude, phase, in_val, quad_val); 
+
+//  magnitude <<= ps.ssbs.drive;  
+//  if (magnitude > 255) magnitude = 255;
 
   phase_difference = phase -  ps.ssbs.previous_phase;
   ps.ssbs.previous_phase = phase;   // calculate phase difference to get instantaneous frequency of signal
 
-  if (phase_difference < _UA)       // negative phase shifts should not occur if the Hilbert filter is calculating a slowly varying signal
+  if (phase_difference < 0)       // negative phase shifts should not occur if the Hilbert filter is calculating a slowly varying signal
     phase_difference += _UA;        // do not allow negative shifts to prevent spurs
 
 #ifdef MAX_PHASE
@@ -141,9 +150,11 @@ void ssb_interrupt(int16_t sample)
     phase_difference = MAX_PHASE;
   }
 #endif
-  ps.ssbs.frequency_shift = phase_difference * 
-     ( (ps.ssbs.protocol == PROTOCOL_USB) ? (SAMPLING_FREQUENCY / _UA) : (-SAMPLING_FREQUENCY / _UA));
+  ps.ssbs.frequency_shift = (phase_difference * FRACTIONAL_MULT) / 256;
+  if (ps.ssbs.protocol == PROTOCOL_LSB) 
+    ps.ssbs.frequency_shift = -ps.ssbs.frequency_shift; 
   ps.ssbs.magnitude = magnitude;
   ps.ssbs.phase_difference = phase_difference;
   ps.ssbs.cumulative_sample = 0;
+
 }

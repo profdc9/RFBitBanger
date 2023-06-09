@@ -161,13 +161,54 @@ uint16_t external_control_time(void)
   return (end_time - start_time);
 }
 
+void ssb_debug(void)
+{
+  static uint16_t last_millis = 0;
+  uint16_t cur_millis = millis();
+
+  ds.ssb_active = 1;
+  if ((uint16_t)(cur_millis-last_millis) < 1000) return;
+  last_millis = cur_millis;
+
+  cli();
+  int16_t last_sample = ps.ssbs.last_sample;
+  int16_t last_sample2 = ps.ssbs.last_sample2;
+  uint16_t magnitude = ps.ssbs.magnitude;
+  int16_t previous_phase = ps.ssbs.previous_phase;
+  sei();
+
+  Serial.print("\r\nprotocol=");
+  Serial.println(ps.ssbs.protocol);
+  Serial.print("last_samples=");
+  Serial.print(last_sample);
+  Serial.print(",");
+  Serial.println(last_sample2);
+  Serial.print("cum=");
+  Serial.println(ps.ssbs.cumulative_sample);
+  Serial.print("dc_level=");
+  Serial.println(ps.ssbs.dc_level);
+  Serial.print("lpf_z1=");
+  Serial.println(ps.ssbs.lpf_z1);
+  Serial.print("previous_phase=");
+  Serial.println(previous_phase);
+  Serial.print("magnitude=");
+  Serial.println(magnitude);
+  Serial.print("phase_difference=");
+  Serial.println(ps.ssbs.phase_difference);
+  Serial.print("frequency_shift=");
+  Serial.println(ps.ssbs.frequency_shift);
+}
+
 extern "C" {
 void idle_task(void)
 {
   dsp_dispatch_receive(current_protocol);
   lcd.pollButtons();
   if ((ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB))
+  {
     ssb_state_change(!digitalRead(PTT_PIN));
+    ssb_debug();
+  }
 }
 }
 
@@ -409,13 +450,13 @@ void set_frequency_snd(void)
 void setup() {
   setupConfiguration();
   si5351.set_xo_freq(rc.frequency_calibration);
-  set_protocol(PROTOCOL_CW);
+  set_protocol(PROTOCOL_USB);
   setupADC();
   stopCompare();
   setup_timers();
   scroll_readout_initialize(&srd_buf);
   PSkey.begin();
-  Serial.begin(2400);
+  Serial.begin(DEFAULT_BAUDRATE);
   pinMode(PTT_PIN,INPUT);
   pinMode(MIC_PIN,INPUT);
   pinMode(AUDIOFILT_PIN,INPUT);
