@@ -1,4 +1,3 @@
-
 /*  dspint.c */
 
 /*
@@ -203,6 +202,13 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
     df.dxr = rtty_txmit;
 }
 
+void dsp_initialize_ssb(protocol)
+{
+    dsp_initialize_fastscan();
+    ps.ssbs.drive = 3;
+    ps.ssbs.protocol = protocol;
+}
+
 void dsp_initialize_protocol(uint8_t protocol, uint8_t wide)
 {
   if (IS_SCAMP_PROTOCOL(protocol))
@@ -211,6 +217,8 @@ void dsp_initialize_protocol(uint8_t protocol, uint8_t wide)
      dsp_initialize_cw(protocol, wide);
   else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
      dsp_initialize_rtty(protocol, wide);
+  else if ((protocol == PROTOCOL_USB) || (protocol == PROTOCOL_LSB))
+     dsp_initialize_ssb(protocol);
 }
 
 void dsp_dispatch_interrupt(uint8_t protocol)

@@ -23,6 +23,14 @@ freely, subject to the following restrictions:
 #ifndef __COMMON_H
 #define __COMMON_H
 
+#define OVERSAMPLING_CLOCKS 4
+#define PROCESSOR_CLOCK_FREQ 16000000
+#define TIMER1_INTERRUPT_FREQ (2000*OVERSAMPLING_CLOCKS)
+#define TIMER1_COUNT_MAX (PROCESSOR_CLOCK_FREQ / TIMER1_INTERRUPT_FREQ)
+#define KEYDOWN_SAMPLE_THRESHOLD 100
+#define KEY_IAMBIC_AGREEMENT 15
+#define WRITE_CHAR_SERIAL_RETURN_DELAY 13000
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,6 +72,7 @@ typedef struct _radio_configuration
 extern radio_configuration rc;
 
 void set_frequency(uint32_t freq, uint8_t clockno);
+void set_frequency_receive();
 void set_clock_onoff(uint8_t onoff, uint8_t clockno);
 void set_clock_onoff_mask(uint8_t on_mask);
 void transmit_set(uint8_t set);

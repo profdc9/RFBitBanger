@@ -36,14 +36,8 @@
 #include "dspint.h"
 #include "cwmod.h"
 #include "scamp.h"
-
-#define OVERSAMPLING_CLOCKS 4
-#define PROCESSOR_CLOCK_FREQ 16000000
-#define TIMER1_INTERRUPT_FREQ (2000*OVERSAMPLING_CLOCKS)
-#define TIMER1_COUNT_MAX (PROCESSOR_CLOCK_FREQ / TIMER1_INTERRUPT_FREQ)
-#define KEYDOWN_SAMPLE_THRESHOLD 100
-#define KEY_IAMBIC_AGREEMENT 15
-#define WRITE_CHAR_SERIAL_RETURN_DELAY 13000
+#include "rtty.h"
+#include "ssb.h"
 
 LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7);
 si5351simple si5351(8,25000000u);
@@ -172,6 +166,8 @@ void idle_task(void)
 {
   dsp_dispatch_receive(current_protocol);
   lcd.pollButtons();
+  if ((ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB))
+    ssb_state_change(!digitalRead(PTT_PIN));
 }
 }
 
@@ -198,8 +194,9 @@ scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 13560000, 0, 0 }
 bargraph_dat bgs = { 4, 12, 0 };
 
 uint8_t adc1_read = 0;
-
 #define SET_ADC1_READ(x) adc1_read = (x)
+
+#define SET_SSB_INTERRUPT_MODE(x) (ds.ssb_active) = (x)
 
 ISR(TIMER1_OVF_vect)
 {
@@ -207,6 +204,11 @@ ISR(TIMER1_OVF_vect)
   static uint16_t totaladc = 0;
   uint16_t adc_sample = ADC;
   //sei();
+  if (ds.ssb_active)
+  {
+    ssb_interrupt((int16_t)adc_sample);
+    return;
+  }
   if (adc1_read != 0)
   {
     ADMUX = (avgs == (OVERSAMPLING_CLOCKS-1)) ? ((1 << REFS0) | (1 << MUX0)) : (1 << REFS0);
@@ -333,6 +335,7 @@ void set_clock_onoff(uint8_t onoff, uint8_t clockno)
 
 void set_protocol(uint8_t protocol)
 {
+   set_frequency_receive();
    dsp_initialize_protocol(protocol, rc.wide);
    current_protocol = protocol;  
 }
@@ -512,6 +515,8 @@ const char *const mainmenu[] PROGMEM = {transmittitle,receivetitle,freqmenutitle
 
 const char back_title[] PROGMEM = "Back";
 const char cw_title[] PROGMEM = "CW";
+const char usb_title[] PROGMEM = "USB";
+const char lsb_title[] PROGMEM = "LSB";
 const char rtty_title[] PROGMEM = "RTTY";
 const char rtty_rev_title[] PROGMEM = "RTTYREV";
 const char scamp_fsk_title[] PROGMEM = "SCAMPFSK";
@@ -523,7 +528,7 @@ const char scamp_ook_slow_title[] PROGMEM = "SCOOKSLW";
 const char scamp_fsk_vslw_title[] PROGMEM = "SCFSKVSL";
 #endif
 
-const char *const protocolmenu[] PROGMEM = {back_title,cw_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,
+const char *const protocolmenu[] PROGMEM = {back_title,cw_title,usb_title,lsb_title,rtty_title,rtty_rev_title,scamp_fsk_title,scamp_ook_title,scamp_fsk_fast_title,
 #ifdef SCAMP_VERY_SLOW_MODES
     scamp_fsk_slow_title,scamp_ook_slow_title,scamp_fsk_vslw_title,
 #endif
@@ -581,6 +586,7 @@ uint8_t scan_frequency(int8_t stepval, uint16_t maxsteps)
 uint8_t scan_refine(uint8_t dir, uint8_t iter)
 {
   uint8_t code;
+  set_frequency_receive();
   dsp_initialize_protocol(current_protocol, rc.wide);
   for (uint8_t i=0;i<iter;i++)
   {
@@ -594,6 +600,7 @@ uint8_t scan_refine(uint8_t dir, uint8_t iter)
 
 uint8_t scan_frequency_end(uint8_t code)
 {
+  set_frequency_receive();
   dsp_initialize_protocol(current_protocol, rc.wide);
   return code;
 }

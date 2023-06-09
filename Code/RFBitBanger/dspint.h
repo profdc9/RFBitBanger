@@ -43,6 +43,7 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define SCAMP_PROTOCOL
 #define CW_PROTOCOL
 #define RTTY_PROTOCOL
+#define SSB_PROTOCOL
 
 #ifdef SCAMP_PROTOCOL
 #include "scamp.h"
@@ -53,6 +54,9 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #ifdef RTTY_PROTOCOL
 #include "rtty.h"
 #endif /* RTTY_PROTOCOL */
+#ifdef SSB_PROTOCOL
+#include "ssb.h"
+#endif /* SSB_PROTOCOL */
 
 #ifdef SCAMP_VERY_SLOW_MODES
 #define DSPINT_MAX_SAMPLEBUFFER 144
@@ -62,18 +66,20 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 
 #define PROTOCOL_FASTSCAN       0 
 #define PROTOCOL_CW             1
-#define PROTOCOL_RTTY           2
-#define PROTOCOL_RTTY_REV       3
-#define PROTOCOL_SCAMP_FSK      4
-#define PROTOCOL_SCAMP_OOK      5
-#define PROTOCOL_SCAMP_FSK_FAST 6
+#define PROTOCOL_USB            2
+#define PROTOCOL_LSB            3 
+#define PROTOCOL_RTTY           4
+#define PROTOCOL_RTTY_REV       5
+#define PROTOCOL_SCAMP_FSK      6
+#define PROTOCOL_SCAMP_OOK      7
+#define PROTOCOL_SCAMP_FSK_FAST 8
 #ifdef SCAMP_VERY_SLOW_MODES
-#define PROTOCOL_SCAMP_FSK_SLOW 7
-#define PROTOCOL_SCAMP_OOK_SLOW 8
-#define PROTOCOL_SCAMP_FSK_VSLW 9
-#define PROTOCOL_SCAMP_LAST_MODE 9
+#define PROTOCOL_SCAMP_FSK_SLOW 9
+#define PROTOCOL_SCAMP_OOK_SLOW 10
+#define PROTOCOL_SCAMP_FSK_VSLW 11
+#define PROTOCOL_SCAMP_LAST_MODE 11
 #else
-#define PROTOCOL_SCAMP_LAST_MODE 6
+#define PROTOCOL_SCAMP_LAST_MODE 8
 #endif
 
 #define IS_SCAMP_PROTOCOL(x) (((x) >= PROTOCOL_SCAMP_FSK) && ((x) <= PROTOCOL_SCAMP_LAST_MODE))
@@ -104,6 +110,8 @@ typedef struct _dsp_state_fixed
    dsp_state_fixed state */
 typedef struct _dsp_state
 {
+  uint8_t   ssb_active;
+
   uint8_t   slow_samp;
   uint16_t  total_num;
 
@@ -137,6 +145,7 @@ typedef struct _dsp_state
   uint16_t  mag_value_16;
   uint16_t  mag_value_20;
   uint16_t  mag_value_24;
+
   uint16_t  sample_buffer[DSPINT_MAX_SAMPLEBUFFER];
 
 } dsp_state;
@@ -154,6 +163,9 @@ typedef union _protocol_state
 #endif
 #ifdef RTTY_PROTOCOL
     rtty_state   rs;
+#endif
+#ifdef SSB_PROTOCOL
+    ssb_state    ssbs;
 #endif
 } protocol_state;
 
