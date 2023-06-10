@@ -43,7 +43,6 @@ LiquidCrystalButtons lcd(LCDB_RS, LCDB_E, LCDB_DB4, LCDB_DB5, LCDB_DB6, LCDB_DB7
 si5351simple si5351(8,25000000u);
 PS2Keyboard PSkey;
 radio_configuration rc;
-uint8_t current_protocol;
 
 const radio_configuration PROGMEM default_rc =
 {
@@ -166,7 +165,8 @@ void ssb_debug(void)
   static uint16_t last_millis = 0;
   uint16_t cur_millis = millis();
 
-  ds.ssb_active = 1;
+  return;
+  //ds.ssb_active = 1;
   if ((uint16_t)(cur_millis-last_millis) < 1000) return;
   last_millis = cur_millis;
 
@@ -202,7 +202,7 @@ void ssb_debug(void)
 extern "C" {
 void idle_task(void)
 {
-  dsp_dispatch_receive(current_protocol);
+  dsp_dispatch_receive();
   lcd.pollButtons();
   if ((ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB))
   {
@@ -266,7 +266,7 @@ ISR(TIMER1_OVF_vect)
   if ((++avgs) >= OVERSAMPLING_CLOCKS)
   {
     dsp_interrupt_sample(totaladc / OVERSAMPLING_CLOCKS);
-    dsp_dispatch_interrupt(current_protocol);
+    dsp_dispatch_interrupt();
     totaladc = 0;
     avgs = 0;    
   }
@@ -376,9 +376,8 @@ void set_clock_onoff(uint8_t onoff, uint8_t clockno)
 
 void set_protocol(uint8_t protocol)
 {
-   set_frequency_receive();
    dsp_initialize_protocol(protocol, rc.wide);
-   current_protocol = protocol;  
+   set_frequency_receive();
 }
 
 void set_frequency(uint32_t freq, uint8_t clockno)
@@ -386,8 +385,9 @@ void set_frequency(uint32_t freq, uint8_t clockno)
    si5351_synth_regs s_regs;
    si5351_multisynth_regs m_regs;
   
-   si5351.calc_registers(freq, 0, &s_regs, &m_regs);
+   si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs);
    si5351.set_registers(0, &s_regs, clockno, &m_regs);
+   si5351.print_c_regs();
 }
 
 void set_frequency_both(uint32_t freq)
@@ -395,9 +395,10 @@ void set_frequency_both(uint32_t freq)
    si5351_synth_regs s_regs;
    si5351_multisynth_regs m_regs;
   
-   si5351.calc_registers(freq, 0, &s_regs, &m_regs);
+   si5351.calc_registers(freq, 0, (ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB), &s_regs, &m_regs);
    si5351.set_registers(0xFF, NULL, 1, &m_regs);
    si5351.set_registers(0, &s_regs, 0, &m_regs);
+   si5351.print_c_regs();
 }
 
 static uint8_t chno = 0;
@@ -628,7 +629,7 @@ uint8_t scan_refine(uint8_t dir, uint8_t iter)
 {
   uint8_t code;
   set_frequency_receive();
-  dsp_initialize_protocol(current_protocol, rc.wide);
+  dsp_initialize_protocol(ps.ns.protocol, rc.wide);
   for (uint8_t i=0;i<iter;i++)
   {
      code = scan_frequency(dir ? -10 : 10, 50);
@@ -642,7 +643,7 @@ uint8_t scan_refine(uint8_t dir, uint8_t iter)
 uint8_t scan_frequency_end(uint8_t code)
 {
   set_frequency_receive();
-  dsp_initialize_protocol(current_protocol, rc.wide);
+  dsp_initialize_protocol(ps.ns.protocol, rc.wide);
   return code;
 }
 
@@ -686,7 +687,7 @@ void set_transmission_mode(void)
 {  
   uint8_t selected;
   menu_str mn = { protocolmenu, 0, 0, 8, 0, 0 };
-  mn.item = current_protocol;
+  mn.item = ps.ns.protocol;
   do_show_menu_item(&mn);
   set_horiz_menu_keys(1);
   do
@@ -769,7 +770,7 @@ void transmit_mode(uint8_t selected)
         if (msg_len > 0)
         {
           write_char_newline("tx:");
-          uint8_t aborted = dsp_dispatch_txmit(current_protocol, snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
+          uint8_t aborted = dsp_dispatch_txmit(snd_freq.n, sad_buf.buffer, msg_len, NULL, transmit_mode_callback);
           if ((rc.erase_on_send) && (!aborted))
           {
             sad_buf.buffer[0] = 0;
@@ -1362,6 +1363,8 @@ void select_command_mode()
     update_readout();
     selected = do_menu(&mn);
   } while (!selected);
+  Serial.print("current_protocol=");
+  Serial.println(ps.ns.protocol);
   current_item = mn.item;
   switch (mn.item)
   {

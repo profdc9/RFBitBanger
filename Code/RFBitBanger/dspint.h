@@ -24,6 +24,8 @@ freely, subject to the following restrictions:
 #ifndef __DSPINT_H
 #define __DSPINT_H
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,7 +45,9 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define SCAMP_PROTOCOL
 #define CW_PROTOCOL
 #define RTTY_PROTOCOL
+#ifdef SSB_SUPPORT
 #define SSB_PROTOCOL
+#endif
 
 #ifdef SCAMP_PROTOCOL
 #include "scamp.h"
@@ -153,8 +157,14 @@ typedef struct _dsp_state
 extern dsp_state       ds;
 extern dsp_state_fixed df;
 
+typedef struct _null_state
+{
+  uint8_t   protocol;
+} null_state;
+
 typedef union _protocol_state
 {
+    null_state   ns;
 #ifdef SCAMP_PROTOCOL
     scamp_state  ss;
 #endif
@@ -179,9 +189,9 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide);
 void dsp_initialize_fastscan(void);
 void dsp_reset_state(void);
 uint16_t dsp_get_signal_magnitude(void);
-uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc);
-void dsp_dispatch_receive(uint8_t protocol);
-void dsp_dispatch_interrupt(uint8_t protocol);
+uint8_t dsp_dispatch_txmit(uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc);
+void dsp_dispatch_receive(void);
+void dsp_dispatch_interrupt(void);
 void dsp_initialize_protocol(uint8_t protocol, uint8_t wide);
 
 #define DECODE_FIFO_LENGTH 16

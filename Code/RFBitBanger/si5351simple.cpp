@@ -31,13 +31,21 @@
 #include <inttypes.h>
 #include "Arduino.h"
 
+#ifdef SSB_SUPPORT
+#define TWI_FAST
+#endif
+
 #define TWI_HARDWARE
 
 #ifdef TWI_HARDWARE
 void twi_init(void)
 {
     TWSR = 0x00;
+#ifdef TWI_FAST
+    TWBR = 0x02;
+#else
     TWBR = 0x0C;
+#endif
     TWCR = (1<<TWEN);
 }
 
@@ -67,6 +75,17 @@ void si5351_write(uint8_t reg_addr, uint8_t reg_value)
    twi_write(reg_value);
    twi_stop();
 } 
+
+void si5351_write_mult(uint8_t reg_addr, uint8_t num, uint8_t reg_value[])
+{
+   twi_start();
+   twi_write(SI5351_ADDRESS << 1);
+   twi_write(reg_addr);
+   for (uint8_t i=0;i<num;i++)
+       twi_write(reg_value[i]);
+   twi_stop();
+} 
+
 #else
 #include <Wire.h>
 void twi_init(void)
@@ -100,6 +119,41 @@ uint32_t si5351simple::get_xo_freq(void)
   return xo_freq;
 }
 
+void si5351simple::set_offset_fast(int16_t offset)
+{
+  uint8_t regs[5];
+  int32_t a, b;
+  uint32_t P1, P2;
+
+  a = c_regs.a;
+  if (offset > 0)
+    b = c_regs.b + offset * c_regs.b_offset_pos /  SI5351_FREQ_OFFSET;
+  else
+    b = c_regs.b + offset * c_regs.b_offset_neg /  SI5351_FREQ_OFFSET;
+
+  if (b < 0)
+  {
+    a--;
+    b += FEEDBACK_MULTIPLIER_C;
+  } else if (b > FEEDBACK_MULTIPLIER_C)
+  {
+    a++;
+    b -= FEEDBACK_MULTIPLIER_C;
+  }
+  
+  P2 = b >> (FEEDBACK_MULTIPLIER_SHIFT-7);
+  P1 = (a << 7) + P2 - 512;
+  P2 = (b << 7) - (P2 << FEEDBACK_MULTIPLIER_SHIFT);
+  
+  regs[0] = (P1 >> 8) & 0xFF;
+  regs[1] = P1 & 0xFF;  
+  regs[2] = ((uint8_t)(FEEDBACK_MULTIPLIER_C >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F);
+  regs[3] = (P2 >> 8) & 0xFF;
+  regs[4] = P2 & 0xFF;
+
+  si5351_write_mult(SI5351_MULTISYNTH_0 + 3, sizeof(regs), regs);
+}
+
 void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, 
 								 uint8_t multisynth_no, si5351_multisynth_regs *m_regs)
 {
@@ -130,33 +184,53 @@ void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs,
       si5351_write(177, synth_no ? 0x80 : 0x20);
 }									 
 
-static void calc_multisynth_registers(uint8_t regs[], uint8_t R, uint32_t a, uint32_t b, uint32_t c)
+static void calc_multisynth_registers(uint8_t regs[], uint8_t R, uint32_t a, uint32_t b)
 {
-  uint32_t P1, P2, P3;
+  uint32_t P1, P2;
 
-  P3 = (b << 7) / c;
-  P1 = (a << 7) + P3 - 512;
-  P2 = (b << 7) - c * P3;
-  P3 = c;
+  P2 = b >> (FEEDBACK_MULTIPLIER_SHIFT-7);
+  P1 = (a << 7) + P2 - 512;
+  P2 = (b << 7) - (P2 << FEEDBACK_MULTIPLIER_SHIFT);
   
-  regs[0] = (P3 >> 8) & 0xFF;
-  regs[1] = P3 & 0xFF;
+  regs[0] = (FEEDBACK_MULTIPLIER_C >> 8) & 0xFF;
+  regs[1] = FEEDBACK_MULTIPLIER_C & 0xFF;
   regs[2] = (((uint8_t)(P1 >> 16)) & 0x03) | (R << 4);
   regs[3] = (P1 >> 8) & 0xFF;
   regs[4] = P1 & 0xFF;  
-  regs[5] = ((uint8_t)(P3 >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F);
+  regs[5] = ((uint8_t)(FEEDBACK_MULTIPLIER_C >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F);
   regs[6] = (P2 >> 8) & 0xFF;
   regs[7] = P2 & 0xFF;
 }
 
-void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs)
+int32_t si5351simple::calculate_b(uint32_t frequency)
 {
-  #define c 1048574               // "c" part of Feedback-Multiplier from XTAL to PLL
-  uint32_t fvco;                  // VCO frequency (600-900 MHz) of PLL
-  uint8_t R = 0;                  // Additional Output Divider in range [1,2,4,...128]
-  uint8_t mult_ratio;
-  uint16_t a;                      // "a" part of Feedback-Multiplier from XTAL to PLL in range [15,90]
-  uint32_t b;                     // "b" part of Feedback-Multiplier from XTAL to PLL
+  int32_t b;
+  b = c_regs.fvco - c_regs.a * frequency;
+  b = (((int64_t)b) << FEEDBACK_MULTIPLIER_SHIFT) / frequency;
+  return b;
+}
+
+void si5351simple::print_c_regs(void)
+{
+  Serial.print("\r\nR=");
+  Serial.println(c_regs.R);
+  Serial.print("mult_ratio=");
+  Serial.println(c_regs.mult_ratio);
+  Serial.print("fvco=");
+  Serial.println(c_regs.fvco);
+  Serial.print("a=");
+  Serial.println(c_regs.a);
+  Serial.print("b=");
+  Serial.println(c_regs.b);
+  Serial.print("b_offset_pos=");
+  Serial.println(c_regs.b_offset_pos);
+  Serial.print("b_offset_neg=");
+  Serial.println(c_regs.b_offset_neg);
+}
+
+void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, uint8_t calc_offset, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs)
+{
+  c_regs.R = 0;
 
   if (phase >= 0x80)
   {
@@ -165,32 +239,40 @@ void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, si5351_synt
   } else m_regs->inv = 0;
 
    if (frequency < 5000000)
-      mult_ratio = 15;
+      c_regs.mult_ratio = 16;
    else if (frequency < 7000000)
-      mult_ratio = 22;
-   else mult_ratio = 33;  
+      c_regs.mult_ratio = 22;
+   else c_regs.mult_ratio = 34;  
 
-  if (s_regs != NULL)
-      calc_multisynth_registers(s_regs->regs, 0, mult_ratio, 0, 1);
-  
-  fvco = xo_freq * mult_ratio;
+  c_regs.fvco = xo_freq * c_regs.mult_ratio;
+
+  int16_t offset = SI5351_FREQ_OFFSET;
 
   for (;;)
   {
-      a = (fvco / frequency);
-      if (a <= 900) break;
+      c_regs.a = (c_regs.fvco / frequency);
+      if (c_regs.a <= 900) break;
       frequency <<= 1;
-      R += 1;
+      offset <<= 1;
+      c_regs.R += 1;
   }
 
-  b = fvco - a * frequency;
-  b = (((uint64_t)b) * c) / frequency;
-
+  c_regs.b = calculate_b(frequency);
+  if (calc_offset)
+  {
+    c_regs.b_offset_pos = calculate_b(frequency + offset) - c_regs.b;
+    c_regs.b_offset_neg = calculate_b(frequency - offset) - c_regs.b;
+  }
+  
   if (phase)
-     m_regs->offset = (uint8_t)((((uint32_t)a)*phase) >> 6) & 0x7F;
+     m_regs->offset = (uint8_t)((((uint32_t)c_regs.a)*phase) >> 6) & 0x7F;
   else
      m_regs->offset = 0;
-  calc_multisynth_registers(m_regs->regs, R, a, b, c);
+
+  if (s_regs != NULL)
+     calc_multisynth_registers(s_regs->regs, 0, c_regs.mult_ratio, 0);
+  
+  calc_multisynth_registers(m_regs->regs, c_regs.R, c_regs.a, c_regs.b);
 }
 
 // off_on = 0 is off, off_on = 1 is on
@@ -229,16 +311,4 @@ void si5351simple::start(void)
      case 8: si5351_write(183, 0x80); break;
      case 10: si5351_write(183, 0xC0); break;
   }
-  
-  // si5351_synth_regs s_regs;
-  // si5351_multisynth_regs m_regs;
-  
-  //calc_registers(7000000, 0, &s_regs, &m_regs);
-  //set_registers(0, &s_regs, 0, &m_regs);
-
-  //calc_registers(7000000, 64, &s_regs, &m_regs);
-  //set_registers(0, &s_regs, 1, &m_regs);
-
-  //setOutputOnOff(0,1);
-  //setOutputOnOff(1,0);
 }

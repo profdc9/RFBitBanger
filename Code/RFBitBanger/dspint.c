@@ -221,19 +221,19 @@ void dsp_initialize_protocol(uint8_t protocol, uint8_t wide)
      dsp_initialize_ssb(protocol);
 }
 
-void dsp_dispatch_interrupt(uint8_t protocol)
+void dsp_dispatch_interrupt(void)
 {
   if (df.dir != NULL)
     df.dir();
 }
 
-void dsp_dispatch_receive(uint8_t protocol)
+void dsp_dispatch_receive(void)
 {
   if (df.ddp != NULL)
     df.ddp();
 }
 
-uint8_t dsp_dispatch_txmit(uint8_t protocol, uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc)
+uint8_t dsp_dispatch_txmit(uint32_t frequency, uint8_t *message, uint8_t length, void *user_state, dsp_dispatch_callback ddc)
 {
   dsp_txmit_message_state dtms;
 
