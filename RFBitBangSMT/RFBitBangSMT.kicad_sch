@@ -7732,6 +7732,20 @@
     (pin "2" (uuid c995aeb2-6dbc-4b58-9b24-56cdb91ed3cf))
   )
 
+  (symbol (lib_id "RFBitBangSMT-rescue:Conn_01x01") (at 280.035 149.86 0) (unit 1)
+    (in_bom yes) (on_board yes)
+    (uuid bf7bf841-e1cd-4d74-b816-09a2f5d77326)
+    (property "Reference" "J23" (id 0) (at 280.035 147.32 0))
+    (property "Value" "Conn_01x01" (id 1) (at 280.035 152.4 0))
+    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (id 2) (at 280.035 149.86 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (id 3) (at 280.035 149.86 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 0052a596-0b3b-4996-bf38-ddd13b759f37))
+  )
+
   (symbol (lib_id "RFBitBangSMT-rescue:L") (at 187.325 57.785 270) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid bfb5e147-9914-47e0-a13d-edcf0eba6b76)
@@ -8692,6 +8706,9 @@
     )
     (path "/20dea924-489b-4047-baef-229a89a54746"
       (reference "J22") (unit 1) (value "Conn_01x02") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical")
+    )
+    (path "/bf7bf841-e1cd-4d74-b816-09a2f5d77326"
+      (reference "J23") (unit 1) (value "Conn_01x01") (footprint "MountingHole:MountingHole_3.2mm_M3")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-00006187ae81"
       (reference "JP1") (unit 1) (value "QSK") (footprint "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm")
