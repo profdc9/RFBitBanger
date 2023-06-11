@@ -70,7 +70,8 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #ifdef SCAMP_VERY_SLOW_MODES
 #define PROTOCOL_SCAMP_FSK_SLOW 7
 #define PROTOCOL_SCAMP_OOK_SLOW 8
-#define PROTOCOL_SCAMP_LAST_MODE 8
+#define PROTOCOL_SCAMP_FSK_VSLW 9
+#define PROTOCOL_SCAMP_LAST_MODE 9
 #else
 #define PROTOCOL_SCAMP_LAST_MODE 6
 #endif
@@ -91,6 +92,7 @@ typedef struct _dsp_state_fixed
   uint8_t   dly_16;
   uint8_t   dly_20;
   uint8_t   dly_24;
+  uint8_t   slow_samp_num;
 
   dsp_interrupt_routine dir;
   dsp_decode_process ddp;
@@ -103,7 +105,6 @@ typedef struct _dsp_state_fixed
 typedef struct _dsp_state
 {
   uint8_t   slow_samp;
-  uint8_t   slow_samp_num;
   uint16_t  total_num;
 
   uint8_t   sample_no;
