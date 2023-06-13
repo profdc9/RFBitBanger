@@ -162,11 +162,11 @@ uint16_t external_control_time(void)
 
 void ssb_debug(void)
 {
+#ifdef SSB_DEBUG_REGISTERS
   static uint16_t last_millis = 0;
   uint16_t cur_millis = millis();
   uint8_t act = ds.ssb_active;
   
-  ds.ssb_active = 1;
   if ((uint16_t)(cur_millis-last_millis) < 1000) return;
   last_millis = cur_millis;
 
@@ -175,6 +175,7 @@ void ssb_debug(void)
   int16_t last_sample2 = ps.ssbs.last_sample2;
   uint16_t magnitude = ps.ssbs.magnitude;
   int16_t previous_phase = ps.ssbs.previous_phase;
+  uint32_t l = ps.ssbs.no_interrupts;
   sei();
 
   Serial.print("\r\nprotocol=");
@@ -200,9 +201,16 @@ void ssb_debug(void)
   Serial.print("frequency_shift=");
   Serial.println(ps.ssbs.frequency_shift);
   Serial.print("no_interrupts=");
-  Serial.println(ps.ssbs.no_interrupts);
+  static uint32_t last_interrupts = 0;
+  Serial.println(l);
+  Serial.print("x_interrupts=");
+  Serial.println(l - last_interrupts);
+  last_interrupts = l;
   Serial.print("phase_inversions=");
   Serial.println(ps.ssbs.phase_inversions);
+#else
+  return;
+#endif
 }
 
 extern "C" {
@@ -212,9 +220,11 @@ void idle_task(void)
   lcd.pollButtons();
   if (IS_SSB_PROTOCOL(ps.ssbs.protocol))
   {
-    //ssb_state_change(!digitalRead(PTT_PIN));
-    ssb_state_change(1);
+    ssb_state_change(!digitalRead(PTT_PIN));
+    //ssb_state_change(1);
+#ifdef SSB_DEBUG_REGISTERS
     ssb_debug();
+#endif
   }
 }
 }

@@ -30,6 +30,8 @@ extern "C" {
 
 #define SSB_FIR_LENGTH 16
 
+#undef SSB_DEBUG_REGISTERS
+
 typedef struct _ssb_state
 {
   uint8_t   protocol;
@@ -41,11 +43,13 @@ typedef struct _ssb_state
   int16_t   lpf_z1;
   int16_t   ssb_fir_buffer[SSB_FIR_LENGTH];
   int16_t   previous_phase;
+#ifdef SSB_DEBUG_REGISTERS
   uint16_t  magnitude;
   int16_t   phase_difference;
   int16_t   frequency_shift;
   uint32_t  no_interrupts;
   uint32_t  phase_inversions;
+#endif
 } ssb_state;
 
 #ifdef __cplusplus

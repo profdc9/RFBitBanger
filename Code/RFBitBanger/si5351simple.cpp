@@ -121,7 +121,7 @@ uint32_t si5351simple::get_xo_freq(void)
 
 void si5351simple::set_offset_fast(int16_t offset)
 {
-  uint8_t regs[5];
+  //uint8_t regs[5];
   uint16_t a;
   int32_t b;
   uint32_t P1, P2;
@@ -145,14 +145,20 @@ void si5351simple::set_offset_fast(int16_t offset)
   P2 = b >> (FEEDBACK_MULTIPLIER_SHIFT-7);
   P1 = (a << 7) + P2 - 512;
   P2 = (b << 7) - (P2 << FEEDBACK_MULTIPLIER_SHIFT);
-  
-  regs[0] = (P1 >> 8) & 0xFF;
-  regs[1] = P1 & 0xFF;  
-  regs[2] = ((uint8_t)(FEEDBACK_MULTIPLIER_C >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F);
-  regs[3] = (P2 >> 8) & 0xFF;
-  regs[4] = P2 & 0xFF;
 
-  si5351_write_mult(SI5351_MULTISYNTH_0 + 3, sizeof(regs), regs);
+#ifdef TWI_FAST
+  twi_start();
+  twi_write(SI5351_ADDRESS << 1);
+  twi_write(SI5351_MULTISYNTH_0 + 3);
+  twi_write((P1 >> 8) & 0xFF);
+  twi_write(P1 & 0xFF);
+  twi_write(((uint8_t)(FEEDBACK_MULTIPLIER_C >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F));
+  twi_write((P2 >> 8) & 0xFF);
+  twi_write(P2 & 0xFF);
+  twi_stop();
+#else
+#error "TWI FAST Required!"
+#endif
 }
 
 void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, 
