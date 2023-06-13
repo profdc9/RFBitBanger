@@ -128,7 +128,7 @@ void ssb_interrupt(int16_t sample)
   int16_t ac, in_val, quad_val;
   int32_t in_prod, quad_prod;
 
-  if (!(IS_SSB_PROTOCOL(ps.ssbs.protocol))) return;
+  if (!ds.ssb_active) return;
 
   ps.ssbs.cumulative_sample += sample; 
   if ((++ps.ssbs.sampling_clock) < SAMPLING_CLOCK)
@@ -143,8 +143,8 @@ void ssb_interrupt(int16_t sample)
     ps.ssbs.ssb_fir_buffer[i] = ps.ssbs.ssb_fir_buffer[i+1];
 
   ac = ps.ssbs.cumulative_sample * 2;
-  //ac += ps.ssbs.lpf_z1;              // LPF
-  ps.ssbs.lpf_z1 = (ps.ssbs.cumulative_sample - (ps.ssbs.lpf_z1 * 4) - ps.ssbs.lpf_z1) / (3 + 1);  // guess that (3+1) is to make this an affine sum
+  ac += ps.ssbs.lpf_z1;              // LPF
+  ps.ssbs.lpf_z1 = (ps.ssbs.cumulative_sample - (ps.ssbs.lpf_z1 * 4) + ps.ssbs.lpf_z1) / (3 + 1);  // guess that (3+1) is to make this an affine sum
   ps.ssbs.dc_level = (ac + (ps.ssbs.dc_level * 4) - ps.ssbs.dc_level) / (3 + 1); 
   ps.ssbs.ssb_fir_buffer[SSB_FIR_LENGTH-1] = (ac - ps.ssbs.dc_level) / 2;
 
@@ -156,12 +156,14 @@ void ssb_interrupt(int16_t sample)
            + (ps.ssbs.ssb_fir_buffer[6] - ps.ssbs.ssb_fir_buffer[8]) / 2; 
      // PE1NNZ Hilbert transform, 40dB side-band rejection in 400..1900Hz (@4kSPS) when used in image-rejection scenario; (Hilbert transform require 5 additional bits)
      
+#ifdef SSB_DEBUG_REGISTERS
   ps.ssbs.last_sample = in_val;
   ps.ssbs.last_sample2 = quad_val;
+#endif
 
   OCTAGON_MAGNITUDE_PHASE(magnitude, phase, in_val, quad_val); 
 
-//  magnitude <<= ps.ssbs.drive;  
+  magnitude = (magnitude * ps.ssbs.gain) >> 3;
   if (magnitude > 255) magnitude = 255;
 #ifdef AMPLITUDE_TABLE_PRESENT
   magnitude = pgm_read_byte_near(&amplitude_table[magnitude]);
@@ -187,6 +189,7 @@ void ssb_interrupt(int16_t sample)
     phase_difference = MAX_PHASE;
   }
 #endif
+
   frequency = (((uint32_t)phase_difference) * FRACTIONAL_MULT_FREQUENCY) / 256;
   if (ps.ssbs.protocol == PROTOCOL_LSB) frequency = -frequency;
   set_frequency_offset(frequency);

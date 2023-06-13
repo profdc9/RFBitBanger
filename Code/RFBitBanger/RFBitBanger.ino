@@ -68,6 +68,7 @@ const radio_configuration PROGMEM default_rc =
   0,   /* cw_iambic_type */
   0,   /* cw_iambic_switch */
   0,   /* erase_on_send */
+  8,   /* ssb gain */
 };
 
 bool check_band_warning(void);
@@ -413,7 +414,10 @@ void set_frequency(uint32_t freq, uint8_t clockno)
 {
    si5351_synth_regs s_regs;
    si5351_multisynth_regs m_regs;
-  
+
+#ifdef SSB_PROTOCOL
+   if (ds.ssb_active) ssb_state_change(0);
+#endif
    si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs);
    si5351.set_registers(0, &s_regs, clockno, &m_regs);
    si5351.print_c_regs();
@@ -423,7 +427,10 @@ void set_frequency_both(uint32_t freq)
 {
    si5351_synth_regs s_regs;
    si5351_multisynth_regs m_regs;
-  
+
+#ifdef SSB_PROTOCOL
+   if (ds.ssb_active) ssb_state_change(0);
+#endif
    si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs);
    si5351.set_registers(0xFF, NULL, 1, &m_regs);
    si5351.set_registers(0, &s_regs, 0, &m_regs);
@@ -872,9 +879,10 @@ const char iambic_mode[] PROGMEM = "0=StKey,1=Iambic";
 const char iambic_mode_type[] PROGMEM = "0=IambA,1=IambB";
 const char iambic_mode_switch[] PROGMEM = "Iambic 0=Nm,1Rev";
 const char erase_on_send[] PROGMEM = "Erase On Send";
+const char ssb_gain[] PROGMEM = "SSB Gain";
 
 const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
-        wide_mode, cw_wpm, scamp_rs, scamp_re,
+        wide_mode, cw_wpm, ssb_gain, scamp_rs, scamp_re,
         rtty_re, rit_shift_freq, rit_shift_dir, 
         sidetone_freq, sidetone_on,
         ext_fast_mode, ext_lsb,
@@ -887,6 +895,7 @@ const configuration_entry PROGMEM configuration_entries[] =
 {
   { &rc.wide,                       1, 1, 0, 1 }, /* WIDE PROTOCOL */
   { &rc.cw_send_speed,              1, 2, 5, 40 }, /* CW WPM */
+  { &rc.ssb_gain,                   1, 2, 0, 32 }, /* SSB GAIN */
   { &rc.scamp_resync_frames,        1, 1, 0, 9  }, /* SCAMP RESYNC */
   { &rc.scamp_resend_frames,        1, 1, 1, 9 },  /* SCAMP RESEND */
   { &rc.rtty_figs_resend,           1, 1, 1, 5 },   /* RTTY REPEAT */
@@ -937,27 +946,6 @@ void calibFrequencyStandard(void)
   si5351.set_xo_freq(rc.frequency_calibration);
   temporary_message(crystal_cal);
 }
-
-#if 0
-void ssb_offset_test(void)
-{ 
-  scroll_number_dat snd = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-  snd.digits = 5;
-  snd.minimum_number = 0;
-  snd.maximum_number = 65535;
-
-      scroll_number_start(&snd);
-  for (;;)
-  {
-        idle_task();
-        scroll_number_key(&snd);
-      if (snd.entered) break;
-      if (snd.changed)
-        si5351.set_offset_fast(-((int32_t)snd.n));
-  }
-}
-#endif
 
 void configuration(void)
 {
@@ -1282,6 +1270,7 @@ void external_control_mode(void)
 
   if (!check_band_warning()) return;
 
+  set_protocol(PROTOCOL_CW);  // set the mode to CW so we can't transmit SSB
   temporary_message(ext_mode);
   setupCompare();
   setup_timers_external_control();
@@ -1431,7 +1420,6 @@ void select_command_mode()
     case 5: set_transmission_mode();
             break;
     case 6: key_mode();
-            //ssb_offset_test();
             break;
     case 7: external_control_mode();
             break;

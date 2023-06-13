@@ -205,19 +205,22 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
 void dsp_initialize_ssb(protocol)
 {
     dsp_initialize_fastscan();
-    ps.ssbs.drive = 3;
+    ps.ssbs.gain = rc.ssb_gain;
     ps.ssbs.protocol = protocol;
 }
 
 void dsp_initialize_protocol(uint8_t protocol, uint8_t wide)
 {
+#ifdef SSB_PROTOCOL
+  ssb_state_change(0);
+#endif
   if (IS_SCAMP_PROTOCOL(protocol))
      dsp_initialize_scamp(protocol, wide);
   else if (protocol == PROTOCOL_CW)
      dsp_initialize_cw(protocol, wide);
   else if ((protocol == PROTOCOL_RTTY) || (protocol == PROTOCOL_RTTY_REV))
      dsp_initialize_rtty(protocol, wide);
-  else if ((protocol == PROTOCOL_USB) || (protocol == PROTOCOL_LSB))
+  else if (IS_SSB_PROTOCOL(protocol))
      dsp_initialize_ssb(protocol);
 }
 

@@ -115,7 +115,7 @@ typedef struct _dsp_state_fixed
    dsp_state_fixed state */
 typedef struct _dsp_state
 {
-  uint8_t   ssb_active;
+  volatile uint8_t   ssb_active;
 
   uint8_t   slow_samp;
   uint16_t  total_num;

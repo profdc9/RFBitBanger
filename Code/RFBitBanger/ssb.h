@@ -36,14 +36,14 @@ typedef struct _ssb_state
 {
   uint8_t   protocol;
   uint8_t   sampling_clock;
-  uint8_t   drive;
+  uint8_t   gain;
   int16_t   cumulative_sample;
-  int16_t   last_sample, last_sample2;
   int16_t   dc_level;
   int16_t   lpf_z1;
   int16_t   ssb_fir_buffer[SSB_FIR_LENGTH];
   int16_t   previous_phase;
 #ifdef SSB_DEBUG_REGISTERS
+  int16_t   last_sample, last_sample2;
   uint16_t  magnitude;
   int16_t   phase_difference;
   int16_t   frequency_shift;
