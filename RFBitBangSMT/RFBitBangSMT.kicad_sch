@@ -8797,8 +8797,8 @@
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061da4f62"
       (reference "Q7") (unit 1) (value "2N7000") (footprint "TO_SOT_Packages_THT:TO-92_Inline_Wide")
     )
-    (path "/00000000-0000-0000-0000-000061b53775/0b905290-8c4a-4210-b9dc-3f15f6b2a258"
-      (reference "Q8") (unit 1) (value "SS8550") (footprint "Package_TO_SOT_SMD:SOT-23")
+    (path "/00000000-0000-0000-0000-000061b53775/a9a801ce-a059-4b78-ac73-8c86caa7180f"
+      (reference "Q8") (unit 1) (value "SS8550") (footprint "Package_TO_SOT_THT:TO-92_Inline_Wide")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061da3f9d"
       (reference "Q9") (unit 1) (value "2N7000") (footprint "TO_SOT_Packages_THT:TO-92_Inline_Wide")
@@ -8820,9 +8820,6 @@
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061de0af6"
       (reference "Q15") (unit 1) (value "NC") (footprint "TO_SOT_Packages_THT:TO-220-3_Vertical")
-    )
-    (path "/00000000-0000-0000-0000-000061b53775/a9a801ce-a059-4b78-ac73-8c86caa7180f"
-      (reference "Q16") (unit 1) (value "SS8550") (footprint "Package_TO_SOT_THT:TO-92_Inline_Wide")
     )
     (path "/00000000-0000-0000-0000-0000615930ed"
       (reference "R1") (unit 1) (value "10k") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
@@ -8936,7 +8933,7 @@
       (reference "R37") (unit 1) (value "1k") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-0000618677f5"
-      (reference "R38") (unit 1) (value "22R") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
+      (reference "R38") (unit 1) (value "2R2") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061864263"
       (reference "R39") (unit 1) (value "22k") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
