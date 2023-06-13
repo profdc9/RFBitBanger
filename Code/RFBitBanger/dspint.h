@@ -86,6 +86,7 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 #define PROTOCOL_SCAMP_LAST_MODE 8
 #endif
 
+#define IS_SSB_PROTOCOL(x) (((x) == PROTOCOL_USB) || ((x) == PROTOCOL_LSB))
 #define IS_SCAMP_PROTOCOL(x) (((x) >= PROTOCOL_SCAMP_FSK) && ((x) <= PROTOCOL_SCAMP_LAST_MODE))
 
 typedef void (*dsp_interrupt_routine)(void);

@@ -43,8 +43,8 @@ typedef struct _si5351_synth_regs
 #define SI5351_MULTISYNTH_1 50
 #define SI5351_MULTISYNTH_2 58
 
-#define SI5351_FREQ_OFFSET 4096
-#define SI5351_FREQ_OFFSET_SHIFT 12
+#define SI5351_FREQ_OFFSET 2048
+#define SI5351_FREQ_OFFSET_SHIFT 11
 
 #define FEEDBACK_MULTIPLIER_C 524288               // "c" part of Feedback-Multiplier from XTAL to PLL
 #define FEEDBACK_MULTIPLIER_SHIFT 19

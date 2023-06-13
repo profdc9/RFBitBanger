@@ -85,6 +85,12 @@ void delayidle(uint32_t ms);
 void tone_on(uint8_t freq, uint8_t vol);
 void tone_off(void);
 
+void set_frequency_offset(int16_t offset);
+void set_transmit_pwm(uint16_t pwm);
+void set_tuning_pwm(uint16_t pwm);
+
+void transmit_pwm_mode(uint8_t set);
+
 #ifdef __cplusplus
 }
 #endif

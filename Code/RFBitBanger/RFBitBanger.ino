@@ -164,9 +164,9 @@ void ssb_debug(void)
 {
   static uint16_t last_millis = 0;
   uint16_t cur_millis = millis();
-
-  return;
-  //ds.ssb_active = 1;
+  uint8_t act = ds.ssb_active;
+  
+  ds.ssb_active = 1;
   if ((uint16_t)(cur_millis-last_millis) < 1000) return;
   last_millis = cur_millis;
 
@@ -178,7 +178,9 @@ void ssb_debug(void)
   sei();
 
   Serial.print("\r\nprotocol=");
-  Serial.println(ps.ssbs.protocol);
+  Serial.print(ps.ssbs.protocol);
+  Serial.print(",");
+  Serial.println(act);
   Serial.print("last_samples=");
   Serial.print(last_sample);
   Serial.print(",");
@@ -197,6 +199,10 @@ void ssb_debug(void)
   Serial.println(ps.ssbs.phase_difference);
   Serial.print("frequency_shift=");
   Serial.println(ps.ssbs.frequency_shift);
+  Serial.print("no_interrupts=");
+  Serial.println(ps.ssbs.no_interrupts);
+  Serial.print("phase_inversions=");
+  Serial.println(ps.ssbs.phase_inversions);
 }
 
 extern "C" {
@@ -204,9 +210,10 @@ void idle_task(void)
 {
   dsp_dispatch_receive();
   lcd.pollButtons();
-  if ((ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB))
+  if (IS_SSB_PROTOCOL(ps.ssbs.protocol))
   {
-    ssb_state_change(!digitalRead(PTT_PIN));
+    //ssb_state_change(!digitalRead(PTT_PIN));
+    ssb_state_change(1);
     ssb_debug();
   }
 }
@@ -272,18 +279,6 @@ ISR(TIMER1_OVF_vect)
   }
 }
 
-void write_transmit_pwm(uint16_t pwm)
-{
-  OCR1AH = pwm >> 8;
-  OCR1AL = pwm & 0xFF;
-}
-
-void write_tuning_pwm(uint16_t pwm)
-{
-  OCR1BH = pwm >> 8;
-  OCR1BL = pwm & 0xFF;
-}
-
 void setup_timers(void)
 {
   cli();
@@ -292,8 +287,8 @@ void setup_timers(void)
   TCCR1B = (1<<CS10);
   TCCR1B = (1<<WGM13) | (1<<WGM12) | (1<<CS10);
   ICR1 = TIMER1_COUNT_MAX;
-  write_transmit_pwm(1);
-  write_tuning_pwm(0);
+  set_transmit_pwm(1);
+  set_tuning_pwm(0);
   TIMSK1 = (1<<TOIE1);
   TIMSK2 = 0;
   sei();
@@ -361,6 +356,7 @@ void muteaudio_set(uint8_t seton)
 
 void transmit_set(uint8_t seton)
 {
+  //OCR1A = seton != 0 ? TIMER1_COUNT_MAX : 0; 
   digitalWrite(TRANSMIT_PIN, seton != 0);
 }
 
@@ -380,6 +376,29 @@ void set_protocol(uint8_t protocol)
    set_frequency_receive();
 }
 
+void set_frequency_offset(int16_t offset)
+{
+   si5351.set_offset_fast(offset);
+}
+
+
+void set_transmit_pwm(uint16_t pwm) 
+{
+  OCR1A = pwm;  
+};
+
+void set_tuning_pwm(uint16_t pwm)
+{
+  OCR1B = pwm;
+};
+
+void transmit_pwm_mode(uint8_t set)
+{
+  if (set) TCCR1A |= ((1 << COM1A1));
+    else TCCR1A &= ~((1 << COM1A1));
+  TCCR1A &= ~((1 << COM1A0));
+}
+
 void set_frequency(uint32_t freq, uint8_t clockno)
 {
    si5351_synth_regs s_regs;
@@ -395,7 +414,7 @@ void set_frequency_both(uint32_t freq)
    si5351_synth_regs s_regs;
    si5351_multisynth_regs m_regs;
   
-   si5351.calc_registers(freq, 0, (ps.ssbs.protocol == PROTOCOL_USB) || (ps.ssbs.protocol == PROTOCOL_LSB), &s_regs, &m_regs);
+   si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs);
    si5351.set_registers(0xFF, NULL, 1, &m_regs);
    si5351.set_registers(0, &s_regs, 0, &m_regs);
    si5351.print_c_regs();
@@ -468,8 +487,8 @@ void setup() {
   si5351.start();
   set_frequency_receive();
   lcd.begin(20,4);
-  digitalWrite(TRANSMIT_PIN,LOW);
-  digitalWrite(MUTEAUDIO_PIN,LOW);
+  transmit_set(0);
+  muteaudio_set(0);
   digitalWrite(BACKLIGHT_PIN,HIGH);
 }
 
@@ -908,6 +927,27 @@ void calibFrequencyStandard(void)
   si5351.set_xo_freq(rc.frequency_calibration);
   temporary_message(crystal_cal);
 }
+
+#if 0
+void ssb_offset_test(void)
+{ 
+  scroll_number_dat snd = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+  snd.digits = 5;
+  snd.minimum_number = 0;
+  snd.maximum_number = 65535;
+
+      scroll_number_start(&snd);
+  for (;;)
+  {
+        idle_task();
+        scroll_number_key(&snd);
+      if (snd.entered) break;
+      if (snd.changed)
+        si5351.set_offset_fast(-((int32_t)snd.n));
+  }
+}
+#endif
 
 void configuration(void)
 {
@@ -1381,6 +1421,7 @@ void select_command_mode()
     case 5: set_transmission_mode();
             break;
     case 6: key_mode();
+            //ssb_offset_test();
             break;
     case 7: external_control_mode();
             break;

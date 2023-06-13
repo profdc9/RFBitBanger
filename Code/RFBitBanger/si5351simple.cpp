@@ -122,14 +122,15 @@ uint32_t si5351simple::get_xo_freq(void)
 void si5351simple::set_offset_fast(int16_t offset)
 {
   uint8_t regs[5];
-  int32_t a, b;
+  uint16_t a;
+  int32_t b;
   uint32_t P1, P2;
 
   a = c_regs.a;
   if (offset > 0)
     b = c_regs.b + offset * c_regs.b_offset_pos /  SI5351_FREQ_OFFSET;
   else
-    b = c_regs.b + offset * c_regs.b_offset_neg /  SI5351_FREQ_OFFSET;
+    b = c_regs.b - offset * c_regs.b_offset_neg /  SI5351_FREQ_OFFSET;
 
   if (b < 0)
   {

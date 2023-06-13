@@ -44,6 +44,8 @@ typedef struct _ssb_state
   uint16_t  magnitude;
   int16_t   phase_difference;
   int16_t   frequency_shift;
+  uint32_t  no_interrupts;
+  uint32_t  phase_inversions;
 } ssb_state;
 
 #ifdef __cplusplus
