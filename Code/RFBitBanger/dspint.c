@@ -179,6 +179,7 @@ void dsp_initialize_cw(uint8_t protocol, uint8_t wide)
     dsp_reset_state();
     df.ddp = cwmod_decode_process;
     df.dxr = cwmod_txmit;
+    df.dfo = cw_frequency_offset;
     cwmod_initialize(rc.cw_spaces_from_mark_timing,rc.cw_smooth,rc.cw_sticky_interval_length);
 }
 
@@ -205,6 +206,7 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
 void dsp_initialize_ssb(protocol)
 {
     dsp_initialize_fastscan();
+    df.dfo = ssb_frequency_offset;
     ps.ssbs.gain = rc.ssb_gain;
     ps.ssbs.protocol = protocol;
 }
@@ -250,6 +252,12 @@ uint8_t dsp_dispatch_txmit(uint32_t frequency, uint8_t *message, uint8_t length,
   if (df.dxr != NULL)
     df.dxr(&dtms,ddc);
   return (dtms.aborted);
+}
+
+int16_t dsp_freq_offset(void)
+{
+  if (df.dfo == NULL) return 0;
+  return df.dfo();
 }
 
 uint16_t dsp_get_signal_magnitude(void)

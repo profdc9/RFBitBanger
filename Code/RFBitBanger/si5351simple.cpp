@@ -217,6 +217,7 @@ int32_t si5351simple::calculate_b(uint32_t frequency)
   return b;
 }
 
+#if 0
 void si5351simple::print_c_regs(void)
 {
   Serial.print("\r\nR=");
@@ -234,6 +235,7 @@ void si5351simple::print_c_regs(void)
   Serial.print("b_offset_neg=");
   Serial.println(c_regs.b_offset_neg);
 }
+#endif
 
 void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, uint8_t calc_offset, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs)
 {

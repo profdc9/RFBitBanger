@@ -453,3 +453,8 @@ uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
     if (dtms->aborted) break;
   }
 }
+
+int16_t cw_frequency_offset(void)
+{
+  return -(CWMOD_SIDETONE_OFFSET);
+}

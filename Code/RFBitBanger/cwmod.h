@@ -97,6 +97,7 @@ void cwmod_decode_process(void);
 void cwmod_initialize(uint8_t spaces_from_mark_timing,
                    uint8_t smooth, uint8_t sticky_interval_length);
 uint8_t cwmod_insert_into_timing_fifo_noint(uint16_t tim);
+int16_t cw_frequency_offset();
 
 #ifdef __cplusplus
 }

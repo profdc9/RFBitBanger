@@ -49,7 +49,7 @@ const radio_configuration PROGMEM default_rc =
   RC_MAGIC_NUMBER,  /* magic_number */
   25000000,  /* frequency_calibratin */
   20,  /* cw_send_speed */
-  3,   /* scamp_resync_frames */
+  0,   /* scamp_resync_frames */
   1,   /* scamp_ressend_frames */
   2,   /* rtty_figs_resend */
   667, /* sidetone_frequency */
@@ -420,7 +420,7 @@ void set_frequency(uint32_t freq, uint8_t clockno)
 #endif
    si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs);
    si5351.set_registers(0, &s_regs, clockno, &m_regs);
-   si5351.print_c_regs();
+   //si5351.print_c_regs();
 }
 
 void set_frequency_both(uint32_t freq)
@@ -434,7 +434,7 @@ void set_frequency_both(uint32_t freq)
    si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs);
    si5351.set_registers(0xFF, NULL, 1, &m_regs);
    si5351.set_registers(0, &s_regs, 0, &m_regs);
-   si5351.print_c_regs();
+   //si5351.print_c_regs();
 }
 
 static uint8_t chno = 0;
@@ -472,7 +472,7 @@ void set_frequency_receive(void)
 {
   muteaudio_set(0);
   transmit_set(0);
-  set_frequency_both(rc.rit_shift_dir ? snd_freq.n - rc.rit_shift_freq : snd_freq.n + rc.rit_shift_freq);
+  set_frequency_both(snd_freq.n + dsp_freq_offset() + (rc.rit_shift_dir ? - rc.rit_shift_freq : rc.rit_shift_freq));
   set_clock_onoff_mask(0x01);
 }
 
@@ -487,7 +487,7 @@ void set_frequency_snd(void)
 void setup() {
   setupConfiguration();
   si5351.set_xo_freq(rc.frequency_calibration);
-  set_protocol(PROTOCOL_USB);
+  set_protocol(PROTOCOL_CW);
   setupADC();
   stopCompare();
   setup_timers();
@@ -935,14 +935,14 @@ void temporary_message(uint8_t *msg)
 void calibFrequencyStandard(void)
 {
   scroll_number_dat cal_freq = { 0, 1, 8, 0, 2500000, 29999999, 0, 500000, 0, 0 };
-  cal_freq.n = snd_freq.n+CWMOD_SIDETONE_OFFSET;
+  cal_freq.n = snd_freq.n;
   scroll_number_start(&cal_freq);
   while (!cal_freq.entered)
   {
      idle_task();
      scroll_number_key(&cal_freq);
   }
-  rc.frequency_calibration = ((uint64_t)si5351.get_xo_freq())*((uint64_t)(cal_freq.n-CWMOD_SIDETONE_OFFSET)) / snd_freq.n;
+  rc.frequency_calibration = ((uint64_t)si5351.get_xo_freq())*((uint64_t)(cal_freq.n)) / snd_freq.n;
   si5351.set_xo_freq(rc.frequency_calibration);
   temporary_message(crystal_cal);
 }
@@ -1145,7 +1145,7 @@ void key_mode(void)
   kc.last_check_time = millis();
   if (!rc.cw_practice)
   {
-    set_frequency(snd_freq.n + CWMOD_SIDETONE_OFFSET, 1);
+    set_frequency(snd_freq.n, 1);
     set_clock_onoff_mask(0x01);
   }
   for (;;)

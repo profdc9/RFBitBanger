@@ -58,5 +58,6 @@ typedef struct _ssb_state
 
 void ssb_interrupt(int16_t sample);
 void ssb_state_change(uint8_t state);
+int16_t ssb_frequency_offset(void);
 
 #endif  /* __SSB_H */

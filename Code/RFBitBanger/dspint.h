@@ -92,6 +92,7 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 typedef void (*dsp_interrupt_routine)(void);
 typedef void (*dsp_decode_process)(void);
 typedef void (*dsp_xmit_routine)(dsp_txmit_message_state *, dsp_dispatch_callback);
+typedef int16_t (*dsp_frequency_offset)(void);
 
 /* this is stuff that is initialized when the modulation mode
    is changed and doesn't change otherwise */
@@ -108,6 +109,7 @@ typedef struct _dsp_state_fixed
   dsp_interrupt_routine dir;
   dsp_decode_process ddp;
   dsp_xmit_routine dxr;
+  dsp_frequency_offset dfo;
 } dsp_state_fixed;
 
 /* this is the current state of the demodulator and is designed
@@ -194,6 +196,7 @@ uint8_t dsp_dispatch_txmit(uint32_t frequency, uint8_t *message, uint8_t length,
 void dsp_dispatch_receive(void);
 void dsp_dispatch_interrupt(void);
 void dsp_initialize_protocol(uint8_t protocol, uint8_t wide);
+int16_t dsp_freq_offset(void);
 
 #define DECODE_FIFO_LENGTH 16
 
