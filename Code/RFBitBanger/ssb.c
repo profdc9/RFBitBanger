@@ -163,6 +163,7 @@ void ssb_interrupt(int16_t sample)
 #endif
   
   set_transmit_pwm(((int32_t)magnitude*(int32_t)(TIMER1_COUNT_MAX/2)) >> 8); 
+  ps.ssbs.magnitude = magnitude;
   
   phase_difference = phase -  ps.ssbs.previous_phase;
   ps.ssbs.previous_phase = phase;   // calculate phase difference to get instantaneous frequency of signal
@@ -189,7 +190,6 @@ void ssb_interrupt(int16_t sample)
 
 #ifdef SSB_DEBUG_REGISTERS
   ps.ssbs.frequency_shift = frequency; 
-  ps.ssbs.magnitude = magnitude;
   ps.ssbs.phase_difference = phase_difference;
   ps.ssbs.no_interrupts++;
 #endif
@@ -198,5 +198,10 @@ void ssb_interrupt(int16_t sample)
 
 int16_t ssb_frequency_offset(void)
 {
-  return (ps.ssbs.protocol == PROTOCOL_USB) ? -1500 : 1500;
+  return -1500;
+}
+
+uint16_t ssb_get_magnitude(void)
+{
+  return ps.ssbs.magnitude;
 }

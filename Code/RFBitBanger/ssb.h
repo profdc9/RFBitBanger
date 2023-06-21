@@ -42,9 +42,9 @@ typedef struct _ssb_state
   int16_t   lpf_z1;
   int16_t   ssb_fir_buffer[SSB_FIR_LENGTH];
   int16_t   previous_phase;
+  uint16_t  magnitude;
 #ifdef SSB_DEBUG_REGISTERS
   int16_t   last_sample, last_sample2;
-  uint16_t  magnitude;
   int16_t   phase_difference;
   int16_t   frequency_shift;
   uint32_t  no_interrupts;
@@ -58,6 +58,7 @@ typedef struct _ssb_state
 
 void ssb_interrupt(int16_t sample);
 void ssb_state_change(uint8_t state);
+uint16_t ssb_get_magnitude(void);
 int16_t ssb_frequency_offset(void);
 
 #endif  /* __SSB_H */

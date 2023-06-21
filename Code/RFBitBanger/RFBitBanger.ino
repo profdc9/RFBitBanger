@@ -562,7 +562,7 @@ void update_bars()
   if ((cur_update - last_update_bars) >= UPDATE_MILLIS_BARS)
   {
     last_update_bars = cur_update;
-    bgs.bars = map_16_to_bar_20(dsp_get_signal_magnitude());
+    bgs.bars = ds.ssb_active ? (ssb_get_magnitude()*20)/256 : map_16_to_bar_20(dsp_get_signal_magnitude());
     lcdBarGraph(&bgs);
   }
 }
@@ -1402,8 +1402,6 @@ void select_command_mode()
     update_readout();
     selected = do_menu(&mn);
   } while (!selected);
-  Serial.print("current_protocol=");
-  Serial.println(ps.ns.protocol);
   current_item = mn.item;
   switch (mn.item)
   {
