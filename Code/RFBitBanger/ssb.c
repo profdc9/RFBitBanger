@@ -185,7 +185,8 @@ void ssb_interrupt(int16_t sample)
 #endif
 
   frequency = (((uint32_t)phase_difference) * FRACTIONAL_MULT_FREQUENCY) / 256;
-  if (ps.ssbs.protocol == PROTOCOL_LSB) frequency = -frequency;
+  if (ps.ssbs.protocol == PROTOCOL_LSB)
+    frequency = -frequency;
   set_frequency_offset(frequency);
 
 #ifdef SSB_DEBUG_REGISTERS
@@ -198,7 +199,7 @@ void ssb_interrupt(int16_t sample)
 
 int16_t ssb_frequency_offset(void)
 {
-  return -1500;
+  return 0;
 }
 
 uint16_t ssb_get_magnitude(void)

@@ -69,6 +69,7 @@ const radio_configuration PROGMEM default_rc =
   0,   /* cw_iambic_switch */
   0,   /* erase_on_send */
   8,   /* ssb gain */
+  1,   /* backlight */
 };
 
 bool check_band_warning(void);
@@ -383,6 +384,7 @@ void set_clock_onoff(uint8_t onoff, uint8_t clockno)
 
 void set_protocol(uint8_t protocol)
 {
+   if (protocol == 0xFF) protocol = ps.ns.protocol;
    dsp_initialize_protocol(protocol, rc.wide);
    set_frequency_receive();
 }
@@ -484,6 +486,11 @@ void set_frequency_snd(void)
   set_clock_onoff_mask(0x01);
 }
 
+void set_backlight(void)
+{
+  digitalWrite(BACKLIGHT_PIN, rc.backlight);
+}
+
 void setup() {
   setupConfiguration();
   si5351.set_xo_freq(rc.frequency_calibration);
@@ -506,7 +513,7 @@ void setup() {
   lcd.begin(20,4);
   transmit_set(0);
   muteaudio_set(0);
-  digitalWrite(BACKLIGHT_PIN,HIGH);
+  set_backlight();
 }
 
 #define UPDATE_MILLIS_BARS 100
@@ -880,9 +887,10 @@ const char iambic_mode_type[] PROGMEM = "0=IambA,1=IambB";
 const char iambic_mode_switch[] PROGMEM = "Iambic 0=Nm,1Rev";
 const char erase_on_send[] PROGMEM = "Erase On Send";
 const char ssb_gain[] PROGMEM = "SSB Gain";
+const char backlight_msg[] PROGMEM = "Backlight";
 
 const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
-        wide_mode, cw_wpm, ssb_gain, scamp_rs, scamp_re,
+        backlight_msg, wide_mode, cw_wpm, ssb_gain, scamp_rs, scamp_re,
         rtty_re, rit_shift_freq, rit_shift_dir, 
         sidetone_freq, sidetone_on,
         ext_fast_mode, ext_lsb,
@@ -893,6 +901,7 @@ const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title,
 
 const configuration_entry PROGMEM configuration_entries[] = 
 {
+  { &rc.backlight,                  1, 1, 0, 1 }, /* BACKLIGHT */
   { &rc.wide,                       1, 1, 0, 1 }, /* WIDE PROTOCOL */
   { &rc.cw_send_speed,              1, 2, 5, 40 }, /* CW WPM */
   { &rc.ssb_gain,                   1, 2, 0, 32 }, /* SSB GAIN */
@@ -1014,6 +1023,8 @@ void configuration(void)
       } 
     }
     display_clear_row_1();
+    set_backlight();
+    set_protocol(0xFF);
   }
 }
 
