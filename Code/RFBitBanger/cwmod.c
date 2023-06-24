@@ -171,7 +171,7 @@ void cw_reset_threshold(uint16_t thresh)
         thresh >>= 1;
    thresh = (thresh < CWMOD_THRESHOLD_MIN) ? CWMOD_THRESHOLD_MIN : thresh;
    ps.cs.keydown_threshold = thresh;
-   ps.cs.keyup_threshold = ps.cs.keydown_threshold >> 1;
+   ps.cs.keyup_threshold = (ps.cs.keydown_threshold*3) / 4;
    ps.cs.ct_average = 0;
    ps.cs.ct_sum = 0;
    ps.cs.ct_min_val = 0xFFFF;
