@@ -6438,7 +6438,7 @@
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp a24a99c0-783e-4b21-a635-fd00ec6b8afb)
     )
-    (fp_text value "33R" (at 3.81 2.31) (layer "F.Fab")
+    (fp_text value "2R2" (at 3.81 2.31) (layer "F.Fab")
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp 84d99dfe-534e-408c-9a16-361ce6153ea0)
     )

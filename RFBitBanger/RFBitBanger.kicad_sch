@@ -7396,7 +7396,7 @@
       (reference "R37") (unit 1) (value "1k") (footprint "Resistors_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-0000618677f5"
-      (reference "R38") (unit 1) (value "33R") (footprint "Resistors_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+      (reference "R38") (unit 1) (value "2R2") (footprint "Resistors_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061864263"
       (reference "R39") (unit 1) (value "22k") (footprint "Resistors_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
