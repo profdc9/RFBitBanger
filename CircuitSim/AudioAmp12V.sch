@@ -159,10 +159,6 @@
   <1040 430 1040 430 "V2" 1050 340 0 "">
 </Wires>
 <Diagrams>
-  <Rect 370 1027 398 293 3 #c0c0c0 1 13 1 1 1 10000 1 1e-09 1 3e-08 1 0 1e-05 5.17201e-05 315 0 225 0 0 0 "" "" "">
-	<"ngspice/ac.i(pr1)" #0000ff 0 3 0 0 0>
-	<"ngspice/ac.v(v1)" #ff0000 0 3 0 0 1>
-  </Rect>
   <Rect 910 1055 410 295 3 #c0c0c0 1 11 1 1 1 10000 1 1e-05 1 0.03 1 0.0001 1 10 315 0 225 0 0 0 "" "" "">
 	<"ngspice/ac.v(v2)" #0000ff 0 3 0 0 0>
 	<"ngspice/ac.v(outputv)" #ff0000 0 3 0 0 1>
@@ -170,6 +166,10 @@
   <Rect 1500 1055 410 295 3 #c0c0c0 1 11 0 10 1 10000 0 1e-10 1 1e-08 1 -1 0.5 1 315 0 225 0 0 0 "" "" "">
 	<"ngspice/ac.onoise_spectrum" #ff0000 0 3 0 0 0>
 	<"ngspice/ac.inoise_spectrum" #ff00ff 0 3 0 0 0>
+  </Rect>
+  <Rect 390 1037 398 293 3 #c0c0c0 1 13 1 1 1 1e+07 1 3e-11 1 3e-08 1 0 1 0 315 0 225 0 0 0 "" "" "">
+	<"ngspice/ac.i(pr1)" #0000ff 0 3 0 0 0>
+	<"ngspice/ac.v(vi1)" #ff00ff 0 3 0 0 0>
   </Rect>
 </Diagrams>
 <Paintings>

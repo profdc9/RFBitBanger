@@ -4657,7 +4657,7 @@
     (property "Reference" "C3" (id 0) (at 62.484 35.052 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "1000 uF" (id 1) (at 62.484 38.862 0)
+    (property "Value" "1000 uF" (id 1) (at 60.96 31.75 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Capacitors_THT:CP_Radial_D8.0mm_P3.50mm" (id 2) (at 62.23 36.83 0)
@@ -5178,7 +5178,7 @@
     (in_bom yes) (on_board yes)
     (uuid 00000000-0000-0000-0000-0000615b9029)
     (property "Reference" "D1" (id 0) (at 74.93 36.83 0))
-    (property "Value" "1N4007" (id 1) (at 69.85 36.83 0))
+    (property "Value" "1N4745A" (id 1) (at 72.39 41.91 90))
     (property "Footprint" "Diode_THT:D_DO-41_SOD81_P7.62mm_Horizontal" (id 2) (at 72.39 36.83 0)
       (effects (font (size 1.27 1.27)) hide)
     )
@@ -8414,6 +8414,9 @@
     (path "/8e3eb73a-f592-4b46-83c9-7e804d91259c"
       (reference "#PWR0113") (unit 1) (value "GND") (footprint "")
     )
+    (path "/00000000-0000-0000-0000-000061b53775/64fd2257-0d44-4e05-aa61-6bd43a2184e3"
+      (reference "#PWR0114") (unit 1) (value "GND") (footprint "")
+    )
     (path "/00000000-0000-0000-0000-0000615917e6"
       (reference "C1") (unit 1) (value "100 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
@@ -8558,17 +8561,17 @@
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-0000619be2c2"
       (reference "C48") (unit 1) (value "100 pF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
-    (path "/00000000-0000-0000-0000-000061b53775/6a793429-9796-4cba-9bf8-9842a7016020"
-      (reference "C49") (unit 1) (value "22 uF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
+    (path "/00000000-0000-0000-0000-000061b53775/9054ddf2-3d92-4616-94dc-c8ef24146530"
+      (reference "C49") (unit 1) (value "22 uF") (footprint "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm")
     )
-    (path "/00000000-0000-0000-0000-000061b53775/17c7b7af-e5eb-4134-84d9-0bc2a3fb97a4"
-      (reference "C50") (unit 1) (value "10 uF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
+    (path "/00000000-0000-0000-0000-000061b53775/91ff8ceb-9874-4436-be08-34e2b32bd8ed"
+      (reference "C50") (unit 1) (value "10 uF") (footprint "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061b8cd82"
       (reference "C51") (unit 1) (value "100 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
-    (path "/00000000-0000-0000-0000-000061b53775/a15d8371-c771-415d-be2c-96d90eae5402"
-      (reference "C52") (unit 1) (value "10 uF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
+    (path "/00000000-0000-0000-0000-000061b53775/44212323-0cc7-4568-aadc-8ff342410e02"
+      (reference "C52") (unit 1) (value "10 uF") (footprint "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm")
     )
     (path "/00000000-0000-0000-0000-000061db14a7"
       (reference "C53") (unit 1) (value "1000 uF") (footprint "Capacitors_THT:CP_Radial_D8.0mm_P3.50mm")
@@ -8628,7 +8631,7 @@
       (reference "C71") (unit 1) (value "NC") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-0000615b9029"
-      (reference "D1") (unit 1) (value "1N4007") (footprint "Diode_THT:D_DO-41_SOD81_P7.62mm_Horizontal")
+      (reference "D1") (unit 1) (value "1N4745A") (footprint "Diode_THT:D_DO-41_SOD81_P7.62mm_Horizontal")
     )
     (path "/00000000-0000-0000-0000-000061593330"
       (reference "D2") (unit 1) (value "1N4148") (footprint "Diode_SMD:D_SOD-123")
@@ -8643,7 +8646,7 @@
       (reference "D5") (unit 1) (value "1N4007") (footprint "Diode_SMD:D_SMA_Handsoldering")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061ca9c6d"
-      (reference "D6") (unit 1) (value "D_Zener") (footprint "Diodes_THT:D_DO-41_SOD81_P7.62mm_Horizontal")
+      (reference "D6") (unit 1) (value "1N4757") (footprint "Diodes_THT:D_DO-41_SOD81_P7.62mm_Horizontal")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-00006183d750"
       (reference "D8") (unit 1) (value "1N4007") (footprint "Diode_SMD:D_SMA_Handsoldering")
@@ -8779,6 +8782,9 @@
     )
     (path "/750dce4c-d8d4-4a96-836a-4e1248513e04"
       (reference "JP9") (unit 1) (value "HIGAIN") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/3a169378-d9ee-49a1-b8d5-9f91818468d8"
+      (reference "JP10") (unit 1) (value "BTP") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical")
     )
     (path "/00000000-0000-0000-0000-0000615a6933"
       (reference "L1") (unit 1) (value "10 uH") (footprint "Inductor_SMD:L_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
