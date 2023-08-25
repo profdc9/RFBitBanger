@@ -301,8 +301,12 @@ void scroll_number_key(scroll_number_dat *snd)
     int8_t dif =  key - '0' - dig;
     if (dif != 0)
     {
-      snd->n += ((int32_t)p10) * dif;
-      snd->changed = 1;
+      uint32_t n = snd->n + ((int32_t)p10) * dif;
+      if ((n >= snd->minimum_number) && (n <= snd->maximum_number))
+      {
+        snd->n = n;
+        snd->changed = 1;
+      }
     }
     if (snd->position < snd->digits)
       snd->position++;

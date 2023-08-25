@@ -289,3 +289,8 @@ void rtty_decode_process(void)
       decode_insert_into_fifo(pgm_read_byte_near(&rtty_letters[code]));
   }
 }
+
+int16_t rtty_frequency_offset(void)
+{
+  return ps.rs.protocol == PROTOCOL_RTTY_REV ? (RTTY_OFFSET_2 + RTTY_OFFSET_1) / 2 : -(RTTY_OFFSET_2 + RTTY_OFFSET_1) / 2;  
+}

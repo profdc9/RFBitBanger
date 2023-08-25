@@ -486,6 +486,7 @@ void scamp_new_sample(void)
                                         max_val = ds.mag_value_16;
                                         break;
 #ifdef SCAMP_VERY_SLOW_MODES
+        case PROTOCOL_SCAMP_FSK_VSLW:
         case PROTOCOL_SCAMP_FSK_SLOW:   demod_sample = ds.mag_value_16 - ds.mag_value_12;
                                         max_val = ds.mag_value_12 > ds.mag_value_16 ? ds.mag_value_12 : ds.mag_value_16;
                                         break;

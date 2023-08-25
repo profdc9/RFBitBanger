@@ -81,6 +81,7 @@ void rtty_new_sample(void);
 void rtty_decode_process(void);
 void rtty_reset_codeword(void);
 uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
+int16_t rtty_frequency_offset(void);
 
 #ifdef __cplusplus
 }

@@ -201,11 +201,16 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
     ps.rs.edge_thr = ps.rs.power_thr;
     df.ddp = rtty_decode_process;
     df.dxr = rtty_txmit;
+    df.dfo = rtty_frequency_offset;
 }
 
 void dsp_initialize_ssb(protocol)
 {
-    dsp_initialize_fastscan();
+    dsp_reset_fixed_state(NULL);
+    df.buffer_size = 24;
+    df.dly_8 = 24;
+    df.dly_24 = 24; 
+    dsp_reset_state();
     df.dfo = ssb_frequency_offset;
     ps.ssbs.gain = rc.ssb_gain;
     ps.ssbs.protocol = protocol;
