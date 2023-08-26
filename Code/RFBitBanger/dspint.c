@@ -106,9 +106,6 @@ void dsp_initialize_fastscan(void)
     ps.ss.protocol = PROTOCOL_FASTSCAN;
     df.buffer_size = 24;
     df.dly_8 = 8;
-    df.dly_12 = 12;
-    df.dly_16 = 16;
-    df.dly_20 = 20;
     df.dly_24 = 24; 
     dsp_reset_state();
 }
@@ -206,11 +203,7 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
 
 void dsp_initialize_ssb(protocol)
 {
-    dsp_reset_fixed_state(NULL);
-    df.buffer_size = 24;
-    df.dly_8 = 24;
-    df.dly_24 = 24; 
-    dsp_reset_state();
+    dsp_initialize_fastscan();
     df.dfo = ssb_frequency_offset;
     ps.ssbs.gain = rc.ssb_gain;
     ps.ssbs.protocol = protocol;
