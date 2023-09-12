@@ -116,6 +116,7 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
 {
     dsp_reset_fixed_state(scamp_new_sample);
     ps.ss.protocol = protocol;
+    df.dfo = scamp_frequency_offset;
     switch (ps.ss.protocol)
     {
         case PROTOCOL_SCAMP_OOK:        df.buffer_size = 64;
@@ -151,7 +152,7 @@ void dsp_initialize_scamp(uint8_t protocol, uint8_t wide)
 #endif // SCAMP_VERY_SLOW_MODES
     }
     ps.ss.demod_samples_per_bit = df.buffer_size / 4;
-    ps.ss.power_thr_min = ((uint16_t)df.buffer_size) * SCAMP_PWR_THR_DEF * (ps.ss.fsk ? 2 : 1);
+    ps.ss.power_thr_min = ((uint16_t)df.buffer_size) * (ps.ss.fsk ? SCAMP_PWR_THR_DEF_FSK : SCAMP_PWR_THR_DEF_OOK);
     dsp_reset_state();
 
     df.ddp = scamp_decode_process;
@@ -325,7 +326,7 @@ void dsp_interrupt_sample(uint16_t sample)
        ds.total_num += sample;
        if ((++ds.slow_samp) >= df.slow_samp_num)
        {
-           sample = ds.total_num;
+           sample = ds.total_num / 2;
            ds.slow_samp = 0;
            ds.total_num = 0;
        } else

@@ -402,7 +402,7 @@ uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   uint16_t pause_len = 1200 / rc.cw_send_speed;  /* element lengthms */
   uint8_t sidetone_freq = TONEFREQ(rc.sidetone_frequency);
   uint8_t sidetone_freq_2 = sidetone_freq >> 2;
-  set_frequency(dtms->frequency + CWMOD_SIDETONE_OFFSET, 1);
+  set_frequency(dtms->frequency, 1);
   set_clock_onoff_mask(0x01);
   for (dtms->current_symbol=0;dtms->current_symbol<dtms->length;dtms->current_symbol++)
   {

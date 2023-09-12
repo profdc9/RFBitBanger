@@ -23,6 +23,10 @@ freely, subject to the following restrictions:
 #ifndef __COMMON_H
 #define __COMMON_H
 
+#define RF_BITBANGER_VERSION_NO "1.0"
+#define RF_BITBANGER_VERSION ( RF_BITBANGER_VERSION_NO " " __DATE__ )
+#define SCAMP_VERSION ( "SCAMP V" SCAMP_VERSION_NO )
+
 #define SSB_SUPPORT
 
 #define DEFAULT_BAUDRATE 115200
@@ -72,6 +76,7 @@ typedef struct _radio_configuration
   uint8_t   erase_on_send;
   uint8_t   ssb_gain;
   uint8_t   backlight;
+  uint32_t  default_frequency;
 } radio_configuration;
 
 extern radio_configuration rc;
@@ -86,6 +91,7 @@ void idle_task(void);
 void delayidle(uint32_t ms);
 void tone_on(uint8_t freq, uint8_t vol);
 void tone_off(void);
+void test_tone(uint16_t freq);
 
 void set_frequency_offset(int16_t offset);
 void set_transmit_pwm(uint16_t pwm);

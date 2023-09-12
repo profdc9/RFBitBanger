@@ -121,7 +121,6 @@ uint32_t si5351simple::get_xo_freq(void)
 
 void si5351simple::set_offset_fast(int16_t offset)
 {
-  //uint8_t regs[5];
   uint16_t a;
   int32_t b;
   uint32_t P1, P2;
@@ -146,7 +145,6 @@ void si5351simple::set_offset_fast(int16_t offset)
   P1 = (a << 7) + P2 - 512;
   P2 = (b << 7) - (P2 << FEEDBACK_MULTIPLIER_SHIFT);
 
-#ifdef TWI_FAST
   twi_start();
   twi_write(SI5351_ADDRESS << 1);
   twi_write(SI5351_MULTISYNTH_0 + 3);
@@ -156,8 +154,9 @@ void si5351simple::set_offset_fast(int16_t offset)
   twi_write((P2 >> 8) & 0xFF);
   twi_write(P2 & 0xFF);
   twi_stop();
-#else
-#error "TWI FAST Required!"
+  
+#ifndef TWI_FAST 
+#warning "TWI FAST Required!!!!!! 1k pullups required on SDA/SCL"
 #endif
 }
 

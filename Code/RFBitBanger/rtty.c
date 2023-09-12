@@ -125,12 +125,12 @@ uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
 
   if (ps.rs.protocol == PROTOCOL_RTTY)
   {
-    set_frequency(dtms->frequency + RTTY_OFFSET_1, 0);
-    set_frequency(dtms->frequency + RTTY_OFFSET_2, 1);
+    set_frequency(dtms->frequency + (RTTY_OFFSET_1 - (RTTY_OFFSET_1+RTTY_OFFSET_2)/2), 0);
+    set_frequency(dtms->frequency + (RTTY_OFFSET_2 - (RTTY_OFFSET_1+RTTY_OFFSET_2)/2), 1);
   } else
   {
-    set_frequency(dtms->frequency - RTTY_OFFSET_2, 0);
-    set_frequency(dtms->frequency - RTTY_OFFSET_1, 1);
+    set_frequency(dtms->frequency - (RTTY_OFFSET_2 - (RTTY_OFFSET_1+RTTY_OFFSET_2)/2), 0);
+    set_frequency(dtms->frequency - (RTTY_OFFSET_1 - (RTTY_OFFSET_1+RTTY_OFFSET_2)/2), 1);
   }
   muteaudio_set(1);
   transmit_set(1);

@@ -24,6 +24,8 @@ freely, subject to the following restrictions:
 #ifndef __SCAMP_H
 #define __SCAMP_H
 
+#define SCAMP_VERSION_NO "0.9"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,7 +34,7 @@ extern "C" {
 
 #define SCAMP_SOLID_CODEWORD  0b111111111111111111111111111111ul
 #define SCAMP_DOTTED_CODEWORD 0b101010101010101010101010101010ul
-#define SCAMP_INIT_CODEWORD   0b111111111111111111111111000011ul
+#define SCAMP_INIT_CODEWORD   0b111111111111111111111111010101ul
 #define SCAMP_SYNC_CODEWORD   0b111110110100011001110100011110ul
                               /* 0x3ED19D1E */
 
@@ -40,7 +42,9 @@ extern "C" {
 
 #define SCAMP_BLANK_CODEWORD 0xAAAAAAAA
 
-#define SCAMP_PWR_THR_DEF 4
+#define SCAMP_PWR_THR_DEF_FSK 0
+#define SCAMP_PWR_THR_DEF_OOK 3
+
 #define SCAMP_AVG_CT_PWR2_FSK 9
 #define SCAMP_AVG_CT_PWR2_OOK 12
 
@@ -118,6 +122,7 @@ void scamp_raw_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code
 uint8_t scamp_code_words_to_bytes(scamp_code_word_get ecwg, void *st, uint8_t *bytes, uint8_t max_bytes);
 uint32_t scamp_add_reversal_bits(uint32_t codeword);
 uint32_t scamp_remove_reversal_bits(uint32_t outword);
+int16_t scamp_frequency_offset();
 
 uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 void scamp_new_sample(void);

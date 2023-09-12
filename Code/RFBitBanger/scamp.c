@@ -453,6 +453,14 @@ void scamp_reset_codeword(void)
    ps.ss.bitflips_ctr = 0;
 }
 
+void scamp_retrain(void)
+{
+  ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;
+  scamp_reset_codeword();
+  ps.ss.last_code = 0;
+  ps.ss.resync = 0;  
+}
+
 /* this is called by the interrupt handle to decode the SCAMP frames from
    the spectral channels.  it figures out the magnitude of
    the signal given the current modulation type (OOK/FSK).  it tries to detect
@@ -511,6 +519,7 @@ void scamp_new_sample(void)
        /* don't allow threshold to get too low, or we'll be having bit edges constantly */
        ps.ss.edge_thr = temp > ps.ss.power_thr_min ? temp : ps.ss.power_thr_min;
        ps.ss.power_thr = ps.ss.edge_thr >> 1;
+       if (ps.ss.protocol != PROTOCOL_SCAMP_FSK_FAST) ps.ss.edge_thr = (ps.ss.edge_thr * 3) / 2;
        ps.ss.squelch_thr = ps.ss.power_thr; 
        ps.ss.ct_average = 0;
        ps.ss.ct_sum = 0;
@@ -617,20 +626,14 @@ void scamp_new_sample(void)
       hamming_weight = hamming_weight_16(ps.ss.current_word);
       if ((hamming_weight < 2) && (ps.ss.fsk))
       {
-        ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;
         ps.ss.polarity = !ps.ss.polarity; /* reverse the polarity of FSK frequencies and 0/1 */
-        scamp_reset_codeword();
-        ps.ss.last_code = 0;
-        ps.ss.resync = 0;
+        scamp_retrain();
         return;
       }
       /* if we have 15 of the last 16 bits ones, that is a ook key down start, or a fsk start */
       if (hamming_weight >= 15)
       {
-        ps.ss.cur_demod_edge_window = ps.ss.demod_samples_per_bit;
-        scamp_reset_codeword();
-        ps.ss.resync = 0;
-        ps.ss.last_code = 0;
+        scamp_retrain();
         return;
       }
     } 
@@ -693,4 +696,22 @@ void scamp_decode_process(void)
   nb = scamp_code_word_to_bytes(gf, bytes);
   if (nb > 0) decode_insert_into_fifo(bytes[0]);
   if (nb > 1) decode_insert_into_fifo(bytes[1]);
+}
+
+int16_t scamp_frequency_offset()
+{
+  switch (ps.ss.protocol)
+  {
+#ifdef SCAMP_VERY_SLOW_MODES
+      case PROTOCOL_SCAMP_OOK_SLOW:
+#endif
+      case PROTOCOL_SCAMP_OOK:        return -625;
+#ifdef SCAMP_VERY_SLOW_MODES
+      case PROTOCOL_SCAMP_FSK_SLOW:   return -((625+667)/2);
+      case PROTOCOL_SCAMP_FSK_VSLW:   return -((625+667)/4);
+#endif
+      case PROTOCOL_SCAMP_FSK:        return -((600+667)/2);
+      case PROTOCOL_SCAMP_FSK_FAST:   return -((583+750)/2);
+  }
+  return -646;
 }

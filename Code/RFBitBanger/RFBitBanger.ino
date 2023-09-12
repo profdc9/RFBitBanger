@@ -70,7 +70,32 @@ const radio_configuration PROGMEM default_rc =
   0,   /* erase_on_send */
   8,   /* ssb gain */
   1,   /* backlight */
+  7000000  /* default frequency */
 };
+
+volatile uint16_t adc_sample_1;
+
+uint8_t mute = 0;
+
+uint8_t srd_buffer[80];
+scroll_readout_dat srd_buf = { 0, 1, 16, sizeof(srd_buffer), srd_buffer, 0 };
+
+uint8_t sad_buffer[80];
+const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
+                                           ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
+                                           '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
+                                           '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
+                                           'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
+                                           'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
+                                           'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
+                                           0x5C,   '^',    '`',    '~' };
+                                     
+scroll_alpha_dat sad_buf = { 0, 0, 16, sizeof(sad_buffer), sad_buffer, sad_validchars, sizeof(sad_validchars), 0, 0, 0, 0 };
+
+scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 7000000, 0, 0 };
+bargraph_dat bgs = { 4, 12, 0 };
+
+uint8_t adc1_read = 0;
 
 bool check_band_warning(void);
 
@@ -79,6 +104,7 @@ void setupConfiguration(void)
   EEPROM.get(EEPROM_CONFIGURATION_ADDRESS, rc);
   if (rc.magic_number != RC_MAGIC_NUMBER)
     memcpy_P((void *)&rc,(void *)&default_rc,sizeof(rc));
+  snd_freq.n = rc.default_frequency;
 }
 
 void saveConfiguration(void)
@@ -231,29 +257,6 @@ void idle_task(void)
 }
 }
 
-volatile uint16_t adc_sample_1;
-
-uint8_t mute = 0;
-
-uint8_t srd_buffer[80];
-scroll_readout_dat srd_buf = { 0, 1, 16, sizeof(srd_buffer), srd_buffer, 0 };
-
-uint8_t sad_buffer[80];
-const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
-                                           ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
-                                           '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',
-                                           '9',    ':',    ';',    '=',    '?',    '@',    'A',    'B',
-                                           'C',    'D',    'E',    'F',    'G',    'H',    'I',    'J',
-                                           'K',    'L',    'M',    'N',    'O',    'P',    'Q',    'R',
-                                           'S',    'T',    'U',    'V',    'W',    'X',    'Y',    'Z',
-                                           0x5C,   '^',    '`',    '~' };
-                                     
-scroll_alpha_dat sad_buf = { 0, 0, 16, sizeof(sad_buffer), sad_buffer, sad_validchars, sizeof(sad_validchars), 0, 0, 0, 0 };
-
-scroll_number_dat snd_freq = { 0, 0, 8, 0, 500000, 29999999, 0, 13560000, 0, 0 };
-bargraph_dat bgs = { 4, 12, 0 };
-
-uint8_t adc1_read = 0;
 #define SET_ADC1_READ(x) adc1_read = (x)
 
 #define SET_SSB_INTERRUPT_MODE(x) (ds.ssb_active) = (x)
@@ -336,6 +339,15 @@ void tone_on(uint8_t freq, uint8_t vol)
     OCR2B = vol;
 }
 }
+
+void test_tone(uint16_t freq)
+{
+  uint8_t freqt = TONEFREQ(freq);
+  tone_on(freqt,freq/2);
+  delay(500);
+  tone_off();
+}
+
 
 void setup_tone_pcm(void)
 {
@@ -750,6 +762,7 @@ const char txtitle1[] PROGMEM = "Return";
 const char txtitle2[] PROGMEM = "Txmit";
 const char quittitle[] PROGMEM = "Quit";
 const char txtitle4[] PROGMEM = "Clear";
+const char txmitting[] PROGMEM = "Transmitting...";
 
 const char *const txmenu[] PROGMEM = {txtitle1,txtitle2,quittitle,txtitle4,NULL };
 
@@ -809,6 +822,7 @@ void transmit_mode(uint8_t selected)
       } while (!selected);
       if (mn.item == 1)
       {
+        lcdPrintFlashSpaces(0, 0, txmitting, 16);
         uint8_t msg_len = transmit_message_length();
         if (msg_len > 0)
         {
@@ -861,6 +875,10 @@ typedef struct _configuration_entry
   uint32_t  max_value;
 } configuration_entry;
 
+const char rf_bitbanger_version[] PROGMEM = RF_BITBANGER_VERSION;
+const char scamp_version[] PROGMEM = SCAMP_VERSION;
+
+const char version_title[] PROGMEM = "Version";
 const char calibfreq_title[] PROGMEM ="Calib Xtal Src";
 const char conf_changed[] PROGMEM = "Config Changed";
 const char conf_saved[] PROGMEM = "Config Saved";
@@ -888,15 +906,16 @@ const char iambic_mode_switch[] PROGMEM = "Iambic 0=Nm,1Rev";
 const char erase_on_send[] PROGMEM = "Erase On Send";
 const char ssb_gain[] PROGMEM = "SSB Gain";
 const char backlight_msg[] PROGMEM = "Backlight";
+const char default_frequency[] PROGMEM = "Default Freq";
 
-const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, 
+const char *const confmenu[] PROGMEM = {quittitle, save_title, calibfreq_title, version_title, 
         backlight_msg, wide_mode, cw_wpm, ssb_gain, scamp_rs, scamp_re,
         rtty_re, rit_shift_freq, rit_shift_dir, 
         sidetone_freq, sidetone_on,
         ext_fast_mode, ext_lsb,
         iambic_mode, iambic_mode_type, iambic_mode_switch,
         cw_practice, cw_spaces_mark_timing,
-        cw_smooth, cw_sticky, band_warning_off, erase_on_send, fr_calib,
+        cw_smooth, cw_sticky, band_warning_off, erase_on_send, fr_calib, default_frequency,
         NULL };
 
 const configuration_entry PROGMEM configuration_entries[] = 
@@ -924,6 +943,7 @@ const configuration_entry PROGMEM configuration_entries[] =
   { &rc.band_warning_off,           1, 1, 0, 1 },   /* BAND WARNING OFF */
   { &rc.erase_on_send,              1, 1, 0, 1 },   /* ERASE ON SEND */
   { &rc.frequency_calibration,      4, 8, 2500000, 29999999 }, /* FREQUENCY CALIBRATION */
+  { &rc.default_frequency,          4, 8, 2500000, 29999999 }, /* DEFAULT_FREQUENCY */
  };
 
 void display_clear_row_1(void)
@@ -933,6 +953,7 @@ void display_clear_row_1(void)
 }
 
 const char crystal_cal[] PROGMEM = "Xtal Calib";
+const char lr_prompt[] PROGMEM = "Lft abrt Rt cont";
 
 void temporary_message(uint8_t *msg)
 {
@@ -940,6 +961,13 @@ void temporary_message(uint8_t *msg)
    delayidle(750);
    display_clear_row_1();
 } 
+
+void showVersionNumber(void)
+{
+  bool res;
+  res = show_lr(1,rf_bitbanger_version,&lr_prompt[9]);
+  res = show_lr(1,scamp_version,&lr_prompt[9]);
+}
 
 void calibFrequencyStandard(void)
 {
@@ -985,8 +1013,12 @@ void configuration(void)
     {
       calibFrequencyStandard();
     } else
+    if (mn.item == 3)
     {
-      selected = mn.item - 3;    
+      showVersionNumber();
+    } else
+    {
+      selected = mn.item - 4;    
       c = &configuration_entries[selected];
       v = pgm_read_word_near(&c->entry);
       snd.digits = pgm_read_word_near(&c->digits);
@@ -1382,7 +1414,6 @@ uint8_t last_band = 0;
 
 const char unknown_band[] PROGMEM = "Unknown band";
 const char new_band[] PROGMEM = "Chg band module";
-const char lr_prompt[] PROGMEM = "Lft abrt Rt cont";
 
 bool check_band_warning(void)
 {
