@@ -213,6 +213,8 @@ uint32_t scamp_remove_reversal_bits(uint32_t outword)
 }
 
 #define SCAMP_IS_DATA_CODE(x) (((uint8_t)((x) >> 8)) == 0x0F)
+#define SCAMP_RES_CODE_BITS_SET(x) ((((uint8_t)(x)) & 0x3C) == 0x3C)
+#define SCAMP_IS_RES_CODE(x) (SCAMP_RES_CODE_BITS_SET(x) && (!SCAMP_IS_DATA_CODE(x)))
 
 #if 0
 /* decode 12 bit code words to 8 bit bytes */
@@ -426,7 +428,6 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   {
     transmit_set(1);
     scamp_send_frame(SCAMP_SOLID_CODEWORD);
-    scamp_send_frame(SCAMP_SOLID_CODEWORD);
   } else
   {
     for (uint8_t i=0;i<4;i++)
@@ -436,11 +437,12 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   scamp_send_frame_rep(SCAMP_SYNC_CODEWORD, rc.scamp_resend_frames);
   scamp_bytes_to_code_words(dtms->message, dtms->length, scamp_code_word_transmit, (void *) &scwtd);
   if (!dtms->aborted)
-     scamp_send_frame(SCAMP_SYNC_CODEWORD);
+     scamp_send_frame_rep(SCAMP_RES_CODE_END_TRANSMISSION, rc.scamp_resend_frames);
   set_clock_onoff(0,0);
   set_clock_onoff(1,0);
   transmit_set(0);
   muteaudio_set(0);
+  ps.ss.reset_protocol = 1;
 }
 
 void scamp_reset_codeword(void)
@@ -613,10 +615,15 @@ void scamp_new_sample(void)
       if (ps.ss.threshold_counter > 0)
           ps.ss.threshold_counter--;
     }
+    if (ps.ss.reset_protocol != 0)
+    {
+      scamp_retrain();
+      ps.ss.reset_protocol = 0;
+    }
     if ((!ps.ss.fsk) || thr)  /* if there is a bit to sync to */
     {
       hamming_weight = hamming_weight_30(ps.ss.current_word ^ SCAMP_SYNC_CODEWORD);
-      if (hamming_weight < (ps.ss.resync ? 4 : 8))  /* 30-bit resync word has occurred! */
+      if (hamming_weight < 4)  /* 30-bit resync word has occurred! */
       {
         scamp_reset_codeword();
         ps.ss.resync = 1;
@@ -689,6 +696,20 @@ void scamp_decode_process(void)
   {
     decode_insert_into_fifo('#');
     return;
+  }
+  if (!SCAMP_IS_DATA_CODE(gf))
+  {
+    if (SCAMP_RES_CODE_BITS_SET(gf))
+    {
+      switch (gf)
+      {
+        case SCAMP_RES_CODE_END_TRANSMISSION:
+            ps.ss.reset_protocol = 1;
+            break;
+      }
+      return;
+    }
+    if (gf == ps.ss.last_code) return;
   }
   if ((!SCAMP_IS_DATA_CODE(gf)) && (gf == ps.ss.last_code))
     return;

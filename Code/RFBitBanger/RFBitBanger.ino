@@ -70,7 +70,7 @@ const radio_configuration PROGMEM default_rc =
   0,   /* erase_on_send */
   8,   /* ssb gain */
   1,   /* backlight */
-  7000000  /* default frequency */
+  7100000  /* default frequency */
 };
 
 volatile uint16_t adc_sample_1;

@@ -30,6 +30,8 @@ freely, subject to the following restrictions:
 extern "C" {
 #endif
 
+#define SCAMP_RES_CODE_END_TRANSMISSION 0b000000111100
+
 #define SCAMP_VERY_SLOW_MODES
 
 #define SCAMP_SOLID_CODEWORD  0b111111111111111111111111111111ul
@@ -77,6 +79,7 @@ typedef struct _scamp_state
   uint32_t  ct_sum;
 
   uint8_t   fsk;
+  uint8_t   reset_protocol;
 
   uint8_t   demod_samples_per_bit;
   uint8_t   demod_edge_window;
