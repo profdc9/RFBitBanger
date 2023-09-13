@@ -711,8 +711,6 @@ void scamp_decode_process(void)
     }
     if (gf == ps.ss.last_code) return;
   }
-  if ((!SCAMP_IS_DATA_CODE(gf)) && (gf == ps.ss.last_code))
-    return;
   ps.ss.last_code = gf;
   nb = scamp_code_word_to_bytes(gf, bytes);
   if (nb > 0) decode_insert_into_fifo(bytes[0]);
