@@ -31,6 +31,8 @@
 #include <inttypes.h>
 #include "Arduino.h"
 
+struct _si5351_cached_regs c_regs;
+
 #ifdef SSB_SUPPORT
 #define TWI_FAST
 #endif
@@ -147,7 +149,7 @@ void si5351simple::set_offset_fast(int16_t offset)
 
   twi_start();
   twi_write(SI5351_ADDRESS << 1);
-  twi_write(SI5351_MULTISYNTH_0 + 3);
+  twi_write(SI5351_SYNTH_PLL_A + 3);
   twi_write((P1 >> 8) & 0xFF);
   twi_write(P1 & 0xFF);
   twi_write(((uint8_t)(FEEDBACK_MULTIPLIER_C >> 12) & 0xF0) | ((uint8_t)(P2 >> 16) & 0x0F));
@@ -178,7 +180,7 @@ void si5351simple::set_registers(uint8_t synth_no, si5351_synth_regs *s_regs,
    }
 
    setSourceAndPower(multisynth_no, 0, 0, 0, 0, 0);
-   if (synth_base != 0xFF)
+   if (s_regs != NULL)
    {
 	   for (i=0;i<8;i++) si5351_write(synth_base+i, s_regs->regs[i]);
    }
@@ -208,14 +210,6 @@ static void calc_multisynth_registers(uint8_t regs[], uint8_t R, uint32_t a, uin
   regs[7] = P2 & 0xFF;
 }
 
-int32_t si5351simple::calculate_b(uint32_t frequency)
-{
-  int32_t b;
-  b = c_regs.fvco - c_regs.a * frequency;
-  b = (((int64_t)b) << FEEDBACK_MULTIPLIER_SHIFT) / frequency;
-  return b;
-}
-
 #if 0
 void si5351simple::print_c_regs(void)
 {
@@ -236,9 +230,16 @@ void si5351simple::print_c_regs(void)
 }
 #endif
 
-void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, uint8_t calc_offset, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs)
+void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, uint8_t calc_offset, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs, si5351_cached_regs *c_regs)
 {
-  c_regs.R = 0;
+  uint8_t R;
+  int16_t offset;
+  uint16_t mult_ratio;
+  uint32_t fvco;
+
+  si5351_cached_regs temp;
+  if (c_regs == NULL)
+    c_regs = &temp;
 
   if (phase >= 0x80)
   {
@@ -246,41 +247,47 @@ void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, uint8_t cal
     m_regs->inv = 1;
   } else m_regs->inv = 0;
 
-   if (frequency < 5000000)
-      c_regs.mult_ratio = 16;
-   else if (frequency < 7000000)
-      c_regs.mult_ratio = 22;
-   else c_regs.mult_ratio = 34;  
+  if (frequency < 5000000)
+      mult_ratio = 400000000ul / frequency;
+  else if (frequency < 7000000)
+      mult_ratio = 550000000ul / frequency;
+  else mult_ratio = 850000000ul / frequency;
 
-  c_regs.fvco = xo_freq * c_regs.mult_ratio;
-
-  int16_t offset = SI5351_FREQ_OFFSET;
-
-  for (;;)
+  R = 0;
+  offset = SI5351_FREQ_OFFSET;
+  while (mult_ratio > 125)
   {
-      c_regs.a = (c_regs.fvco / frequency);
-      if (c_regs.a <= 900) break;
-      frequency <<= 1;
-      offset <<= 1;
-      c_regs.R += 1;
-  }
+    mult_ratio >>= 1;
+    frequency <<= 1;
+    offset <<= 1;
+    R++;    
+  };
 
-  c_regs.b = calculate_b(frequency);
+  mult_ratio = (mult_ratio + 1) & ~0x01;
+  fvco = frequency * mult_ratio;
+  
+  c_regs->a = fvco / xo_freq;
+  c_regs->b = fvco - xo_freq * c_regs->a;
+  c_regs->b = ( ((uint64_t)c_regs->b) << FEEDBACK_MULTIPLIER_SHIFT ) / xo_freq;
+
   if (calc_offset)
   {
-    c_regs.b_offset_pos = calculate_b(frequency + offset) - c_regs.b;
-    c_regs.b_offset_neg = calculate_b(frequency - offset) - c_regs.b;
+    uint32_t fr_offset = ((uint32_t)offset) * mult_ratio;
+
+    c_regs->b_offset_pos = (fvco + fr_offset) - xo_freq * c_regs->a;
+    c_regs->b_offset_pos = ( ((uint64_t)c_regs->b_offset_pos) << FEEDBACK_MULTIPLIER_SHIFT ) / xo_freq - c_regs->b;
+
+    c_regs->b_offset_neg = (fvco - fr_offset) - xo_freq * c_regs->a;
+    c_regs->b_offset_neg = ( ((uint64_t)c_regs->b_offset_neg) << FEEDBACK_MULTIPLIER_SHIFT ) / xo_freq - c_regs->b;
   }
   
   if (phase)
-     m_regs->offset = (uint8_t)((((uint32_t)c_regs.a)*phase) >> 6) & 0x7F;
+     m_regs->offset = (uint8_t)((((uint32_t)mult_ratio)*phase) >> 6) & 0x7F;
   else
      m_regs->offset = 0;
 
-  if (s_regs != NULL)
-     calc_multisynth_registers(s_regs->regs, 0, c_regs.mult_ratio, 0);
-  
-  calc_multisynth_registers(m_regs->regs, c_regs.R, c_regs.a, c_regs.b);
+  calc_multisynth_registers(s_regs->regs, 0, c_regs->a, c_regs->b);  
+  calc_multisynth_registers(m_regs->regs, R, mult_ratio, 0);
 }
 
 // off_on = 0 is off, off_on = 1 is on

@@ -34,11 +34,6 @@
 #define SI5351_SYNTH_PLL_A 26
 #define SI5351_SYNTH_PLL_B 34
 
-typedef struct _si5351_synth_regs
-{ 
-  uint8_t regs[8];
-} si5351_synth_regs;
-
 #define SI5351_MULTISYNTH_0 42
 #define SI5351_MULTISYNTH_1 50
 #define SI5351_MULTISYNTH_2 58
@@ -49,6 +44,11 @@ typedef struct _si5351_synth_regs
 #define FEEDBACK_MULTIPLIER_C 524288               // "c" part of Feedback-Multiplier from XTAL to PLL
 #define FEEDBACK_MULTIPLIER_SHIFT 19
 
+typedef struct _si5351_synth_regs
+{ 
+  uint8_t regs[8];
+} si5351_synth_regs;
+
 typedef struct _si5351_multisynth_regs
 {
   uint8_t regs[8];
@@ -58,23 +58,21 @@ typedef struct _si5351_multisynth_regs
 
 typedef struct _si5351_cached_regs
 {
-  uint8_t R;             // Additional Output Divider in range [1,2,4,...128]
-  uint8_t mult_ratio;
-  uint32_t fvco;         // VCO frequency (600-900 MHz) of PLL
   uint16_t a;            // "a" part of Feedback-Multiplier from XTAL to PLL in range [15,90]
   int32_t  b;            // "b" part of Feedback-Multiplier from XTAL to PLL
   int32_t  b_offset_pos; // offset b
   int32_t  b_offset_neg; // offset b
 } si5351_cached_regs;
 
+extern struct _si5351_cached_regs c_regs;
+
 class si5351simple  {
-  si5351_cached_regs c_regs;
 public:
   si5351simple(uint8_t cap, uint32_t xo_freq); 
   void set_xo_freq(uint32_t p_xo_freq);
   uint32_t get_xo_freq();
   void start(void);
-  void calc_registers(uint32_t frequency, uint8_t phase, uint8_t calc_offset, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs);
+  void calc_registers(uint32_t frequency, uint8_t phase, uint8_t calc_offset, si5351_synth_regs *s_regs, si5351_multisynth_regs *m_regs, si5351_cached_regs *c_regs);
   void setSourceAndPower(uint8_t clock_no, uint8_t frac, uint8_t off_on, uint8_t pll_source, uint8_t power, uint8_t inv);
   void set_registers(uint8_t synth_no, si5351_synth_regs *s_regs, uint8_t multisynth_no, si5351_multisynth_regs *m_regs);
   void setOutputOnOff(uint8_t clock_no, uint8_t off_on);

@@ -432,8 +432,8 @@ void set_frequency(uint32_t freq, uint8_t clockno)
 #ifdef SSB_PROTOCOL
    if (ds.ssb_active) ssb_state_change(0);
 #endif
-   si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs);
-   si5351.set_registers(0, &s_regs, clockno, &m_regs);
+   si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs, clockno == 0 ? &c_regs : NULL);
+   si5351.set_registers(clockno, &s_regs, clockno, &m_regs);
    //si5351.print_c_regs();
 }
 
@@ -445,10 +445,10 @@ void set_frequency_both(uint32_t freq)
 #ifdef SSB_PROTOCOL
    if (ds.ssb_active) ssb_state_change(0);
 #endif
-   si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs);
-   si5351.set_registers(0xFF, NULL, 1, &m_regs);
+   si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs, &c_regs);
+
+   si5351.set_registers(1, &s_regs, 1, &m_regs);
    si5351.set_registers(0, &s_regs, 0, &m_regs);
-   //si5351.print_c_regs();
 }
 
 static uint8_t chno = 0;
