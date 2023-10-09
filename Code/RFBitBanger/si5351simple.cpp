@@ -129,9 +129,9 @@ void si5351simple::set_offset_fast(int16_t offset)
 
   a = c_regs.a;
   if (offset > 0)
-    b = c_regs.b + offset * c_regs.b_offset_pos /  SI5351_FREQ_OFFSET;
+    b = c_regs.b + ((uint32_t)(offset)) * c_regs.b_offset /  SI5351_FREQ_OFFSET;
   else
-    b = c_regs.b - offset * c_regs.b_offset_neg /  SI5351_FREQ_OFFSET;
+    b = c_regs.b - ((uint32_t)(-offset)) * c_regs.b_offset /  SI5351_FREQ_OFFSET;
 
   if (b < 0)
   {
@@ -273,12 +273,7 @@ void si5351simple::calc_registers(uint32_t frequency, uint8_t phase, uint8_t cal
   if (calc_offset)
   {
     uint32_t fr_offset = ((uint32_t)offset) * mult_ratio;
-
-    c_regs->b_offset_pos = (fvco + fr_offset) - xo_freq * c_regs->a;
-    c_regs->b_offset_pos = ( ((uint64_t)c_regs->b_offset_pos) << FEEDBACK_MULTIPLIER_SHIFT ) / xo_freq - c_regs->b;
-
-    c_regs->b_offset_neg = (fvco - fr_offset) - xo_freq * c_regs->a;
-    c_regs->b_offset_neg = ( ((uint64_t)c_regs->b_offset_neg) << FEEDBACK_MULTIPLIER_SHIFT ) / xo_freq - c_regs->b;
+    c_regs->b_offset = ( ((uint64_t)fr_offset) << FEEDBACK_MULTIPLIER_SHIFT ) / xo_freq;
   }
   
   if (phase)

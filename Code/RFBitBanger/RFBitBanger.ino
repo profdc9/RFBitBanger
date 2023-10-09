@@ -236,8 +236,6 @@ void ssb_debug(void)
   last_interrupts = l;
   Serial.print("phase_inversions=");
   Serial.println(ps.ssbs.phase_inversions);
-#else
-  return;
 #endif
 }
 

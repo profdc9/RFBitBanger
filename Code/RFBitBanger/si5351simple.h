@@ -58,10 +58,9 @@ typedef struct _si5351_multisynth_regs
 
 typedef struct _si5351_cached_regs
 {
-  uint16_t a;            // "a" part of Feedback-Multiplier from XTAL to PLL in range [15,90]
-  int32_t  b;            // "b" part of Feedback-Multiplier from XTAL to PLL
-  int32_t  b_offset_pos; // offset b
-  int32_t  b_offset_neg; // offset b
+  uint16_t  a;            // "a" part of Feedback-Multiplier from XTAL to PLL in range [15,90]
+  uint32_t  b;            // "b" part of Feedback-Multiplier from XTAL to PLL
+  uint32_t  b_offset;     // offset b
 } si5351_cached_regs;
 
 extern struct _si5351_cached_regs c_regs;
