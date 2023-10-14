@@ -149,7 +149,7 @@ typedef struct _scamp_code_word_put_mem_buf_struct
   uint8_t max_words;
 } scamp_code_word_put_mem_buf_struct;
 
-void scamp_code_word_put_mem_buf(uint16_t code, void *st, uint8_t pos)
+void scamp_code_word_put_mem_buf(uint16_t code, void *st, uint8_t pos, uint8_t frame)
 {
   scamp_code_word_put_mem_buf_struct *s = (scamp_code_word_put_mem_buf_struct *) st;
   if (s->cur_word < s->max_words)
@@ -268,10 +268,11 @@ uint8_t scamp_code_word_to_bytes(uint16_t code, uint8_t bytes[])
 void scamp_raw_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code_word_put ecwp, void *st)
 {
   uint8_t cur_byte = 0;
+  uint8_t frame = 0;
   while (cur_byte < num_bytes)
   {
      uint8_t b = bytes[cur_byte++];
-     ecwp( ((uint16_t)(0xF00)) | b, st, cur_byte );
+     ecwp( ((uint16_t)(0xF00)) | b, st, cur_byte, frame++ );
   }
 }
 
@@ -297,6 +298,7 @@ uint8_t scamp_find_code_in_table(uint8_t c)
 void scamp_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code_word_put ecwp, void *st)
 {
   uint8_t cur_byte = 0;
+  uint8_t frame = 0;
   uint16_t last_code_word = 0;
   uint16_t code_word;
   while (cur_byte < num_bytes)
@@ -321,10 +323,10 @@ void scamp_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code_wor
          }
          if (code_word == last_code_word)
          {
-           if (ecwp(0, st, cur_byte)) break;
+           if (ecwp(0, st, cur_byte, frame++)) break;
          }
      }
-     if (ecwp(code_word, st, cur_byte)) break;
+     if (ecwp(code_word, st, cur_byte, frame++)) break;
      last_code_word = code_word;
   }
 }
@@ -396,7 +398,7 @@ typedef struct _scamp_code_word_transmit_data
   dsp_txmit_message_state *dtms;
 } scamp_code_word_transmit_data;
 
-uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos)
+uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos, uint8_t frame)
 {
   uint8_t data_code = SCAMP_IS_DATA_CODE(code);
   uint32_t code_30;
@@ -405,7 +407,7 @@ uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos)
   code_30 = golay_encode(code);
   code_30 = scamp_add_reversal_bits(code_30);
   scamp_send_frame_rep(code_30, data_code ? 1 : rc.scamp_resend_frames);
-  if ((rc.scamp_resync_frames != 0) && (((pos+1) % rc.scamp_resync_frames) == 0))
+  if ((rc.scamp_resync_frames != 0) && (((frame+1) % rc.scamp_resync_frames) == 0))
   {
     scamp_send_frame(SCAMP_INIT_CODEWORD);
     scamp_send_frame(SCAMP_SYNC_CODEWORD);

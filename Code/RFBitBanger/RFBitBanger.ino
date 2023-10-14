@@ -77,10 +77,10 @@ volatile uint16_t adc_sample_1;
 
 uint8_t mute = 0;
 
-uint8_t srd_buffer[80];
+uint8_t srd_buffer[160];
 scroll_readout_dat srd_buf = { 0, 1, 16, sizeof(srd_buffer), srd_buffer, 0 };
 
-uint8_t sad_buffer[80];
+uint8_t sad_buffer[160];
 const uint8_t sad_validchars[] PROGMEM = { ' ',    '!',   0x22,   0x27,    '(',
                                            ')',    '*',    '+',    ',',    '-',    '.',    '/',    '0',
                                            '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',

@@ -24,7 +24,7 @@ freely, subject to the following restrictions:
 #ifndef __SCAMP_H
 #define __SCAMP_H
 
-#define SCAMP_VERSION_NO "0.9"
+#define SCAMP_VERSION_NO "0.91"
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,7 +117,7 @@ uint8_t scamp_insert_into_frame_fifo(volatile scamp_frame_fifo *dff, uint32_t fr
 uint32_t scamp_remove_from_frame_fifo(volatile scamp_frame_fifo *dff);
 void scamp_initialize_frame_fifo(volatile scamp_frame_fifo *dff);
 
-typedef uint8_t (*scamp_code_word_put)(uint16_t, void *, uint8_t);
+typedef uint8_t (*scamp_code_word_put)(uint16_t, void *, uint8_t, uint8_t);
 typedef uint16_t (*scamp_code_word_get)(void *);
 
 void scamp_bytes_to_code_words(uint8_t *bytes, uint8_t num_bytes, scamp_code_word_put ecwp, void *st);

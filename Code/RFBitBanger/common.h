@@ -23,7 +23,7 @@ freely, subject to the following restrictions:
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#define RF_BITBANGER_VERSION_NO "1.0"
+#define RF_BITBANGER_VERSION_NO "1.01"
 #define RF_BITBANGER_VERSION ( RF_BITBANGER_VERSION_NO " " __DATE__ )
 #define SCAMP_VERSION ( "SCAMP V" SCAMP_VERSION_NO )
 
