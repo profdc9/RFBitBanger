@@ -5713,7 +5713,7 @@
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp d303459f-5b0d-458d-a610-98d05bcbee4c)
     )
-    (fp_text value "27 MHz" (at 2.44 3.525 -90) (layer "F.Fab")
+    (fp_text value "25 MHz" (at 2.44 3.525 -90) (layer "F.Fab")
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp 690a1c4c-da9a-4f03-aba0-408f79d7e8ca)
     )

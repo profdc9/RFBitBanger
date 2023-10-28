@@ -7570,7 +7570,7 @@
       (reference "Y2") (unit 1) (value "7.X MHz") (footprint "Crystals:Crystal_HC49-U_Vertical")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-00006169e239"
-      (reference "Y3") (unit 1) (value "27 MHz") (footprint "Crystals:Crystal_HC49-U_Vertical")
+      (reference "Y3") (unit 1) (value "25 MHz") (footprint "Crystals:Crystal_HC49-U_Vertical")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061bd6891"
       (reference "Y4") (unit 1) (value "7.X MHz") (footprint "Crystals:Crystal_HC49-U_Vertical")

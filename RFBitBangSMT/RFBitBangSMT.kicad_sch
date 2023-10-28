@@ -8417,6 +8417,12 @@
     (path "/00000000-0000-0000-0000-000061b53775/64fd2257-0d44-4e05-aa61-6bd43a2184e3"
       (reference "#PWR0114") (unit 1) (value "GND") (footprint "")
     )
+    (path "/00000000-0000-0000-0000-000061b53775/68d5e815-716f-42ad-92f1-33c0a4ecbd9b"
+      (reference "#PWR0115") (unit 1) (value "GND") (footprint "")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/55529ebf-472b-4343-a525-ad54ec009f40"
+      (reference "#PWR0116") (unit 1) (value "GND") (footprint "")
+    )
     (path "/00000000-0000-0000-0000-0000615917e6"
       (reference "C1") (unit 1) (value "100 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
@@ -8629,6 +8635,9 @@
     )
     (path "/328edbb5-8b9b-4c59-bc61-9764732eb7b8"
       (reference "C71") (unit 1) (value "NC") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/511d8b43-bd62-4118-be0a-e7bfbcb4d955"
+      (reference "C72") (unit 1) (value "100 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-0000615b9029"
       (reference "D1") (unit 1) (value "1N4745A") (footprint "Diode_THT:D_DO-41_SOD81_P7.62mm_Horizontal")
@@ -9127,6 +9136,9 @@
     )
     (path "/3e13cbed-09a2-4ca3-a1e9-9decef27b9ed"
       (reference "R86") (unit 1) (value "1k") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/27935f41-b08c-4eb0-b491-8fb61581495d"
+      (reference "R87") (unit 1) (value "NC") (footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-00006183a50a"
       (reference "RLY1") (unit 1) (value "DPDTRelay") (footprint "RFBitBangSMT:G2VRelay")
