@@ -412,8 +412,11 @@ uint8_t scamp_code_word_transmit(uint16_t code, void *st, uint8_t pos, uint8_t f
     scamp_send_frame(SCAMP_INIT_CODEWORD);
     scamp_send_frame(SCAMP_SYNC_CODEWORD);
   }
-  scwtd->dtms->current_symbol = pos;
-  scwtd->ddc(scwtd->dtms);
+  while (scwtd->dtms->current_symbol <= pos)
+  {
+    scwtd->ddc(scwtd->dtms);
+    scwtd->dtms->current_symbol++;
+  }
   return scwtd->dtms->aborted;
 }
 
