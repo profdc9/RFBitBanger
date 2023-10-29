@@ -8696,6 +8696,21 @@
     (path "/7d9de343-5493-44c2-baea-92e7662c3112"
       (reference "DS1") (unit 1) (value "LCD1602A") (footprint "Display:WC1602A")
     )
+    (path "/00000000-0000-0000-0000-000061b53775/c0cb33d1-8867-4216-af4c-4bc623ab03ed"
+      (reference "H1") (unit 1) (value "MountingHole") (footprint "RFBitBangSMT:CutSlot")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/d1fbb16a-a6e6-4875-8cc3-ed2e5f5cc7ed"
+      (reference "H2") (unit 1) (value "MountingHole") (footprint "RFBitBangSMT:CutSlot")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/2090e1a7-26ec-4ea7-9028-cc2c5dbe7a8a"
+      (reference "H3") (unit 1) (value "MountingHole") (footprint "RFBitBangSMT:CutSlot")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/d6a6ad9e-1deb-4903-a49a-24b50b4b94d3"
+      (reference "H4") (unit 1) (value "MountingHole") (footprint "RFBitBangSMT:CutSlot")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/acc94be8-1528-49cc-9ed8-48ade436b7d1"
+      (reference "H5") (unit 1) (value "MountingHole") (footprint "RFBitBangSMT:CutSlot")
+    )
     (path "/00000000-0000-0000-0000-0000615cbebf"
       (reference "J1") (unit 1) (value "POWER") (footprint "Connectors_Terminal_Blocks:TerminalBlock_bornier-2_P5.08mm")
     )
@@ -9216,7 +9231,7 @@
       (reference "Y2") (unit 1) (value "7.X MHz") (footprint "Crystals:Crystal_HC49-U_Vertical")
     )
     (path "/00000000-0000-0000-0000-000061b53775/1d2cd9cf-70f3-49e4-9719-1706853f1b10"
-      (reference "Y3") (unit 1) (value "25 MHz") (footprint "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm_HandSoldering")
+      (reference "Y3") (unit 1) (value "25 MHz") (footprint "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm")
     )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-000061bd6891"
       (reference "Y4") (unit 1) (value "7.X MHz") (footprint "Crystals:Crystal_HC49-U_Vertical")

@@ -1,0 +1,18 @@
+(footprint "CutSlot" (version 20211014) (generator pcbnew)
+  (layer "F.Cu")
+  (tedit 0)
+  (attr through_hole)
+  (fp_text reference "REF**" (at 0 -1.5 unlocked) (layer "F.SilkS") hide
+    (effects (font (size 1 1) (thickness 0.15)))
+    (tstamp 7e1e003b-4094-4966-bdec-e94d74a04d92)
+  )
+  (fp_text value "CutSlot" (at 0 1 unlocked) (layer "F.Fab") hide
+    (effects (font (size 1 1) (thickness 0.15)))
+    (tstamp 386e012a-aca4-4b72-92f9-1dfb52b41961)
+  )
+  (fp_text user "${REFERENCE}" (at 0 2.5 unlocked) (layer "F.Fab") hide
+    (effects (font (size 1 1) (thickness 0.15)))
+    (tstamp 3fe9b877-7402-4ea3-94fb-f281b746034c)
+  )
+  (pad "" np_thru_hole roundrect (at 0 0) (size 2 5) (drill oval 2 5) (layers F&B.Cu *.Mask) (roundrect_rratio 0.25) (tstamp 2709602f-f2a3-480d-ae60-90be4a14139a))
+)
