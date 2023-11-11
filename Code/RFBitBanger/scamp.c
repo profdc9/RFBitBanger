@@ -361,13 +361,22 @@ void scamp_set_mod_frequencies(dsp_txmit_message_state *dtms)
   set_frequency(dtms->frequency + offset2, 1);
 }
 
+void scamp_wait_bit(void)
+{
+  uint16_t read_bit;
+  uint8_t bit_ms = df.buffer_size / (df.slow_samp_num > 1 ? 1 : 2); // (divided by 2 for 2000 Hz -> ms)
+  ps.ss.clock_bit += bit_ms;
+  do
+  {
+    read_bit = millis();
+  } while (((int16_t)(ps.ss.clock_bit - read_bit)) > 0);
+}
+
 void scamp_send_frame(uint32_t bits)
 {
-  uint8_t bit_ms = df.buffer_size / (df.slow_samp_num > 1 ? 1 : 2); // (divided by 2 for 2000 Hz -> ms)
-  uint16_t clock_bit = millis();
-  uint16_t read_bit;
   for (uint8_t num=0;num<30;num++)
   {
+    scamp_wait_bit();
     uint8_t bitv = (bits & 0x20000000) != 0;
     if (ps.ss.fsk)
       set_clock_onoff_mask(bitv ? 0x02 : 0x01) ;
@@ -375,11 +384,6 @@ void scamp_send_frame(uint32_t bits)
       transmit_set(bitv);
     idle_task();
     bits <<= 1;
-    do
-    {
-      read_bit = millis();
-    } while ((read_bit - clock_bit) < bit_ms);
-    clock_bit += bit_ms;
   }
 }
 
@@ -429,6 +433,7 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   
   scamp_set_mod_frequencies(dtms);
   muteaudio_set(1);
+  ps.ss.clock_bit = millis();
   if (ps.ss.fsk) 
   {
     transmit_set(1);
@@ -443,6 +448,7 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   scamp_bytes_to_code_words(dtms->message, dtms->length, scamp_code_word_transmit, (void *) &scwtd);
   if (!dtms->aborted)
      scamp_send_frame_rep(SCAMP_RES_CODE_END_TRANSMISSION, rc.scamp_resend_frames);
+  scamp_wait_bit();
   set_clock_onoff(0,0);
   set_clock_onoff(1,0);
   transmit_set(0);

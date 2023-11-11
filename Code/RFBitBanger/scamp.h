@@ -111,6 +111,8 @@ typedef struct _scamp_state
 
   uint16_t  last_code;
   uint16_t  threshold_counter;
+
+  uint16_t  clock_bit;
 } scamp_state;
 
 uint8_t scamp_insert_into_frame_fifo(volatile scamp_frame_fifo *dff, uint32_t frame);
