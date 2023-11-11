@@ -8417,6 +8417,12 @@
     (path "/00000000-0000-0000-0000-000061b53775/64fd2257-0d44-4e05-aa61-6bd43a2184e3"
       (reference "#PWR0114") (unit 1) (value "GND") (footprint "")
     )
+    (path "/00000000-0000-0000-0000-000061b53775/30d1ea36-4ed8-4866-8f6b-fd04726567ab"
+      (reference "#PWR0115") (unit 1) (value "GND") (footprint "")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/d293303e-956d-47dd-9a8f-4fdff8b60af0"
+      (reference "#PWR0116") (unit 1) (value "GND") (footprint "")
+    )
     (path "/00000000-0000-0000-0000-0000615917e6"
       (reference "C1") (unit 1) (value "100 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
@@ -8630,6 +8636,9 @@
     (path "/328edbb5-8b9b-4c59-bc61-9764732eb7b8"
       (reference "C71") (unit 1) (value "NC") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
+    (path "/00000000-0000-0000-0000-000061b53775/ad72557d-5898-48c9-b8fe-21614ad9b532"
+      (reference "C72") (unit 1) (value "100 nF") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
+    )
     (path "/00000000-0000-0000-0000-0000615b9029"
       (reference "D1") (unit 1) (value "1N4745A") (footprint "Diode_THT:D_DO-41_SOD81_P7.62mm_Horizontal")
     )
@@ -8771,6 +8780,9 @@
     (path "/bf7bf841-e1cd-4d74-b816-09a2f5d77326"
       (reference "J23") (unit 1) (value "Conn_01x01") (footprint "MountingHole:MountingHole_3.2mm_M3")
     )
+    (path "/00000000-0000-0000-0000-000061b53775/6e5e8539-3f56-4b24-a8c1-a2ea7671959b"
+      (reference "J25") (unit 1) (value "Conn_01x01") (footprint "Connector_PinHeader_2.00mm:PinHeader_1x01_P2.00mm_Vertical")
+    )
     (path "/00000000-0000-0000-0000-000061b53775/00000000-0000-0000-0000-00006187ae81"
       (reference "JP1") (unit 1) (value "QSK") (footprint "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm")
     )
@@ -8800,6 +8812,9 @@
     )
     (path "/00000000-0000-0000-0000-000061b53775/3a169378-d9ee-49a1-b8d5-9f91818468d8"
       (reference "JP10") (unit 1) (value "BTP") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical")
+    )
+    (path "/00000000-0000-0000-0000-000061b53775/2be80ad7-1a93-418c-99ed-db36bc4433e8"
+      (reference "JP11") (unit 1) (value "TCXO") (footprint "Jumper:SolderJumper-2_P1.3mm_Open_Pad1.0x1.5mm")
     )
     (path "/00000000-0000-0000-0000-0000615a6933"
       (reference "L1") (unit 1) (value "10 uH") (footprint "Inductor_SMD:L_0805_2012Metric_Pad1.15x1.40mm_HandSolder")
