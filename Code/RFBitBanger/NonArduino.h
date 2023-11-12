@@ -1,5 +1,3 @@
-/*  golay.h */
-
 /*
  * Copyright (c) 2021 Daniel Marks
 
@@ -20,16 +18,31 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
  */
 
-#ifndef __GOLAY_H
-#define __GOLAY_H
+/*
+This header file is used to provide some definitions needed when building
+the code outside of the Arduino environment.  
+ */
+#ifndef _NonArduino_h
+#define _NonArduino_h
 
 #include <stdint.h>
+#include <stddef.h>
 
-uint32_t golay_encode(uint16_t wd_enc);
-uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs);
+// Ignore this directive
+#define PROGMEM
 
-#ifdef __cplusplus
-}
+#define pgm_read_byte_near(addr) (pgm_read_byte_near_2((const uint8_t*)addr))
+#define pgm_read_word_near(addr) (pgm_read_word_near_2((const uint16_t*)addr))
+
+uint8_t pgm_read_byte_near_2(const uint8_t* addr);
+uint16_t pgm_read_word_near_2(const uint16_t* addr);
+
+unsigned long millis();
+void cli();
+void sei();
+void* memset(void* dest, int c, size_t count);
+
+// This is defined in RFBitBanger.io
+void received_character(uint8_t ch);
+
 #endif
-
-#endif /* __GOLAY_H */

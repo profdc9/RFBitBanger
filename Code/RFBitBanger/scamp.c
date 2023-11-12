@@ -32,6 +32,8 @@ freely, subject to the following restrictions:
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#else
+#include "NonArduino.h"
 #endif
 
 #ifdef SCAMP_DEBUG
@@ -454,6 +456,7 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   transmit_set(0);
   muteaudio_set(0);
   ps.ss.reset_protocol = 1;
+  return 0;
 }
 
 void scamp_reset_codeword(void)

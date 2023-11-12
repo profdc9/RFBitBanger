@@ -25,6 +25,8 @@ freely, subject to the following restrictions:
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#else 
+#include "NonArduino.h"
 #endif
 
 #ifdef DSPINT_DEBUG
@@ -45,6 +47,7 @@ protocol_state  ps;
 uint8_t decode_insert_into_fifo(uint8_t c)
 {
   received_character(c);
+  return 0;
 }
 
 #if 0
@@ -202,7 +205,7 @@ void dsp_initialize_rtty(uint8_t protocol, uint8_t wide)
     df.dfo = rtty_frequency_offset;
 }
 
-void dsp_initialize_ssb(protocol)
+void dsp_initialize_ssb(uint8_t protocol)
 {
     dsp_initialize_fastscan();
     df.dfo = ssb_frequency_offset;
