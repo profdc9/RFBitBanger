@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Daniel Marks
+ * Copyright (c) 2023 Daniel Marks
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -23,8 +23,8 @@ This header file provides some definitions needed when building
 the code outside of the Arduino environment.  IT IS NOT USED IN NORMAL
 RFBITBANGER OPERATION.
  */
-#ifndef __NONAARDUINO__
-#define __NONAARDUINO__
+#ifndef _NONARDUINO_H
+#define _NONARDUINO_H
 
 #include <stdint.h>
 #include <stddef.h>
