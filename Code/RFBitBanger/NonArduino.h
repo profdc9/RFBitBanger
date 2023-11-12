@@ -29,19 +29,22 @@ RFBITBANGER OPERATION.
 #include <stdint.h>
 #include <stddef.h>
 
-// Ignore this directive completely
+// This is an AVR-specific function that allows you to store data in flash 
+// (program) memory instead of SRAM.
+// Ignore this directive completely.
 #define PROGMEM
 
+// Used to read from the program memory
 #define pgm_read_byte_near(addr) (pgm_read_byte_near_2((const uint8_t*)addr))
 #define pgm_read_word_near(addr) (pgm_read_word_near_2((const uint16_t*)addr))
 
 uint8_t pgm_read_byte_near_2(const uint8_t* addr);
 uint16_t pgm_read_word_near_2(const uint16_t* addr);
 
+// Arduino platform
 unsigned long millis();
 void cli();
 void sei();
-void* memset(void* dest, int c, size_t count);
 
 // This is defined in RFBitBanger.ino
 void received_character(uint8_t ch);
