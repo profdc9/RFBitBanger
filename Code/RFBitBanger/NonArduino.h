@@ -19,16 +19,17 @@ freely, subject to the following restrictions:
  */
 
 /*
-This header file is used to provide some definitions needed when building
-the code outside of the Arduino environment.  
+This header file provides some definitions needed when building
+the code outside of the Arduino environment.  IT IS NOT USED IN NORMAL
+RFBITBANGER OPERATION.
  */
-#ifndef _NonArduino_h
-#define _NonArduino_h
+#ifndef __NONAARDUINO__
+#define __NONAARDUINO__
 
 #include <stdint.h>
 #include <stddef.h>
 
-// Ignore this directive
+// Ignore this directive completely
 #define PROGMEM
 
 #define pgm_read_byte_near(addr) (pgm_read_byte_near_2((const uint8_t*)addr))
@@ -42,7 +43,7 @@ void cli();
 void sei();
 void* memset(void* dest, int c, size_t count);
 
-// This is defined in RFBitBanger.io
+// This is defined in RFBitBanger.ino
 void received_character(uint8_t ch);
 
 #endif
