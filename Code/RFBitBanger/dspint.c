@@ -26,6 +26,7 @@ freely, subject to the following restrictions:
 #ifdef ARDUINO
 #include <Arduino.h>
 #else 
+#include <string.h>
 #include "NonArduino.h"
 #endif
 
