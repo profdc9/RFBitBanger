@@ -452,6 +452,7 @@ uint8_t cwmod_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
     ddc(dtms);
     if (dtms->aborted) break;
   }
+  return 0;
 }
 
 int16_t cw_frequency_offset(void)

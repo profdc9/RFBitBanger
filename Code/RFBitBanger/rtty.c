@@ -90,7 +90,7 @@ uint16_t rtty_remove_from_frame_fifo(volatile rtty_frame_fifo *dff)
 uint8_t rtty_find_code_in_table(uint8_t c, uint8_t figs)
 {
   uint8_t i;
-  uint8_t *table = figs ? rtty_figures : rtty_letters;
+  const uint8_t *table = figs ? rtty_figures : rtty_letters;
   if ((c >= 'a') && (c <= 'z')) c -= 32;
   for (i=1;i<(sizeof(rtty_letters)/sizeof(uint8_t));i++)
         if (pgm_read_byte_near(&table[i]) == c) return i;
@@ -158,6 +158,7 @@ uint8_t rtty_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   set_clock_onoff_mask(0) ;
   transmit_set(0);
   muteaudio_set(0);
+  return 0;
 }
 
 void rtty_reset_codeword(void)

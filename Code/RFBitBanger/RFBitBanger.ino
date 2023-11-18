@@ -240,19 +240,19 @@ void ssb_debug(void)
 }
 
 extern "C" {
-void idle_task(void)
-{
-  dsp_dispatch_receive();
-  lcd.pollButtons();
-  if (IS_SSB_PROTOCOL(ps.ssbs.protocol))
+  void idle_task(void)
   {
-    ssb_state_change(!digitalRead(PTT_PIN));
-    //ssb_state_change(1);
-#ifdef SSB_DEBUG_REGISTERS
-    ssb_debug();
-#endif
+    dsp_dispatch_receive();
+    lcd.pollButtons();
+    if (IS_SSB_PROTOCOL(ps.ssbs.protocol))
+    {
+      ssb_state_change(!digitalRead(PTT_PIN));
+      //ssb_state_change(1);
+  #ifdef SSB_DEBUG_REGISTERS
+      ssb_debug();
+  #endif
+    }
   }
-}
 }
 
 #define SET_ADC1_READ(x) adc1_read = (x)
@@ -311,41 +311,41 @@ uint8_t tone_state = 0;
 uint8_t tone_last_freq = 0;
 
 extern "C" {
-void tone_off(void)
-{
-  if (tone_state)
+  void tone_off(void)
   {
-    pinMode(BEEPOUT_PIN,INPUT);
-    tone_state = 0;
+    if (tone_state)
+    {
+      pinMode(BEEPOUT_PIN,INPUT);
+      tone_state = 0;
+    }
   }
-}
 
-void tone_on(uint8_t freq, uint8_t vol)
-{
-  if ((!tone_state) || (freq != tone_last_freq))
+  void tone_on(uint8_t freq, uint8_t vol)
   {
-    if (!tone_state) pinMode(BEEPOUT_PIN,OUTPUT);  
-    TCCR2B = 0;
-    OCR2A = freq;
-    OCR2B = vol;
-    TCNT2 = 0;
-    TCCR2A = (1<<COM2B1) | (1 << WGM21) | (1 << WGM20);
-    TCCR2B = (1 << WGM22) | (1<<CS22) | (1<<CS21);   // 256 divider
-    tone_last_freq = freq;
-    tone_state = 1;
-  } else
-    OCR2B = vol;
-}
-}
+    if ((!tone_state) || (freq != tone_last_freq))
+    {
+      if (!tone_state) pinMode(BEEPOUT_PIN,OUTPUT);  
+      TCCR2B = 0;
+      OCR2A = freq;
+      OCR2B = vol;
+      TCNT2 = 0;
+      TCCR2A = (1<<COM2B1) | (1 << WGM21) | (1 << WGM20);
+      TCCR2B = (1 << WGM22) | (1<<CS22) | (1<<CS21);   // 256 divider
+      tone_last_freq = freq;
+      tone_state = 1;
+    } else
+      OCR2B = vol;
+  }
+  
+  void test_tone(uint16_t freq)
+  {
+    uint8_t freqt = TONEFREQ(freq);
+    tone_on(freqt,freq/2);
+    delay(500);
+    tone_off();
+  }
 
-void test_tone(uint16_t freq)
-{
-  uint8_t freqt = TONEFREQ(freq);
-  tone_on(freqt,freq/2);
-  delay(500);
-  tone_off();
-}
-
+}   /* extern 'C' */
 
 void setup_tone_pcm(void)
 {
@@ -358,127 +358,126 @@ void setup_tone_pcm(void)
 
 extern "C" {
 
-void delayidle(uint32_t ms)
-{
-        uint32_t start = micros();
-
-        while (ms > 0) {
-                idle_task();
-                while ( ms > 0 && (micros() - start) >= 1000) {
+  void delayidle(uint32_t ms)
+  {
+          uint32_t start = micros();
+  
+          while (ms > 0) {
+                  idle_task();
+                  while ( ms > 0 && (micros() - start) >= 1000) {
                         ms--;
                         start += 1000;
-                }
-        }
-}
+                  }
+          }
+  }
 
-void muteaudio_set(uint8_t seton)
-{
-  digitalWrite(MUTEAUDIO_PIN, seton != 0);
-}
+  void muteaudio_set(uint8_t seton)
+  {
+    digitalWrite(MUTEAUDIO_PIN, seton != 0);
+  }
 
-void transmit_set(uint8_t seton)
-{
-  //OCR1A = seton != 0 ? TIMER1_COUNT_MAX : 0; 
-  digitalWrite(TRANSMIT_PIN, seton != 0);
-}
+  void transmit_set(uint8_t seton)
+  {
+    //OCR1A = seton != 0 ? TIMER1_COUNT_MAX : 0; 
+    digitalWrite(TRANSMIT_PIN, seton != 0);
+  }
 
-void set_clock_onoff_mask(uint8_t on_mask)
-{
-  si5351.setOutputOnOffMask(on_mask);
-}
+  void set_clock_onoff_mask(uint8_t on_mask)
+  {
+    si5351.setOutputOnOffMask(on_mask);
+  }
 
-void set_clock_onoff(uint8_t onoff, uint8_t clockno)
-{
-   si5351.setOutputOnOff(clockno,onoff != 0);  
-}
+  void set_clock_onoff(uint8_t onoff, uint8_t clockno)
+  {
+    si5351.setOutputOnOff(clockno,onoff != 0);  
+  }
 
-void set_protocol(uint8_t protocol)
-{
-   if (protocol == 0xFF) protocol = ps.ns.protocol;
-   dsp_initialize_protocol(protocol, rc.wide);
+  void set_protocol(uint8_t protocol)
+  {
+    if (protocol == 0xFF) protocol = ps.ns.protocol;
+    dsp_initialize_protocol(protocol, rc.wide);
    set_frequency_receive();
-}
+  }
 
-void set_frequency_offset(int16_t offset)
-{
-   si5351.set_offset_fast(offset);
-}
+  void set_frequency_offset(int16_t offset)
+  {
+    si5351.set_offset_fast(offset);
+  }
 
 
-void set_transmit_pwm(uint16_t pwm) 
-{
-  OCR1A = pwm;  
-};
+  void set_transmit_pwm(uint16_t pwm) 
+  {
+    OCR1A = pwm;  
+  };
 
-void set_tuning_pwm(uint16_t pwm)
-{
-  OCR1B = pwm;
-};
+  void set_tuning_pwm(uint16_t pwm)
+  {
+    OCR1B = pwm;
+  };
 
-void transmit_pwm_mode(uint8_t set)
-{
-  if (set) TCCR1A |= ((1 << COM1A1));
-    else TCCR1A &= ~((1 << COM1A1));
-  TCCR1A &= ~((1 << COM1A0));
-}
+  void transmit_pwm_mode(uint8_t set)
+  {
+    if (set) TCCR1A |= ((1 << COM1A1));
+      else TCCR1A &= ~((1 << COM1A1));
+    TCCR1A &= ~((1 << COM1A0));
+  }
 
-void set_frequency(uint32_t freq, uint8_t clockno)
-{
-   si5351_synth_regs s_regs;
-   si5351_multisynth_regs m_regs;
-
-#ifdef SSB_PROTOCOL
-   if (ds.ssb_active) ssb_state_change(0);
-#endif
-   si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs, clockno == 0 ? &c_regs : NULL);
-   si5351.set_registers(clockno, &s_regs, clockno, &m_regs);
-   //si5351.print_c_regs();
-}
-
-void set_frequency_both(uint32_t freq)
-{
-   si5351_synth_regs s_regs;
-   si5351_multisynth_regs m_regs;
+  void set_frequency(uint32_t freq, uint8_t clockno)
+  {
+    si5351_synth_regs s_regs;
+    si5351_multisynth_regs m_regs;
 
 #ifdef SSB_PROTOCOL
-   if (ds.ssb_active) ssb_state_change(0);
+    if (ds.ssb_active) ssb_state_change(0);
 #endif
-   si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs, &c_regs);
+     si5351.calc_registers(freq, 0, 0, &s_regs, &m_regs, clockno == 0 ? &c_regs : NULL);
+    si5351.set_registers(clockno, &s_regs, clockno, &m_regs);
+    //si5351.print_c_regs();
+  }
 
-   si5351.set_registers(1, &s_regs, 1, &m_regs);
-   si5351.set_registers(0, &s_regs, 0, &m_regs);
-}
+  void set_frequency_both(uint32_t freq)
+  {
+    si5351_synth_regs s_regs;
+    si5351_multisynth_regs m_regs;
+  
+#ifdef SSB_PROTOCOL
+     if (ds.ssb_active) ssb_state_change(0);
+#endif
+     si5351.calc_registers(freq, 0, IS_SSB_PROTOCOL(ps.ssbs.protocol), &s_regs, &m_regs, &c_regs);
 
-static uint8_t chno = 0;
-static uint16_t last_millis_ch = 0;
+    si5351.set_registers(1, &s_regs, 1, &m_regs);
+    si5351.set_registers(0, &s_regs, 0, &m_regs);
+  }
 
-void write_char_newline(const char *c)
-{
-  Serial.print("\r\n");
-  Serial.print(c);
-  chno = 0;
-}
+  static uint8_t chno = 0;
+  static uint16_t last_millis_ch = 0;
 
-void write_char_serial(char ch)
-{
-  uint16_t current_millis = millis();
-  if (((current_millis - last_millis_ch) > WRITE_CHAR_SERIAL_RETURN_DELAY) || ((chno > 65) && (ch == ' ')) || (chno > 75))
-    write_char_newline(NULL);
-  last_millis_ch = current_millis;
-  Serial.print(ch);
-  chno++;
-}
+  void write_char_newline(const char *c)
+  {
+    Serial.print("\r\n");
+    Serial.print(c);
+    chno = 0;
+  }
 
-void received_character(uint8_t ch)
-{
-  if (ch == '\b')
-     scroll_readout_back_character(&srd_buf,' ');
-  else if ((ch >= ' ') && (ch <= '~'))
-     scroll_readout_add_character(&srd_buf, ch);
-  write_char_serial((char)ch);
-}
+  void write_char_serial(char ch)
+  {
+    uint16_t current_millis = millis();
+    if (((current_millis - last_millis_ch) > WRITE_CHAR_SERIAL_RETURN_DELAY) || ((chno > 65) && (ch == ' ')) || (chno > 75))
+      write_char_newline(NULL);
+    last_millis_ch = current_millis;
+    Serial.print(ch);
+    chno++;
+  }
 
-}
+  void received_character(uint8_t ch)
+  {
+    if (ch == '\b')
+      scroll_readout_back_character(&srd_buf,' ');
+    else if ((ch >= ' ') && (ch <= '~'))
+      scroll_readout_add_character(&srd_buf, ch);
+    write_char_serial((char)ch);
+  }
+}  /* extern 'C' */
 
 void set_frequency_receive(void)
 {
@@ -953,7 +952,7 @@ void display_clear_row_1(void)
 const char crystal_cal[] PROGMEM = "Xtal Calib";
 const char lr_prompt[] PROGMEM = "Lft abrt Rt cont";
 
-void temporary_message(uint8_t *msg)
+void temporary_message(const char *msg)
 {
    lcdPrintFlashSpaces(0,1,msg,16);
    delayidle(750);
@@ -992,7 +991,7 @@ void configuration(void)
   {
     void *v;
     uint32_t val;
-    configuration_entry *c;
+    const configuration_entry *c;
     scroll_number_dat snd = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     do

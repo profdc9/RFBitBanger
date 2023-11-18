@@ -46,7 +46,4 @@ unsigned long millis();
 void cli();
 void sei();
 
-// This is defined in RFBitBanger.ino
-void received_character(uint8_t ch);
-
 #endif

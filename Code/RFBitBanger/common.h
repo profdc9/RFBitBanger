@@ -81,7 +81,9 @@ typedef struct _radio_configuration
 
 extern radio_configuration rc;
 
+void set_protocol(uint8_t protocol);
 void set_frequency(uint32_t freq, uint8_t clockno);
+void set_frequency_both(uint32_t freq);
 void set_frequency_receive();
 void set_clock_onoff(uint8_t onoff, uint8_t clockno);
 void set_clock_onoff_mask(uint8_t on_mask);
@@ -92,12 +94,14 @@ void delayidle(uint32_t ms);
 void tone_on(uint8_t freq, uint8_t vol);
 void tone_off(void);
 void test_tone(uint16_t freq);
-
+void write_char_newline(const char *c);
+void write_char_serial(char ch); 
 void set_frequency_offset(int16_t offset);
 void set_transmit_pwm(uint16_t pwm);
 void set_tuning_pwm(uint16_t pwm);
 
 void transmit_pwm_mode(uint8_t set);
+void received_character(uint8_t ch);
 
 #ifdef __cplusplus
 }
