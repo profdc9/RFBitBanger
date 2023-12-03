@@ -23,8 +23,11 @@ freely, subject to the following restrictions:
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#else
+#include "NonArduino.h"
 #endif
 
+#include "dspint.h"
 
 #ifdef __cplusplus
 extern "C" {

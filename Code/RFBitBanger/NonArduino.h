@@ -1,7 +1,5 @@
-/*  golay.h */
-
 /*
- * Copyright (c) 2021 Daniel Marks
+ * Copyright (c) 2023 Daniel Marks
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -20,16 +18,32 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
  */
 
-#ifndef __GOLAY_H
-#define __GOLAY_H
+/*
+This header file provides some definitions needed when building
+the code outside of the Arduino environment.  IT IS NOT USED IN NORMAL
+RFBITBANGER OPERATION.
+ */
+#ifndef _NONARDUINO_H
+#define _NONARDUINO_H
 
 #include <stdint.h>
+#include <stddef.h>
 
-uint32_t golay_encode(uint16_t wd_enc);
-uint16_t golay_decode(uint32_t codeword, uint8_t *biterrs);
+// This is an AVR-specific function that allows you to store data in flash 
+// (program) memory instead of SRAM.
+// Ignore this directive completely.
+#define PROGMEM
 
-#ifdef __cplusplus
-}
+// Used to read from the program memory
+#define pgm_read_byte_near(addr) (pgm_read_byte_near_2((const uint8_t*)addr))
+#define pgm_read_word_near(addr) (pgm_read_word_near_2((const uint16_t*)addr))
+
+uint8_t pgm_read_byte_near_2(const uint8_t* addr);
+uint16_t pgm_read_word_near_2(const uint16_t* addr);
+
+// Arduino platform
+unsigned long millis();
+void cli();
+void sei();
+
 #endif
-
-#endif /* __GOLAY_H */

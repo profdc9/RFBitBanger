@@ -91,7 +91,7 @@ typedef void (*dsp_dispatch_callback)(struct _dsp_txmit_message_state *);
 
 typedef void (*dsp_interrupt_routine)(void);
 typedef void (*dsp_decode_process)(void);
-typedef void (*dsp_xmit_routine)(dsp_txmit_message_state *, dsp_dispatch_callback);
+typedef uint8_t (*dsp_xmit_routine)(dsp_txmit_message_state *, dsp_dispatch_callback);
 typedef int16_t (*dsp_frequency_offset)(void);
 
 /* this is stuff that is initialized when the modulation mode

@@ -24,6 +24,8 @@ freely, subject to the following restrictions:
 #ifndef __SCAMP_H
 #define __SCAMP_H
 
+#include "dspint.h"
+
 #define SCAMP_VERSION_NO "0.91"
 
 #ifdef __cplusplus
@@ -133,6 +135,7 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc);
 void scamp_new_sample(void);
 void scamp_decode_process(void);
 uint8_t hamming_weight_16(uint16_t n);
+void scamp_reset_codeword(void);
 
 #ifdef __cplusplus
 }

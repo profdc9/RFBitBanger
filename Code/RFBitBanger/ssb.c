@@ -90,9 +90,9 @@ void ssb_state_change(uint8_t state)
    uint16_t ux = ((x) < 0 ? -(x) : (x)); \
    uint16_t uy = ((y) < 0 ? -(y) : (y)); \
    mag = ((uy > ux) ? (uy+ux/4) : (ux+uy/4)); \
-   phs = ((uy > ux) ? ((_UA/4) - ATAN_APPROX(ux,uy)) : ((ux == 0) ? 0 : ATAN_APPROX(uy,ux))); \ 
-   phs = (((x) < 0) ? ((_UA/2) - phs) : phs); \ 
-   phs = (((y) < 0) ? -phs : phs); \  
+   phs = ((uy > ux) ? ((_UA/4) - ATAN_APPROX(ux,uy)) : ((ux == 0) ? 0 : ATAN_APPROX(uy,ux))); \
+   phs = (((x) < 0) ? ((_UA/2) - phs) : phs); \
+   phs = (((y) < 0) ? -phs : phs); \
 } while(0)
 
 #undef PWR_075_AMPLITUDE_TABLE
