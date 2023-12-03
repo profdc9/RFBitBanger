@@ -2,6 +2,9 @@
 The RFBitBanger is an off-the-grid QRP radio.  It is not just designed to be used off the grid, it is designed to be assembled and maintained off-the-grid.  Most radios require specialized parts that would be difficult to obtain in an extreme parts shortage or in remote places.  This radio is designed to be assembled and maintained using the most common jellybean components that might be in a hobbyist junkpile.  It will mainly support low bandwidth/digital modes to make the most of limited power.  
 
 
+A presentation presented at the 2023 QSO Today conference on the RFBitBanger can be viewed on Youtube [here](https://www.youtube.com/watch?v=Fbgs_4QsKnE).
+
+
 Design goals:
 
 * A single band double-sideband radio, with the band changed by pluggable external filters on 20 m to 80 m.  A double-balanced ring mixer is used to provide good rejection of strong stations while not requiring any custom ICs such as SA612 or FST3253.  The mixer has strong drive to reduce nonlinearity.
