@@ -32,5 +32,6 @@ This design was started after a discuss on the [Collapse OS](http://collapseos.o
 
 Any comments to profdc9 AT gmail.com.
 
+![RFBitBangerSMT](pics/RFBitBangerSMT.jpg)
 ![RFBitBanger](pics/RFBitBanger.jpg)
 ![RFBitBangerNano](pics/RFBitBangerNano.jpg)
