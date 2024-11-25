@@ -22,7 +22,7 @@ Design goals:
 * There is a full complement of support for CW, including keyclick elimination on transmit, a built-in CW decoder, a CW encoder, and straight and iambic key support.
 * RTTY 45/170 is supported as a mode for transmit and reception.
 * Uses a common 2X16 HD44780-based LCD display.
-* The hardware is there for supporting SSB transmission based on the same method of the uSDX of frequency tracking and envelope recovery.  This is not implemented currently in software.
+* Supports SSB transmission based on the same method of the uSDX of frequency tracking and envelope recovery.
 * Includes a 3d printable case, a 3d printable iambic key, and 3d printable coil forms for air core inductors.
 * The PCBs are licensed under the CC-BY-SA 4.0 open source license, and the source code is licensed under the zlib open source license.
 

@@ -449,7 +449,7 @@ uint8_t scamp_txmit(dsp_txmit_message_state *dtms, dsp_dispatch_callback ddc)
   scamp_send_frame_rep(SCAMP_SYNC_CODEWORD, rc.scamp_resend_frames);
   scamp_bytes_to_code_words(dtms->message, dtms->length, scamp_code_word_transmit, (void *) &scwtd);
   if (!dtms->aborted)
-     scamp_send_frame_rep(SCAMP_RES_CODE_END_TRANSMISSION, rc.scamp_resend_frames);
+     scamp_send_frame_rep(SCAMP_RES_CODE_END_TRANSMISSION_FRAME, rc.scamp_resend_frames);
   scamp_wait_bit();
   set_clock_onoff(0,0);
   set_clock_onoff(1,0);
